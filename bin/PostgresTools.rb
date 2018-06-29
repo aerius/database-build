@@ -168,7 +168,7 @@ class PostgresTools
     logger.log 'FILE: ' + original_filename unless original_filename.empty?
     logger.log 'CMD: ' + cmd
     success = Utility.run_cmd(cmd, true, original_filename, logger)
-    logger.error_sql get_sql_command_last_error_message(logger), 1000 unless success
+    logger.error_sql get_sql_command_last_error_message(logger), original_filename, 1000 unless success
   end
 
   # Run a PostgreSQL commandline command and fetch the return string
@@ -177,7 +177,7 @@ class PostgresTools
     logger.log 'FILE: ' + original_filename unless original_filename.empty?
     logger.log 'CMD: ' + cmd
     rv = Utility.fetch_cmd(cmd, true, original_filename, logger)
-    logger.error_sql get_sql_command_last_error_message(logger), 1000 if rv.nil?
+    logger.error_sql get_sql_command_last_error_message(logger), original_filename, 1000 if rv.nil?
     return rv
   end
 
@@ -238,7 +238,7 @@ class PostgresTools
       logger.error 'Recurring or circular {import_common} detected! History:' + (imported_files + [filename.strip.downcase]).join("\n")
     end
     imported_files << filename.strip.downcase
-    
+
 
     source_code_items = []
     code_left = File.open(filename, 'r') { |f| f.read }
@@ -270,10 +270,10 @@ class PostgresTools
         raise "File '#{import_filename}' not found."
       end
 
-      matches = code_left.match(/\{import_common\s+\'(.*)\'\s*\}/i) 
+      matches = code_left.match(/\{import_common\s+\'(.*)\'\s*\}/i)
     end
 
-    source_code_items << SourceCodeItem.new(code_left, filename) 
+    source_code_items << SourceCodeItem.new(code_left, filename)
 
     return source_code_items
   end

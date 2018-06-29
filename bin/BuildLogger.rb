@@ -61,9 +61,9 @@ class BuildLogger
     raise cut_string_start(str, max_strlength)
   end
 
-  def error_sql(str, max_strlength = -1)
-    log('FATAL SQL ERROR: ' + str)
-    puts '', "\u25BA\u25BA An error occured executing SQL:", '', cut_string_end(str, max_strlength)
+  def error_sql(str, original_filename = '', max_strlength = -1)
+    log('FATAL SQL ERROR' + (original_filename.empty? ? '' : ' @ ' + original_filename) + ":\n" + str)
+    puts '', "\u25BA\u25BA An error occured executing " + (original_filename.empty? ? 'SQL' : original_filename) + ':', '', cut_string_end(str, max_strlength)
     raise 'SQL error'
   end
 
