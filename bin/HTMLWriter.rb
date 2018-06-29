@@ -20,7 +20,7 @@ class HTMLWriter
 
     html << <<-'END_HTML_HEADER'
 <style>
-body, table {font-size: 10pt; font-family: Helvetica, Arial, sans-serif; line-height: 1.4em;}
+body, table {font-size: 10pt; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; line-height: 1.4em;}
 a {text-decoration: none;}
 .header {position: fixed; left: 0; top: 0; right: 0; height: 30px; line-height: 30px; font-size: 12pt; padding: 10px; white-space: nowrap; background-color: #eee;}
 .header .generated {float: right; text-align: right; font-size: 8pt; color: silver;}
