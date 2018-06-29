@@ -82,7 +82,6 @@ class CommentMerger
     PostgresTools.fetch_sql_command(sql, '', logger).each{ |record|
       object = 'SCHEMA'
       comment_item = create_empty_comment_item()
-      comment_item.identifier = record['schema']
       comment_item.identifier_noschema = record['schema']
       comment_item.schema = record['schema']
       comment_item.schema = '' if comment_item.schema == 'public'
@@ -118,7 +117,6 @@ class CommentMerger
         else next
       end
       comment_item = create_empty_comment_item()
-      comment_item.identifier = record['identifier']
       comment_item.identifier_noschema = record['identifier_noschema']
       comment_item.schema = record['schema']
       comment_item.schema = '' if comment_item.schema == 'public'
@@ -157,16 +155,15 @@ class CommentMerger
         else next
       end
       comment_item = create_empty_comment_item()
-      comment_item.identifier = record['identifier']
       comment_item.identifier_noschema = record['identifier_noschema']
       comment_item.schema = record['schema']
       comment_item.schema = '' if comment_item.schema == 'public'
       comment_item.arguments = record['arguments']
       comment_item.arguments_nodefault = record['arguments_nodefault']
       comment_item.returns = [record['returns'], '']
-      paramtypes = record['paramtypes'].split(',')
-      parammodes = record['parammodes'].split(',')
-      paramnames = record['paramnames'].split(',')
+      paramtypes = record['paramtypes'].nil? ? [] : record['paramtypes'].split(',')
+      parammodes = record['parammodes'].nil? ? [] : record['parammodes'].split(',')
+      paramnames = record['paramnames'].nil? ? [] : record['paramnames'].split(',')
       if !paramtypes.empty? then
         paramnames = [''] * paramtypes.size if paramnames.empty?  # may be empty if no names given
         paramnames.each_index {|idx|  # fill in any missing names
@@ -208,7 +205,6 @@ class CommentMerger
         else 'TYPE'
       end
       comment_item = create_empty_comment_item()
-      comment_item.identifier = record['identifier']
       comment_item.identifier_noschema = record['identifier_noschema']
       comment_item.schema = record['schema']
       comment_item.schema = '' if comment_item.schema == 'public'
@@ -221,7 +217,6 @@ class CommentMerger
 
   def self.create_empty_comment_item()
     comment_item = CommentItem.new
-    comment_item.identifier = ''
     comment_item.identifier_noschema = ''
     comment_item.schema = ''
     comment_item.arguments = ''

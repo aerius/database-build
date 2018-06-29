@@ -42,9 +42,11 @@ a {text-decoration: none;}
 .comments .object {font-size: 20pt; line-height: 20pt; margin-top: 40px; margin-bottom: 5px; padding-bottom: 5px; font-style: italic; display: inline-block; border-bottom: 6px solid #ddd;}
 .comments .object:first-child {margin-top: 0;}
 .comments .block {margin-top: 1em; margin-bottom: 1em; padding: 10px; border: 1px solid #ddd;}
-.comments .schema {font-weight: normal; color: #066;}
 .comments .identifier {font-weight: bold; font-size: 12pt; padding-bottom: 5px; border-bottom: 1px solid #eee;}
+.comments .identifier > span {float: left;}
+.comments .schema {float: left; font-weight: normal; color: #066;}
 .comments .arguments {font-weight: normal; font-style: italic; margin-left: 4px; color: #444;}
+.comments .fileref {font-size: 8pt; font-weight: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; padding-left: 20px; text-align: right; color: darkgray;}
 .comments .comment {padding-top: 5px;}
 .comments .column, .comments .param, .comments .returns, .comments .seealso, .comments .todo {padding-left: 60px; text-indent: -30px;}
 .comments .columnname, .comments .columntype, .comments .paramname, .comments .paramtype, .comments .returntype {font-family: Consolas, monospace;}
@@ -128,6 +130,8 @@ function toggleTree(blockElement) {
           html << "<span class=\"schema\">#{CGI.escapeHTML(comment_item.schema)}.</span>" unless comment_item.schema.empty? || object == 'SCHEMA'
           html << "<span>#{CGI.escapeHTML(comment_item.identifier_noschema)}</span>"
           html << "<span class=\"arguments\">#{CGI.escapeHTML(comment_item.arguments)}</span>" unless comment_item.arguments.empty?
+          html << "<div class=\"fileref\">&lrm;#{CGI.escapeHTML(comment_item.file)}</div>" unless comment_item.file.nil? || comment_item.file.empty?
+          html << "<div style=\"clear:both\"></div>"
           html << "</div>"
 
           toc << "<div class=\"toc-entry\" data-schema=\"#{comment_item.schema}\"><a href=\"##{anchor_name}\">#{CGI.escapeHTML(comment_item.identifier)}</a> #{CGI.escapeHTML(comment_item.arguments_nodefault)}</div>"

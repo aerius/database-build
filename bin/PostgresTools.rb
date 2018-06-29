@@ -103,10 +103,17 @@ class PostgresTools
     execute_postgres_command "#{get_pg_dump()} --format custom --blobs --verbose --file \"#{filename}\" \"#{$database_name}\"", "Error during dump: #{filename}", filename
   end
 
-  # Run a SQL file while processing all its references to common SQL files ({import_common ...}) and the dbdata folder ({data_folder}).
+  # Read a SQL file while processing all its references to common SQL files ({import_common ...}) and the dbdata folder ({data_folder}).
   def self.process_sql_file(filename, common_path, data_folder = nil)
     data_folder.chomp!('/') unless data_folder.nil? # only for search & replace
     return process_sql_file_recursive(filename, common_path, data_folder, [])
+  end
+
+  # Same as process_sql_file() but instead of returning a single string it returns a hashmap of file contents per processed (imported) file
+  def self.process_sql_file_and_return_separate_files(filename, common_path)
+    separate_files = {}
+    process_sql_file_recursive(filename, common_path, nil, [], separate_files)
+    return separate_files
   end
 
   def self.start_recording(filename)
@@ -169,7 +176,8 @@ class PostgresTools
 
   # Processes a SQL file and returns the new content as a string.
   # Processing means filling in dbdata paths and imports from the common folders.
-  def self.process_sql_file_recursive(filename, common_path, data_folder, imported_files, logger = $logger)
+  # If parameter separate_files is not nil, it is assumed to be a hashmap in which the individual file contents per file are added.
+  def self.process_sql_file_recursive(filename, common_path, data_folder, imported_files, separate_files = nil, logger = $logger)
     if imported_files.include?(filename.strip.downcase) then
       logger.error 'Recurring or circular {import_common} detected! History:' + (imported_files + [filename.strip.downcase]).join("\n")
     end
@@ -181,6 +189,8 @@ class PostgresTools
     # Replace dbdata path identifier
     contents.gsub!("{data_folder}", data_folder) unless data_folder.nil?
 
+    separate_files[filename] = contents unless separate_files.nil?
+
     # Replace import statement with file contents
     contents.gsub!(/\{import_common\s+\'(.*)\'\s*\}/i) {
       import_filename = File.expand_path(common_path + $1).fix_filename
@@ -191,11 +201,11 @@ class PostgresTools
           import_filename = import_filename.fix_pathname
           Dir[import_filename + '**/*.sql'].sort.each { |sub_import_filename|
             sub_import_filename = sub_import_filename.fix_filename
-            replacement += process_sql_file_recursive(sub_import_filename, common_path, data_folder, imported_files, logger) + "\n\n"
+            replacement += process_sql_file_recursive(sub_import_filename, common_path, data_folder, imported_files, separate_files, logger) + "\n\n"
           }
           replacement.chomp!("\n\n")
         else
-          replacement = process_sql_file_recursive(import_filename, common_path, data_folder, imported_files, logger)
+          replacement = process_sql_file_recursive(import_filename, common_path, data_folder, imported_files, separate_files, logger)
         end
       else
         raise "File '#{import_filename}' not found."
