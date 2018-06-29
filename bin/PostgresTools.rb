@@ -1,21 +1,4 @@
 ##
-# Data object for storing SQL source code (parts).
-#
-class SourceCodeItem
-  attr_accessor :code, :source_file
-
-  def initialize
-  end
-
-  def initialize(code, source_file)
-    @code = code
-    @source_file = source_file
-  end
-end
-
-
-
-##
 # Utility class for executing PostgreSQL commands (via the psql commandline).
 #
 class PostgresTools
@@ -120,18 +103,10 @@ class PostgresTools
     execute_postgres_command "#{get_pg_dump()} --format custom --blobs --verbose --file \"#{filename}\" \"#{$database_name}\"", "Error during dump: #{filename}", filename
   end
 
-  # Read a SQL file while processing all its references to common SQL files ({import_common ...}) recursively and processing all the dbdata folder ({data_folder}).
-  # Returns the code as a string.
+  # Run a SQL file while processing all its references to common SQL files ({import_common ...}) and the dbdata folder ({data_folder}).
   def self.process_sql_file(filename, common_path, data_folder = nil)
     data_folder.chomp!('/') unless data_folder.nil? # only for search & replace
     return process_sql_file_recursive(filename, common_path, data_folder, [])
-  end
-
-  # Read a SQL file while processing all its references to common SQL files ({import_common ...}) recursively and processing all the dbdata folder ({data_folder}).
-  # Return the code as a list of SourceCodeItem objects.
-  def self.get_sql_code(filename, common_path, data_folder = nil)
-    data_folder.chomp!('/') unless data_folder.nil? # only for search & replace
-    return get_sql_code_recursive(filename, common_path, data_folder, [])
   end
 
   def self.start_recording(filename)
@@ -229,53 +204,6 @@ class PostgresTools
     }
 
     return contents
-  end
-
-  # Processes a SQL file and returns the new content as SourceCodeItem objects.
-  # Processing means filling in dbdata paths and imports from the common folders.
-  def self.get_sql_code_recursive(filename, common_path, data_folder, imported_files, logger = $logger)
-    if imported_files.include?(filename.strip.downcase) then
-      logger.error 'Recurring or circular {import_common} detected! History:' + (imported_files + [filename.strip.downcase]).join("\n")
-    end
-    imported_files << filename.strip.downcase
-
-
-    source_code_items = []
-    code_left = File.open(filename, 'r') { |f| f.read }
-
-    matches = code_left.match(/\{import_common\s+\'(.*)\'\s*\}/i)
-
-    while (matches) do
-      from = matches.end(0)
-      to = matches.begin(0) - 1
-
-      code = code_left[0..to]
-      code_left = code_left[from..-1]
-
-      source_code_items << SourceCodeItem.new(code, filename)
-
-      import_filename = File.expand_path(common_path + $1).fix_filename
-      import_filename += '.sql' if !File.exist?(import_filename) && File.exist?(import_filename + '.sql')
-      if File.exist?(import_filename) then
-        if File.directory?(import_filename) then # Include an entire directory!
-          import_filename = import_filename.fix_pathname
-          Dir[import_filename + '**/*.sql'].sort.each { |sub_import_filename|
-            sub_import_filename = sub_import_filename.fix_filename
-            source_code_items.concat(get_sql_code_recursive(sub_import_filename, common_path, data_folder, imported_files, logger))
-          }
-        else
-          source_code_items.concat(get_sql_code_recursive(import_filename, common_path, data_folder, imported_files, logger))
-        end
-      else
-        raise "File '#{import_filename}' not found."
-      end
-
-      matches = code_left.match(/\{import_common\s+\'(.*)\'\s*\}/i)
-    end
-
-    source_code_items << SourceCodeItem.new(code_left, filename)
-
-    return source_code_items
   end
 
   # Find {multithread ...} statements and divide the command up into subcommands with all correct variabled filled in.

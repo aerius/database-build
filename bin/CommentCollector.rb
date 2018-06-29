@@ -4,7 +4,6 @@
 class CommentItem
   attr_accessor :identifier, :identifier_noschema, :schema, :arguments, :arguments_nodefault
   attr_accessor :full_comment, :parsed_comment
-  attr_accessor :source_file
   attr_accessor :params, :columns
   attr_accessor :returns, :see, :todo
 
@@ -24,22 +23,15 @@ class CommentCollector
   def self.collect(logger, product_sql_path, common_sql_path)
     comments = {}
 
-    source_code_items = []
-    Dir[product_sql_path + '**/*.sql'].each { |input_sql_filename|
-      source_code_items.concat(PostgresTools.get_sql_code(input_sql_filename, common_sql_path))
-    }
-
-    source_code_items.each { |source_code_item|
+    Dir[product_sql_path + '**/*.sql'].each{ |input_sql_filename|
+      processed_contents = PostgresTools.process_sql_file(input_sql_filename, common_sql_path)
 
       comment = ''
       contents = ''
       in_comment_block = 0
       before_was_a_comment_block = false
 
-      path_replace = Utility.get_common_path(product_sql_path, common_sql_path)
-      source_file = source_code_item.source_file.gsub(path_replace, '')
-
-      source_code_item.code.each_line do |line|
+      processed_contents.each_line do |line|
         line.strip!
         unless line.empty? then
 
@@ -79,7 +71,7 @@ class CommentCollector
               arguments = $3 || ''
 
               unless identifier.nil? || identifier.downcase == comment.downcase then
-                process_comment_block(logger, comments, object, identifier, arguments, comment, source_file)
+                process_comment_block(logger, comments, object, identifier, arguments, comment)
               end
             end
 
@@ -98,13 +90,11 @@ class CommentCollector
 
  private
 
-  def self.process_comment_block(logger, comments, object, identifier, arguments, comment, source_file)
-    comment_item = create_comment_item(object, identifier, arguments, source_file)
+  def self.process_comment_block(logger, comments, object, identifier, arguments, comment)
+    comment_item = create_comment_item(object, identifier, arguments)
 
     comment_lines = split_comment_without_header(logger, comment, identifier)
-    comment_lines = fix_wrapping(comment_lines)
-    comment_lines = comment_lines + "\n\n" + "Source: " + source_file
-    comment_item.full_comment = comment_lines
+    comment_item.full_comment = fix_wrapping(comment_lines)
 
     unless comment_item.full_comment.empty? then
       parse_comment_tags(logger, comment_item)
@@ -151,7 +141,7 @@ class CommentCollector
     return full_comment.strip
   end
 
-  def self.create_comment_item(object, identifier, arguments, source_file)
+  def self.create_comment_item(object, identifier, arguments)
     comment_item = CommentItem.new
     comment_item.identifier = identifier
     comment_item.identifier_noschema = identifier.include?('.') ? identifier.split('.')[1] : identifier
@@ -159,7 +149,6 @@ class CommentCollector
     comment_item.schema = identifier if object == 'SCHEMA'
     comment_item.arguments = arguments
     comment_item.arguments_nodefault = arguments.gsub(/\s*=\s*((E?'\S*')|(\w+))\s*/i, '') # strip default values of optional parameters
-    comment_item.source_file = source_file
     return comment_item
   end
 
