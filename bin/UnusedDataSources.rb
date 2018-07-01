@@ -29,20 +29,20 @@ $logger.open($log_path, 'unused_datasources')
 # Collect datasources
 # Walk through all load sql files in the data folder and find the datasource txt filenames.
 # parse_path is the path to database\src\data\sql\
-$logger.publish "Collecting datasources..."
+$logger.writeln "Collecting datasources..."
 
 datasources = {}
 parse_path = File.expand_path($product_data_path + '../').fix_pathname
-$logger.publish "Looking in #{parse_path}..."
+$logger.writeln "Looking in #{parse_path}..."
 Dir[parse_path.fix_pathname + '*/load.rb'].each{ |load_rb_entry|
   product_datasources = DataSourceCollector.collect($logger, File.dirname(load_rb_entry), $common_data_path, $dbdata_path)
   datasources.merge!(product_datasources)
-  $logger.publish "#{load_rb_entry} (#{product_datasources.size} datasources found)"
+  $logger.writeln "#{load_rb_entry} (#{product_datasources.size} datasources found)"
 }
 $datasources = datasources.keys.sort
 
 # Collect unused files
-$logger.publish "Scanning '#{$dbdata_path}'..."
+$logger.writeln "Scanning '#{$dbdata_path}'..."
 unused = []
 unused_total_size = 0
 Dir[$dbdata_path + '/**/*'].each { |filename|
@@ -57,7 +57,7 @@ Dir[$dbdata_path + '/**/*'].each { |filename|
   end
 }
 
-$logger.publish "#{unused.size} unused files found (#{Utility.format_filesize(unused_total_size)})."
+$logger.writeln "#{unused.size} unused files found (#{Utility.format_filesize(unused_total_size)})."
 
 unless unused.empty? then
   output_file = $output_path + 'delete_unused_datasources.bat'
@@ -69,6 +69,6 @@ unless unused.empty? then
     }
   }
 
-  $logger.publish "Batch file to delete them written to: #{output_file}"
-  $logger.publish "ENSURE THAT THE PRODUCT LIST ABOVE IS COMPLETE BEFORE RUNNING THIS -- OTHERWISE TOO MUCH DATASOURCES ARE LISTED HERE"
+  $logger.writeln "Batch file to delete them written to: #{output_file}"
+  $logger.writeln "ENSURE THAT THE PRODUCT LIST ABOVE IS COMPLETE BEFORE RUNNING THIS -- OTHERWISE TOO MUCH DATASOURCES ARE LISTED HERE"
 end

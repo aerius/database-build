@@ -17,7 +17,7 @@ class BuildLogger
     @commandlog_filename = log_path + "#{prefix}commands#{suffix}.log"
     @log_file = File.open(@log_filename, 'a')
     @log_file.puts '', '', '', '=' * 100, "Log opened @ #{Time.now.strftime('%d-%m-%Y %H:%M:%S')}", '=' * 100
-    publish "Logging path: #{log_path}"
+    writeln "Logging file: #{@log_filename}"
   end
 
   def close
@@ -33,16 +33,22 @@ class BuildLogger
     @log_file.puts "[#{Time.now.strftime('%d-%m-%Y %H:%M:%S')}] #{str}" unless @log_file.nil?
   end
 
-  # Write to screen and log to file.
-  def publish(str, max_strlength = -1)
+  # Write to screen and log to file, no newline on screen.
+  def write(str)
     log(str)
-    puts cut_string_start(str, max_strlength)
+    print str
+  end
+
+  # Write to screen and log to file, with newline.
+  def writeln(str)
+    log(str)
+    puts str
   end
 
   # Write to screen and log to file; takes a block for which the run duration will be measured, writes this time to the
   # screen (on the same line) when done. The logfile already contains timestamps so nothing different is done there.
   # In case of an error, no timing is printed, only a newline.
-  def publish_with_timing(str, max_strlength = -1)
+  def writeln_with_timing(str, max_strlength = -1)
     log(str)
     print cut_string_start(str, max_strlength)
     begin
@@ -67,6 +73,10 @@ class BuildLogger
     raise 'SQL error'
   end
 
+  def warn(str)
+    writeln('WARNING: ' + str)
+  end
+
   def hint_level=(level)
     if [HINT_LEVEL_OFF, HINT_LEVEL_MAJOR, HINT_LEVEL_ALL].include?(level.to_i) then
       @hint_level = level.to_i
@@ -76,17 +86,13 @@ class BuildLogger
   end
 
   def major_hint(str)
-    if @hint_level >= HINT_LEVEL_MAJOR then
       log('HINT: ' + str)
-      puts 'HINT: ' + str
-    end
+    puts 'HINT: ' + str if @hint_level >= HINT_LEVEL_MAJOR
   end
 
   def minor_hint(str)
-    if @hint_level >= HINT_LEVEL_ALL then
       log('HINT: ' + str)
-      puts 'HINT: ' + str
-    end
+    puts 'HINT: ' + str if @hint_level >= HINT_LEVEL_ALL
   end
 
   def clear

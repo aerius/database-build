@@ -34,7 +34,7 @@ class PostgresTools
         # There's a simple thread pool of $max_threads going on here.
         Thread.abort_on_exception = true
         threads = []
-        $logger.publish "Running threads for: #{command_block.keys.join('; ')}..."
+        $logger.writeln "Running threads for: #{command_block.keys.join('; ')}..."
         work_queue = Queue.new
         command_block.each { |command_block_entry| # Put all work in the queue
           work_queue.push(command_block_entry)
@@ -62,7 +62,7 @@ class PostgresTools
         threads.each { |t| t.join } # Wait for all threads to complete
       else
         # Command that is to be executed standalone (no {multithread} section)
-        $logger.publish "Running main thread..." if commands.size > 1
+        $logger.writeln "Running main thread..." if commands.size > 1
         execute_sql_command(command_block, original_filename)
       end
     }
