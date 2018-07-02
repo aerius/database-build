@@ -1,6 +1,6 @@
 require 'cgi'
-require 'set'
 require 'digest/sha2'
+begin; require 'set'; rescue LoadError; require 'Set'; end;
 
 ##
 # Creates a HTML document to go along with a database build (release/dump).

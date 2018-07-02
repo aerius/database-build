@@ -12,7 +12,6 @@ class PostgresTools
     filename = $product_temp_path + 'execute_external_sql_command.tmp'
     File.open(filename, 'w') { |f| f.write(command) }
     execute_postgres_command "#{get_psql()} --dbname \"postgres\" --file \"#{filename}\" --echo-all", "Error executing SQL external command: #{command}"
-    record(command)
     # External commands aren't executed from inside a database; however it seems that if you do not specify a dbname, PostgreSQL will make something up.
     # It will use the username as database name and complain if that doesn't exist. So we force "postgres" as dbname because this default database always exists.
   end
@@ -84,8 +83,7 @@ class PostgresTools
           record = {}
         else
           columnname, value = line.split('|')
-          value = '' if value.nil?
-          record[columnname.strip] = value.strip
+          record[columnname.strip] = value.nil? ? nil : value.strip
         end
       end
     }

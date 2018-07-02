@@ -2,7 +2,6 @@ require 'PostgresTools.rb'
 require 'CommentCollector.rb'
 require 'CommentMerger.rb'
 require 'DataSourceCollector.rb'
-require 'FTPUploader.rb'
 
 ##
 # Here are the implementations of all the methods that can be called from the user script.
@@ -99,6 +98,7 @@ class ScriptCommands
     $logger.writeln "Creating database #{$database_name}..."
     with = "TEMPLATE \"#{$database_template}\""
     with += " TABLESPACE \"#{$database_tablespace}\"" unless $database_tablespace.empty?
+    with += " LC_COLLATE '#{$database_collation}' LC_CTYPE '#{$database_collation}'" unless $database_collation.empty?
     PostgresTools.execute_external_sql_command("CREATE DATABASE \"#{$database_name}\" WITH #{with}")
 
     if update_database_comment then
@@ -150,6 +150,7 @@ class ScriptCommands
       filename += '.sql' if !File.exist?(filename) && File.exist?(filename + '.sql')
     end
     raise "File '#{sqlfilename}' not found." unless File.exist?(filename)
+
     $logger.writeln_with_timing("Running SQL file '#{filename}'...") {
       if params == [:sql_as_is] then
         PostgresTools.execute_sql_file(filename)
@@ -237,7 +238,8 @@ class ScriptCommands
   def ensure_comments_collected
     if !$comments_collected then
       $logger.writeln "Scanning for comments in '#{$product_sql_path}'..."
-      $comments = CommentCollector.collect($logger, $product_sql_path, $common_sql_path)
+      root_path = File.expand_path(File.dirname($project_settings_file) + '/../../').fix_pathname
+      $comments = CommentCollector.collect($logger, $product_sql_path, $common_sql_path, root_path)
       $comments_collected = true
     end
   end

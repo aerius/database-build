@@ -157,4 +157,5 @@ class Utility
   def self.is_ruby_version_below(version_str)
     return ((RUBY_VERSION.split('.').map{ |v| v.to_i }) <=> (version_str.split('.').map{ |v| v.to_i })) < 0
   end
+
 end

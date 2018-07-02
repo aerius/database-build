@@ -1,5 +1,5 @@
 ##
-# CommentItem data object
+# Representation of a parsed comment for a database object
 #
 class CommentItem
   attr_accessor :identifier_noschema, :schema, :arguments, :arguments_nodefault
@@ -28,11 +28,10 @@ end
 class CommentCollector
 
   # Walk through source files and collect all comments for database objects.
-  def self.collect(logger, product_sql_path, common_sql_path)
+  def self.collect(logger, scanned_sql_path, common_sql_path, root_path)
     comments = {}
-    root_path = File.expand_path(File.dirname($project_settings_file) + '/../../').fix_pathname
 
-    Dir[product_sql_path + '**/*.sql'].each{ |input_sql_filename|
+    Dir[scanned_sql_path + '**/*.sql'].each{ |input_sql_filename|
       processed_files = PostgresTools.process_sql_file_and_return_separate_files(input_sql_filename, common_sql_path)
 
       comment = ''

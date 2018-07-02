@@ -82,6 +82,7 @@ opts.each do |option, argument|
     when '--dump-filename'; $dump_filetitle = argument
     when '--flags'; argument.split(',').each{ |flag| $build_flags << flag.strip.downcase.to_sym }
     when '--hints'; $hint_level = argument.to_i
+    when '--help'; display_help
   end
 end
 
