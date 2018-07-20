@@ -211,9 +211,9 @@ class CommentCollector
         elsif current_keyword == '@return' || current_keyword == '@returns' then
           comment_item.returns = ['', fixed_comment]
         elsif current_keyword == '@see' then
-          comment_item.see = fixed_comment
+          comment_item.see = comment_item.see.nil? ? fixed_comment : [*comment_item.see] + [fixed_comment]
         elsif current_keyword == '@todo' || current_keyword == '@todo:' then
-          comment_item.todo = fixed_comment
+          comment_item.todo = comment_item.todo.nil? ? fixed_comment : [*comment_item.todo] + [fixed_comment]
         end
         current_keyword = nil
         keyword_comment_lines = []

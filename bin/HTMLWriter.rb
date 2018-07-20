@@ -140,7 +140,9 @@ function toggleTree(blockElement) {
           html << escape_and_br(comment_item.parsed_comment)
 
           unless comment_item.todo.nil? then
-            html << "<div class=\"todo\"><span class=\"todo-badge\">TODO</span>#{escape_and_br(comment_item.todo)}</div>"
+            [*comment_item.todo].each{ |comment_item_todo_entry|
+              html << "<div class=\"todo\"><span class=\"todo-badge\">TODO</span>#{escape_and_br(comment_item_todo_entry)}</div>"
+            }
           end
 
           unless comment_item.columns.empty? then
@@ -173,13 +175,17 @@ function toggleTree(blockElement) {
 
           unless comment_item.see.nil? then
             html << "<div class=\"note\">See also:</div><div class=\"seealso\">"
-            see_object, see_comment_item = find_item(comments, comment_item.see)
-            if see_comment_item.nil? then
-              html << escape_and_br(comment_item.see)
-            else
-              see_anchor_name = get_anchor_name(see_object, see_comment_item)
-              html << "<a href=\"##{see_anchor_name}\">#{CGI.escapeHTML(see_comment_item.identifier + see_comment_item.arguments_nodefault)}</a>"
-            end
+            comment_item_see_entries = [*comment_item.see]
+            comment_item_see_entries.each_index{ |idx|
+              html << ", " if idx > 0
+              see_object, see_comment_item = find_item(comments, comment_item_see_entries[idx])
+              if see_comment_item.nil? then
+                html << escape_and_br(comment_item_see_entries[idx])
+              else
+                see_anchor_name = get_anchor_name(see_object, see_comment_item)
+                html << "<a href=\"##{see_anchor_name}\">#{CGI.escapeHTML(see_comment_item.identifier + see_comment_item.arguments_nodefault)}</a>"
+              end
+            }
             html << "</div>"
           end
 

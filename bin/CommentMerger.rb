@@ -12,11 +12,20 @@ class CommentMerger
     struct_comments.each{ |object, struct_comment_items|
       merged_comments[object] = {} unless merged_comments.has_key?(object)
       struct_comment_items.each{ |key, struct_comment_item|
-        if !merged_comments[object].has_key?(key) then
+
+        merged_comment_item = nil
+        if merged_comments[object].has_key?(key) then
+          merged_comment_item = merged_comments[object][key]
+        elsif object == 'FUNCTION' || object == 'AGGREGATE' then
+          # try again without parameter definition (only accept when there is only 1 match)
+          function_without_args = key.match(/^(.*)\(.*\)$/)[1].strip
+          matched_comment_item_keys = merged_comments[object].keys.select{ |functiondef| function_without_args == functiondef.match(/^(.*)\(.*\)$/)[1].strip }
+          merged_comment_item = merged_comments[object][matched_comment_item_keys[0]] if matched_comment_item_keys.length == 1
+        end
+
+        if merged_comment_item.nil? then
           merged_comments[object][key] = struct_comment_item
         else
-          merged_comment_item = merged_comments[object][key]
-
           if merged_comment_item.columns.nil? || merged_comment_item.columns.empty? then
             merged_comment_item.columns = struct_comment_item.columns
           else
