@@ -18,8 +18,11 @@ class CommentMerger
           merged_comment_item = merged_comments[object][key]
         elsif object == 'FUNCTION' || object == 'AGGREGATE' then
           # try again without parameter definition (only accept when there is only 1 match)
-          function_without_args = key.match(/^(.*)\(.*\)$/)[1].strip
-          matched_comment_item_keys = merged_comments[object].keys.select{ |functiondef| function_without_args == functiondef.match(/^(.*)\(.*\)$/)[1].strip }
+          function_without_args = key.match(/^([^\(]+)/)[1].strip
+          matched_comment_item_keys = merged_comments[object].keys.select{ |functiondef| function_without_args == functiondef.match(/^([^\(]+)/)[1].strip[0..62] }
+          merged_comment_item = merged_comments[object][matched_comment_item_keys[0]] if matched_comment_item_keys.length == 1
+        else
+          matched_comment_item_keys = merged_comments[object].keys.select{ |objectdef| key == objectdef[0..62] }
           merged_comment_item = merged_comments[object][matched_comment_item_keys[0]] if matched_comment_item_keys.length == 1
         end
 
