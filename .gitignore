@@ -1,0 +1,2 @@
+# Ignore custom shell scripts used for building Docker images
+docker/**/*.sh
