@@ -30,5 +30,3 @@ RUN apk update && apk upgrade \
     && rm -rf aerius-database-build/.git \
     && apk del .git-deps
 
-CMD ["/bin/bash"]
-
