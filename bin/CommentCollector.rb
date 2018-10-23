@@ -39,8 +39,8 @@ class CommentCollector
       in_comment_block = 0
       before_was_a_comment_block = false
 
-      processed_files.each{ |processed_sql_filename, lines|
-        lines.each_line do |line|
+      processed_files.each{ |processed_sql_file|
+        processed_sql_file.contents.each_line do |line|
           line.strip!
           unless line.empty? then
 
@@ -80,8 +80,8 @@ class CommentCollector
                 arguments = $3 || ''
 
                 unless identifier.nil? || identifier.downcase == comment.downcase then
-                  file = Pathname.new(processed_sql_filename).relative_path_from(Pathname.new(root_path)).to_s
-                  process_comment_block(logger, comments, object, identifier, arguments, comment, file)
+                  file = Pathname.new(processed_sql_file.filename).relative_path_from(Pathname.new(root_path)).to_s
+                  process_comment_block(logger, comments, object, identifier, arguments, comment, file, processed_sql_file.default_schema)
                 end
               end
 
@@ -101,9 +101,11 @@ class CommentCollector
 
  private
 
-  def self.process_comment_block(logger, comments, object, identifier, arguments, comment, file)
+  def self.process_comment_block(logger, comments, object, identifier, arguments, comment, file, default_schema = nil)
     comment_item = create_comment_item(object, identifier, arguments)
     comment_item.file = file
+
+    comment_item.schema = default_schema if !default_schema.nil? && comment_item.schema == '' && object != 'SCHEMA'
 
     comment_lines = split_comment_without_header(logger, comment, identifier)
     comment_item.full_comment = fix_wrapping(comment_lines)
