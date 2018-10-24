@@ -212,7 +212,7 @@ class PostgresTools
     # Special import statement with overridden default schema
     contents.gsub!(/\{import_common_into_schema\s+\'(.*)\'\s*\,\s*\'(.*)\'\s*\}/i) {
       # Replacement value for gsub block:
-      "SET search_path TO \"#{$2}\";\n\n" +
+      "SET search_path TO \"#{$2}\", public;\n\n" +
         get_import_common_contents($1, common_path, data_folder, imported_files, separate_files, $2, logger) +
         "\n\nRESET search_path;"
     }
