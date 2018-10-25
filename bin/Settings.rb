@@ -30,6 +30,7 @@ end
 
 $database_template = 'template0'
 $database_tablespace = ''
+$database_collation = '' # Can override in ..\AppSettings.rb in case you need to force it, otherwise it is taken from the template
 
 #$database_name_prefix = '...' # Override in ..\AppSettings.rb
 #$db_function_prefix = '...' # Override in ..\AppSettings.rb

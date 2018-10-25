@@ -82,6 +82,7 @@ opts.each do |option, argument|
     when '--dump-filename'; $dump_filetitle = argument
     when '--flags'; argument.split(',').each{ |flag| $build_flags << flag.strip.downcase.to_sym }
     when '--hints'; $hint_level = argument.to_i
+    when '--help'; display_help
   end
 end
 
@@ -90,25 +91,25 @@ $logger.major_hint "You are running a very old depecrated Ruby version (#{RUBY_V
 
 # ------------------------------------
 
-$logger.publish "Building product: #{$product.to_s}"
-$logger.publish 'Build flags: ' + ($build_flags.empty? ? '<none>' : $build_flags.sort.join(', '))
-$logger.publish "Runscript: #{$runscript_file}"
-$logger.publish "Product settings file: #{$product_settings_file}"
-$logger.publish "User product settings file: #{$user_product_settings_file}" unless $user_product_settings_file.nil?
-$logger.publish "Project settings file: #{$project_settings_file}"
-$logger.publish "User project settings file: #{$user_project_settings_file}" unless $user_project_settings_file.nil?
-$logger.publish "Output path: #{$product_output_path}"
+$logger.writeln "Building product: #{$product.to_s}"
+$logger.writeln 'Build flags: ' + ($build_flags.empty? ? '<none>' : $build_flags.sort.join(', '))
+$logger.writeln "Runscript: #{$runscript_file}"
+$logger.writeln "Product settings file: #{$product_settings_file}"
+$logger.writeln "User product settings file: #{$user_product_settings_file}" unless $user_product_settings_file.nil?
+$logger.writeln "Project settings file: #{$project_settings_file}"
+$logger.writeln "User project settings file: #{$user_project_settings_file}" unless $user_project_settings_file.nil?
+$logger.writeln "Output path: #{$product_output_path}"
 
 # Let's go!
 begin
   starttime = Time.now
-  $logger.publish ''
-  $logger.publish "Build started at #{Time.now.strftime('%d-%m-%Y %H:%M:%S')}"
-  $logger.publish ''
+  $logger.writeln ''
+  $logger.writeln "Build started at #{Time.now.strftime('%d-%m-%Y %H:%M:%S')}"
+  $logger.writeln ''
 
   # Clean up/prepare folders
   if File.exist?($product_temp_path) && File.directory?($product_temp_path) then # possible previous run
-    $logger.publish "Deleting '#{$product_temp_path}'..."
+    $logger.writeln "Deleting '#{$product_temp_path}'..."
     FileUtils.rm_r($product_temp_path)
     $logger.error "Deleting '#{$product_temp_path}' FAILED!" if File.exist?($product_temp_path)
   end
@@ -127,18 +128,18 @@ begin
 
   # Cleaning up
   if File.exist?($product_temp_path) then
-    $logger.publish "Deleting #{$product_temp_path}..."
+    $logger.writeln "Deleting #{$product_temp_path}..."
     FileUtils.rm_r($product_temp_path)
-    $logger.publish "(Deleting '#{$product_temp_path}' FAILED!)" if File.exist?($product_temp_path)
+    $logger.writeln "(Deleting '#{$product_temp_path}' FAILED!)" if File.exist?($product_temp_path)
   end
 
-  $logger.publish ''
-  $logger.publish "Build completed at #{Time.now.strftime('%d-%m-%Y %H:%M:%S')} (#{Utility.format_duration(Time.now - starttime)})"
+  $logger.writeln ''
+  $logger.writeln "Build completed at #{Time.now.strftime('%d-%m-%Y %H:%M:%S')} (#{Utility.format_duration(Time.now - starttime)})"
 
 rescue Exception => e
   $logger.log e
-  $logger.publish ''
-  $logger.publish "Build failed at #{Time.now.strftime('%d-%m-%Y %H:%M:%S')} (#{Utility.format_duration(Time.now - starttime)})"
+  $logger.writeln ''
+  $logger.writeln "Build failed at #{Time.now.strftime('%d-%m-%Y %H:%M:%S')} (#{Utility.format_duration(Time.now - starttime)})"
   $logger.close
 
   raise

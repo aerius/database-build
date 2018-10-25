@@ -26,12 +26,12 @@ $logger.open($product_log_path, 'missing_org')
 # Copies these files to your local db-data folder.
 
 # Collect datasources
-$logger.publish "Collecting datasources..."
+$logger.writeln "Collecting datasources..."
 $datasources = DataSourceCollector.collect($logger, $product_data_path, $common_data_path, nil).keys.sort
 
 # FTP connect
 $ftp_org_path = $sftp_data_path.fix_pathname + $org_dir.fix_pathname
-$logger.publish "Connecting to SFTP (#{$ftp_org_path})..."
+$logger.writeln "Connecting to SFTP (#{$ftp_org_path})..."
 
 require 'SFTPUploader.rb'
 
@@ -46,10 +46,10 @@ end
 $fs = SFTPUploader.new($logger)
 
 # Collect FTP files
-$logger.publish "Scanning SFTP for .txt files..."
+$logger.writeln "Scanning SFTP for .txt files..."
 $fs.connect sftp_data_host, sftp_data_port, $sftp_data_readonly_username, $sftp_data_readonly_password, sftp_data_remote_path
 remote_txt_files = $fs.get_filenames($fs.getdir, '**/*.txt')
-$logger.publish "#{remote_txt_files.size} files found."
+$logger.writeln "#{remote_txt_files.size} files found."
 
 # Map it
 $datasource_map = {}
@@ -59,14 +59,14 @@ remote_txt_files.each { |txt_file|
 }
 
 # List results
-$logger.publish "\nThese files could be found in org:"
+$logger.writeln "\nThese files could be found in org:"
 $datasources.each { |datasource|
   datasource_filename = File.basename(datasource).downcase
-  $logger.publish $datasource_map[datasource_filename] if $datasource_map.has_key?(datasource_filename)
+  $logger.writeln $datasource_map[datasource_filename] if $datasource_map.has_key?(datasource_filename)
 }
 
-$logger.publish "\nThe following files are NOT found in org:"
+$logger.writeln "\nThe following files are NOT found in org:"
 $datasources.each { |datasource|
   datasource_filename = File.basename(datasource).downcase
-  $logger.publish datasource unless $datasource_map.has_key?(datasource_filename)
+  $logger.writeln datasource unless $datasource_map.has_key?(datasource_filename)
 }

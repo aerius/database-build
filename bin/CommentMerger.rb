@@ -12,11 +12,23 @@ class CommentMerger
     struct_comments.each{ |object, struct_comment_items|
       merged_comments[object] = {} unless merged_comments.has_key?(object)
       struct_comment_items.each{ |key, struct_comment_item|
-        if !merged_comments[object].has_key?(key) then
+
+        merged_comment_item = nil
+        if merged_comments[object].has_key?(key) then
+          merged_comment_item = merged_comments[object][key]
+        elsif object == 'FUNCTION' || object == 'AGGREGATE' then
+          # try again without parameter definition (only accept when there is only 1 match)
+          function_without_args = key.match(/^([^\(]+)/)[1].strip
+          matched_comment_item_keys = merged_comments[object].keys.select{ |functiondef| function_without_args == functiondef.match(/^([^\(]+)/)[1].strip[0..62] }
+          merged_comment_item = merged_comments[object][matched_comment_item_keys[0]] if matched_comment_item_keys.length == 1
+        else
+          matched_comment_item_keys = merged_comments[object].keys.select{ |objectdef| key == objectdef[0..62] }
+          merged_comment_item = merged_comments[object][matched_comment_item_keys[0]] if matched_comment_item_keys.length == 1
+        end
+
+        if merged_comment_item.nil? then
           merged_comments[object][key] = struct_comment_item
         else
-          merged_comment_item = merged_comments[object][key]
-
           if merged_comment_item.columns.nil? || merged_comment_item.columns.empty? then
             merged_comment_item.columns = struct_comment_item.columns
           else
@@ -82,7 +94,6 @@ class CommentMerger
     PostgresTools.fetch_sql_command(sql, '', logger).each{ |record|
       object = 'SCHEMA'
       comment_item = create_empty_comment_item()
-      comment_item.identifier = record['schema']
       comment_item.identifier_noschema = record['schema']
       comment_item.schema = record['schema']
       comment_item.schema = '' if comment_item.schema == 'public'
@@ -118,7 +129,6 @@ class CommentMerger
         else next
       end
       comment_item = create_empty_comment_item()
-      comment_item.identifier = record['identifier']
       comment_item.identifier_noschema = record['identifier_noschema']
       comment_item.schema = record['schema']
       comment_item.schema = '' if comment_item.schema == 'public'
@@ -157,16 +167,15 @@ class CommentMerger
         else next
       end
       comment_item = create_empty_comment_item()
-      comment_item.identifier = record['identifier']
       comment_item.identifier_noschema = record['identifier_noschema']
       comment_item.schema = record['schema']
       comment_item.schema = '' if comment_item.schema == 'public'
       comment_item.arguments = record['arguments']
       comment_item.arguments_nodefault = record['arguments_nodefault']
       comment_item.returns = [record['returns'], '']
-      paramtypes = record['paramtypes'].split(',')
-      parammodes = record['parammodes'].split(',')
-      paramnames = record['paramnames'].split(',')
+      paramtypes = record['paramtypes'].nil? ? [] : record['paramtypes'].split(',')
+      parammodes = record['parammodes'].nil? ? [] : record['parammodes'].split(',')
+      paramnames = record['paramnames'].nil? ? [] : record['paramnames'].split(',')
       if !paramtypes.empty? then
         paramnames = [''] * paramtypes.size if paramnames.empty?  # may be empty if no names given
         paramnames.each_index {|idx|  # fill in any missing names
@@ -208,7 +217,6 @@ class CommentMerger
         else 'TYPE'
       end
       comment_item = create_empty_comment_item()
-      comment_item.identifier = record['identifier']
       comment_item.identifier_noschema = record['identifier_noschema']
       comment_item.schema = record['schema']
       comment_item.schema = '' if comment_item.schema == 'public'
@@ -221,7 +229,6 @@ class CommentMerger
 
   def self.create_empty_comment_item()
     comment_item = CommentItem.new
-    comment_item.identifier = ''
     comment_item.identifier_noschema = ''
     comment_item.schema = ''
     comment_item.arguments = ''

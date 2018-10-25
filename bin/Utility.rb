@@ -158,16 +158,4 @@ class Utility
     return ((RUBY_VERSION.split('.').map{ |v| v.to_i }) <=> (version_str.split('.').map{ |v| v.to_i })) < 0
   end
 
-  # Returns the common part of the two paths
-  # Make sure the pathname is fixed.
-  def self.get_common_path(p1, p2)
-      a1 = p1.split('/')
-      a2 = p2.split('/')
-      ac = []
-      a1.length.times { |i|
-        break unless a1[i] == a2[i] && i < a1.length
-        ac << a1[i]
-      }
-      return ac.join('/')
-  end
 end

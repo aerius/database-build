@@ -132,19 +132,19 @@ def parse_commandline
   display_info if $opts.has_key?('--info')
 
   if $source == :ftp then
-    $logger.publish "Syncing from FTP (#{$from_ftp})"
+    $logger.writeln "Syncing from FTP (#{$from_ftp})"
   elsif $source == :sftp then
-    $logger.publish "Syncing from SFTP (#{$from_sftp})"
+    $logger.writeln "Syncing from SFTP (#{$from_sftp})"
   elsif $source == :local then
-    $logger.publish "Syncing from local (#{$from_local})"
+    $logger.writeln "Syncing from local (#{$from_local})"
   end
 
   if $target == :ftp then
-    $logger.publish "Syncing to FTP (#{$to_ftp}):"
+    $logger.writeln "Syncing to FTP (#{$to_ftp}):"
   elsif $target == :sftp then
-    $logger.publish "Syncing to SFTP (#{$to_sftp}):"
+    $logger.writeln "Syncing to SFTP (#{$to_sftp}):"
   elsif $target == :local then
-    $logger.publish "Syncing to local (#{$to_local}):"
+    $logger.writeln "Syncing to local (#{$to_local}):"
   end
 
   if ($source == :ftp || $source == :sftp) && ($target == :ftp || $target == :sftp) then
@@ -334,7 +334,7 @@ def sync
         end
       else
         if $continue then
-          $logger.publish "File not found: #{copy_from}" unless is_infofile
+          $logger.writeln "File not found: #{copy_from}" unless is_infofile
         else
           $logger.error "File not found: #{copy_from}" unless is_infofile
         end

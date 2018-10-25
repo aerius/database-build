@@ -2,7 +2,6 @@ require 'PostgresTools.rb'
 require 'CommentCollector.rb'
 require 'CommentMerger.rb'
 require 'DataSourceCollector.rb'
-require 'FTPUploader.rb'
 
 ##
 # Here are the implementations of all the methods that can be called from the user script.
@@ -23,7 +22,7 @@ class ScriptCommands
     database_name = database_name.gsub('#', Utility.get_svn_head_revision) if database_name.include?('#') && $vcs == :svn
     database_name = database_name.gsub('#', Utility.get_git_hash) if database_name.include?('#') && $vcs == :git
     $database_name = database_name
-    $logger.publish "Database name = #{$database_name}"
+    $logger.writeln "Database name = #{$database_name}"
   end
 
   def ensure_database_name
@@ -44,7 +43,7 @@ class ScriptCommands
     version = version.gsub('#', Utility.get_svn_head_revision) if version.include?('#') && $vcs == :svn
     version = version.gsub('#', Utility.get_git_hash) if version.include?('#') && $vcs == :git
     $version = version
-    $logger.publish "Version = #{$version}"
+    $logger.writeln "Version = #{$version}"
     set_database_name($database_name_prefix + '-' + $product.to_s + '-' + $version) if $database_name.nil?
   end
 
@@ -66,7 +65,7 @@ class ScriptCommands
   def set_dbdata_path(dbdata_path)
     $dbdata_path = File.expand_path(dbdata_path.to_s).fix_pathname
     raise "Cannot find table data file path: #{$dbdata_path}" unless File.exist?($dbdata_path) && File.directory?($dbdata_path)
-    $logger.publish "Table data file path = #{$dbdata_path}"
+    $logger.writeln "Table data file path = #{$dbdata_path}"
   end
 
   def drop_database_if_exists(*params)
@@ -79,7 +78,7 @@ class ScriptCommands
     }
 
     ensure_database_name
-    $logger.publish "Dropping database #{$database_name} if it exists..."
+    $logger.writeln "Dropping database #{$database_name} if it exists..."
     PostgresTools.execute_external_sql_command("DROP DATABASE IF EXISTS \"#{$database_name}\"")
   end
 
@@ -96,9 +95,10 @@ class ScriptCommands
     }
 
     ensure_database_name
-    $logger.publish "Creating database #{$database_name}..."
+    $logger.writeln "Creating database #{$database_name}..."
     with = "TEMPLATE \"#{$database_template}\""
     with += " TABLESPACE \"#{$database_tablespace}\"" unless $database_tablespace.empty?
+    with += " LC_COLLATE '#{$database_collation}' LC_CTYPE '#{$database_collation}'" unless $database_collation.empty?
     PostgresTools.execute_external_sql_command("CREATE DATABASE \"#{$database_name}\" WITH #{with}")
 
     if update_database_comment then
@@ -117,7 +117,7 @@ class ScriptCommands
   def import_database_structure(*params)
     ensure_database_name
 
-    $logger.publish_with_timing("Importing all SQL from '#{$product_sql_path}'...") {
+    $logger.writeln_with_timing("Importing all SQL from '#{$product_sql_path}'...") {
 
       as_is = false
       if params == [:sql_as_is] then
@@ -150,7 +150,8 @@ class ScriptCommands
       filename += '.sql' if !File.exist?(filename) && File.exist?(filename + '.sql')
     end
     raise "File '#{sqlfilename}' not found." unless File.exist?(filename)
-    $logger.publish_with_timing("Running SQL file '#{filename}'...") {
+
+    $logger.writeln_with_timing("Running SQL file '#{filename}'...") {
       if params == [:sql_as_is] then
         PostgresTools.execute_sql_file(filename)
       elsif !params.empty? then
@@ -167,7 +168,7 @@ class ScriptCommands
     foldername = File.expand_path($product_data_path + sqlfoldername).fix_pathname
     raise "Folder '#{foldername}' not found." unless File.exist?(foldername) && File.directory?(foldername)
     raise "Folder '#{foldername}' is not located in the product folder." if foldername[0, $product_data_path.length] != $product_data_path
-    $logger.publish "Running SQL folder '#{foldername}'..."
+    $logger.writeln "Running SQL folder '#{foldername}'..."
     Dir[foldername + '**/*.sql'].sort.each { |sql_filename|
       sql_filename = sql_filename[$product_data_path.length..sql_filename.length]
       run_sql(sql_filename)
@@ -176,7 +177,7 @@ class ScriptCommands
 
   def check_datasources
     ensure_datasourcesinfo_collected
-    $logger.publish "Verifying presence of data sources..."
+    $logger.writeln "Verifying presence of data sources..."
     $datasources.keys.each{ |datasource|
       raise "Data source not found: #{datasource}" unless File.exist?(datasource)
     }
@@ -190,14 +191,14 @@ class ScriptCommands
   end
 
   def execute_sql(statement)
-    $logger.publish_with_timing("Running SQL command '#{statement}'...", 100) {
+    $logger.writeln_with_timing("Running SQL command '#{statement}'...", 100) {
       ensure_database_name
       PostgresTools.execute_sql_command(statement)
     }
   end
 
   def execute_ext_sql(statement)
-    $logger.publish_with_timing("Running external SQL command '#{statement}'...", 100) {
+    $logger.writeln_with_timing("Running external SQL command '#{statement}'...", 100) {
       ensure_database_name
       PostgresTools.execute_external_sql_command(statement)
     }
@@ -205,7 +206,7 @@ class ScriptCommands
 
   def reindex_database
     ensure_database_name
-    $logger.publish_with_timing("Re-indexing database #{$database_name}...") {
+    $logger.writeln_with_timing("Re-indexing database #{$database_name}...") {
       PostgresTools.execute_sql_command("REINDEX DATABASE \"#{$database_name}\"")
     }
   end
@@ -222,22 +223,23 @@ class ScriptCommands
     else
       raise "You need to specify at least :vacuum or :analyze as parameters to analyze_vacuum_database()"
     end
-    $logger.publish_with_timing("Vacuuming/analyzing database #{$database_name}...") {
+    $logger.writeln_with_timing("Vacuuming/analyzing database #{$database_name}...") {
       PostgresTools.execute_sql_command(cmd)
     }
   end
 
   def synchronize_serials
     ensure_database_name
-    $logger.publish "Synchronizing all serials..."
+    $logger.writeln "Synchronizing all serials..."
     PostgresTools.execute_sql_command("SELECT setup.#{$db_function_prefix}_synchronize_all_serials()");
   end
   alias_method :synchronise_serials, :synchronize_serials
 
   def ensure_comments_collected
     if !$comments_collected then
-      $logger.publish "Scanning for comments in '#{$product_sql_path}'..."
-      $comments = CommentCollector.collect($logger, $product_sql_path, $common_sql_path)
+      $logger.writeln "Scanning for comments in '#{$product_sql_path}'..."
+      root_path = File.expand_path(File.dirname($project_settings_file) + '/../../').fix_pathname
+      $comments = CommentCollector.collect($logger, $product_sql_path, $common_sql_path, root_path)
       $comments_collected = true
     end
   end
@@ -245,7 +247,7 @@ class ScriptCommands
   def update_comments
     ensure_database_name
     ensure_comments_collected
-    $logger.publish "Updating comments in #{$database_name}..."
+    $logger.writeln "Updating comments in #{$database_name}..."
     comments_sql = ''
     $comments.each{ |object, comment_items|
       comment_items.each{ |_, comment_item|
@@ -259,7 +261,7 @@ class ScriptCommands
 
   def ensure_datasourcesinfo_collected
     if $datasources.nil? then
-      $logger.publish "Scanning for data sources in '#{$product_data_path}'..."
+      $logger.writeln "Scanning for data sources in '#{$product_data_path}'..."
       $datasources = DataSourceCollector.collect($logger, $product_data_path, $common_data_path, $dbdata_path)
     end
   end
@@ -271,7 +273,7 @@ class ScriptCommands
     ensure_datasourcesinfo_collected
     filename = "#{$database_name} SQL Comments.rtf" if filename.empty?
     filename = File.expand_path($product_output_path + filename).fix_filename
-    $logger.publish "Generating RTF documentation in '#{$product_output_path}'..."
+    $logger.writeln "Generating RTF documentation in '#{$product_output_path}'..."
     RTFWriter.create_rtf(filename, $comments, $datasources)
   end
 
@@ -283,26 +285,26 @@ class ScriptCommands
 
     comments = $comments
     unless params.include?(:no_merge_with_structure) then
-      $logger.publish "Merging actual database structure of #{$database_name} into parsed comments..."
+      $logger.writeln "Merging actual database structure of #{$database_name} into parsed comments..."
       comments = CommentMerger.merge_with_database_structure($logger, comments)
     end
 
     filename = "#{$database_name}_sqldocgen.html" if filename.empty?
     filename = File.expand_path($product_output_path + filename).fix_filename
-    $logger.publish "Generating HTML documentation in '#{$product_output_path}'..."
+    $logger.writeln "Generating HTML documentation in '#{$product_output_path}'..."
     HTMLWriter.create_html(filename, $database_name, comments, $datasources)
   end
 
   def run_unit_tests
     ensure_database_name
-    $logger.publish_with_timing("Running unit tests...") {
+    $logger.writeln_with_timing("Running unit tests...") {
       PostgresTools.execute_sql_command("SELECT setup.#{$db_function_prefix}_unit_test_all()");
     }
   end
 
   def validate_contents
     ensure_database_name
-    $logger.publish_with_timing("Validating database contents...") {
+    $logger.writeln_with_timing("Validating database contents...") {
       PostgresTools.execute_sql_command("\\set VERBOSITY terse \n SELECT setup.#{$db_function_prefix}_validate_all()");
     }
   end
@@ -310,7 +312,7 @@ class ScriptCommands
   def create_summary
     ensure_database_name
     filename = File.expand_path($product_output_path + '{title}_{datesuffix}.csv').fix_filename
-    $logger.publish_with_timing("Creating database summary in '#{$product_output_path}'...") {
+    $logger.writeln_with_timing("Creating database summary in '#{$product_output_path}'...") {
       PostgresTools.execute_sql_command("SELECT setup.#{$db_function_prefix}_output_summary_table('#{filename}')");
     }
   end
@@ -342,7 +344,7 @@ class ScriptCommands
       $dump_filename = File.expand_path(filepath + $dump_filetitle).fix_filename
     end
 
-    $logger.publish_with_timing("Dumping database to '#{$dump_filename}'...") {
+    $logger.writeln_with_timing("Dumping database to '#{$dump_filename}'...") {
       if File.exist?($dump_filename) then
         if overwrite_existing then
           FileUtils.rm($dump_filename)
@@ -364,7 +366,7 @@ class ScriptCommands
 
   def add_constant(key, value, schema = 'system')
     ensure_database_name
-    $logger.publish "Adding constant #{key.to_s} = #{value.to_s}"
+    $logger.writeln "Adding constant #{key.to_s} = #{value.to_s}"
     PostgresTools.execute_sql_command("INSERT INTO \"#{schema}\".constants(key, value) VALUES ('#{key.to_s}', '#{value.to_s}')")
   end
 
@@ -381,13 +383,13 @@ class ScriptCommands
 
   def cluster_tables
     ensure_database_name
-    $logger.publish "Clustering all tables..."
+    $logger.writeln "Clustering all tables..."
     PostgresTools.execute_sql_command("SELECT setup.#{$db_function_prefix}_cluster_all_tables()");
   end
 
   def terminate_connections
     ensure_database_name
-    $logger.publish "Terminating all connections to #{$database_name}..."
+    $logger.writeln "Terminating all connections to #{$database_name}..."
     cmd = "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '#{$database_name}' AND pid <> pg_backend_pid()"
     PostgresTools.execute_sql_command(cmd)
   end
@@ -395,14 +397,14 @@ class ScriptCommands
   def start_sql_recorder(filename = '')
     ensure_database_name
     filename = "#{$database_name}.sql" if filename.empty?
-    $logger.publish "Starting SQL recording into file '#{filename}'..."
+    $logger.writeln "Starting SQL recording into file '#{filename}'..."
     filename = File.expand_path($product_output_path + filename).fix_filename
     PostgresTools.start_recording(filename)
   end
 
   def stop_sql_recorder
     PostgresTools.stop_recording
-    $logger.publish "Stopped SQL recording."
+    $logger.writeln "Stopped SQL recording."
   end
 
   private :ensure_database_name, :ensure_version, :ensure_comments_collected, :ensure_datasourcesinfo_collected
