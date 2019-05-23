@@ -48,9 +48,12 @@ su postgres -c 'pg_ctl start'
 # execute database build
 ruby ../../aerius-database-build/bin/Build.rb default settings.rb -v '#' -n "${DATABASE_NAME}"
 
+# make the image smaller by doing a VACUUM FULL ANALYZE
+su postgres -c "psql -U '${POSTGRES_USER}' -d '${DATABASE_NAME}' -c 'VACUUM FULL ANALYZE'"
+
 # stop PostgreSQL database cleanly
 su postgres -c 'pg_ctl stop'
 
-# image cleanup (removing unneeded '.git' directory in cloned repo directory and git dependencies)
-rm -rf "${GIT_REPOSITORY}"/.git
+# image cleanup (removing unneeded db-data, '.git' directory in cloned repo directory and git dependencies)
+rm -rf /"${DBDATA_PATH}" "${GIT_REPOSITORY}"/.git
 apk del .git-deps
