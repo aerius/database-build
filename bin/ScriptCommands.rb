@@ -132,7 +132,7 @@ class ScriptCommands
         if as_is then
           PostgresTools.execute_sql_file(sql_filename)
         else
-          contents = PostgresTools.process_sql_file(sql_filename, $common_sql_path)
+          contents = PostgresTools.process_sql_file(sql_filename, $common_sql_paths)
           PostgresTools.execute_sql_command(contents, sql_filename) unless contents.empty?
         end
         print bullet
@@ -143,13 +143,15 @@ class ScriptCommands
 
   def run_sql(sqlfilename, *params)
     ensure_database_name
-    filename = File.expand_path($product_data_path + sqlfilename).fix_filename
-    filename += '.sql' if !File.exist?(filename) && File.exist?(filename + '.sql')
-    unless File.exist?(filename) then
-      filename = File.expand_path($common_data_path + sqlfilename).fix_filename
+
+    filename = nil
+    ([$product_data_path] + $common_data_paths).each { |data_path|
+      filename = File.expand_path(data_path + sqlfilename).fix_filename
       filename += '.sql' if !File.exist?(filename) && File.exist?(filename + '.sql')
-    end
-    raise "File '#{sqlfilename}' not found." unless File.exist?(filename)
+      break if File.exist?(filename)
+      filename = nil
+    }
+    raise "File '#{sqlfilename}' not found in product and common path(s)." if filename.nil?
 
     $logger.writeln_with_timing("Running SQL file '#{filename}'...") {
       if params == [:sql_as_is] then
@@ -157,7 +159,7 @@ class ScriptCommands
       elsif !params.empty? then
         $logger.error "Unknown parameter given to run_sql()"
       else
-        contents = PostgresTools.process_sql_file(filename, $common_data_path, $dbdata_path)
+        contents = PostgresTools.process_sql_file(filename, $common_data_paths, $dbdata_path)
         PostgresTools.execute_sql_command_multithread_support(contents, filename) unless contents.empty?
       end
     }
@@ -239,7 +241,7 @@ class ScriptCommands
     if !$comments_collected then
       $logger.writeln "Scanning for comments in '#{$product_sql_path}'..."
       root_path = File.expand_path(File.dirname($project_settings_file) + '/../../').fix_pathname
-      $comments = CommentCollector.collect($logger, $product_sql_path, $common_sql_path, root_path)
+      $comments = CommentCollector.collect($logger, $product_sql_path, $common_sql_paths, root_path)
       $comments_collected = true
     end
   end
@@ -262,7 +264,7 @@ class ScriptCommands
   def ensure_datasourcesinfo_collected
     if $datasources.nil? then
       $logger.writeln "Scanning for data sources in '#{$product_data_path}'..."
-      $datasources = DataSourceCollector.collect($logger, $product_data_path, $common_data_path, $dbdata_path)
+      $datasources = DataSourceCollector.collect($logger, $product_data_path, $common_data_paths, $dbdata_path)
     end
   end
 
@@ -271,6 +273,7 @@ class ScriptCommands
     ensure_database_name
     ensure_comments_collected
     ensure_datasourcesinfo_collected
+    $logger.minor_hint 'generation of RTF documentation is no longer maintained in favor of the superior HTML documentation'
     filename = "#{$database_name} SQL Comments.rtf" if filename.empty?
     filename = File.expand_path($product_output_path + filename).fix_filename
     $logger.writeln "Generating RTF documentation in '#{$product_output_path}'..."
@@ -286,26 +289,62 @@ class ScriptCommands
     comments = $comments
     unless params.include?(:no_merge_with_structure) then
       $logger.writeln "Merging actual database structure of #{$database_name} into parsed comments..."
-      comments = CommentMerger.merge_with_database_structure($logger, comments)
+      comments = CommentMerger.merge_with_database_structure($logger, comments, !params.include?(:no_dependencies))
     end
 
     filename = "#{$database_name}_sqldocgen.html" if filename.empty?
     filename = File.expand_path($product_output_path + filename).fix_filename
     $logger.writeln "Generating HTML documentation in '#{$product_output_path}'..."
-    HTMLWriter.create_html(filename, $database_name, comments, $datasources)
+    HTMLWriter.create_html(filename, $database_name, comments, $datasources, !params.include?(:no_dependencies))
   end
 
-  def run_unit_tests
+  def run_unit_tests(*params)
     ensure_database_name
-    $logger.writeln_with_timing("Running unit tests...") {
-      PostgresTools.execute_sql_command("SELECT setup.#{$db_function_prefix}_unit_test_all()");
+    $logger.write "Running unit tests... "
+    unittest_count = 0
+    unittest_failed = 0
+    functions = PostgresTools.fetch_sql_command("SELECT * FROM setup.#{$db_function_prefix}_list_unittest_functions('#{$db_function_prefix}_unittest_')");
+    $logger.write 'none found.' if functions.empty?
+    $logger.writeln ''
+    functions.each{ |function|
+      function_name = function['name']
+      function_args = function['args']
+      if function_args.nil? then
+        unittest_count += 1
+        function_returns = function['returns']
+        $logger.major_hint "#{function_name}() returns \"#{function_returns}\"; should have no return value" if function_returns != 'void'
+        rv = PostgresTools.fetch_sql_command("BEGIN; SELECT * FROM setup.#{$db_function_prefix}_execute_unittest('#{function_name}'); ROLLBACK;");
+        if rv.empty? then
+          $logger.warn "Could not read result from #{function_name}()"
+        elsif rv[0].has_key?('errcode') then
+          errmessage = rv[0]['message']
+          errcontext = rv[0]['context']
+          errlinenr = rv[0]['linenr']
+          $logger.writeln "FAIL: #{function_name}()"
+          $logger.writeln "\t#{errmessage}"
+          $logger.writeln "\tat line #{errlinenr}, #{errcontext}" if !errcontext.nil? || !errlinenr.nil?
+          unittest_failed += 1
+        end
+      else
+        $logger.warn "#{function_name}() skipped because it takes arguments \"#{function_args}\"; should be no-args"
+      end
     }
+    if unittest_count > 0 then
+      unittest_success_rate = ((unittest_count - unittest_failed) * 100.0 / unittest_count).round
+      $logger.writeln "Unit test success rate: #{unittest_count - unittest_failed}/#{unittest_count} (#{unittest_success_rate}%)"
+      raise "Build aborted because 'run_unit_tests' was called with parameter ':abort_on_failures'" if unittest_failed > 0 && params.include?(:abort_on_failures)
+    end
   end
 
-  def validate_contents
+  def validate_contents(*params)
     ensure_database_name
     $logger.writeln_with_timing("Validating database contents...") {
       PostgresTools.execute_sql_command("\\set VERBOSITY terse \n SELECT setup.#{$db_function_prefix}_validate_all()");
+      if params.include?(:abort_on_errors) then
+        rs = PostgresTools.fetch_sql_command("SELECT number_of_tests FROM setup.last_validation_run_view WHERE result = 'error'");
+        num_errors = rs[0]['number_of_tests'].to_i
+        $logger.error "Validation yielded #{num_errors} error(s), please consult the logs and setup.last_validation_logs_view" if num_errors > 0
+      end
     }
   end
 

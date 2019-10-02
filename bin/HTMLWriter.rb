@@ -9,7 +9,7 @@ begin; require 'set'; rescue LoadError; require 'Set'; end;
 #
 class HTMLWriter
 
-  def self.create_html(filename, title, comments, datasources = {})
+  def self.create_html(filename, title, comments, datasources = {}, show_dependencies = true)
 
     last_item = nil
 
@@ -22,6 +22,7 @@ class HTMLWriter
 <style>
 body, table {font-size: 10pt; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; line-height: 1.4em;}
 a {text-decoration: none;}
+a.dead-link {text-decoration: line-through; cursor: not-allowed;}
 .header {position: fixed; left: 0; top: 0; right: 0; height: 30px; line-height: 30px; font-size: 12pt; padding: 10px; white-space: nowrap; background-color: #eee;}
 .header .generated {float: right; text-align: right; font-size: 8pt; color: silver;}
 .header .title {display: inline-block; font-weight: bold; margin-right: 10px;}
@@ -48,8 +49,8 @@ a {text-decoration: none;}
 .comments .arguments {font-weight: normal; font-style: italic; margin-left: 4px; color: #444;}
 .comments .fileref {font-size: 8pt; font-weight: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; padding-left: 20px; text-align: right; color: darkgray;}
 .comments .comment {padding-top: 5px;}
-.comments .column, .comments .param, .comments .returns, .comments .seealso, .comments .todo {padding-left: 60px; text-indent: -30px;}
-.comments .columnname, .comments .columntype, .comments .paramname, .comments .paramtype, .comments .returntype {font-family: Consolas, monospace;}
+.comments .column, .comments .param, .comments .returns, .comments .seealso, .comments .dependencies, .comments .todo {padding-left: 60px; text-indent: -30px;}
+.comments .columnname, .comments .columntype, .comments .paramname, .comments .paramtype, .comments .returntype, code {font-family: Consolas, monospace;}
 .comments .columnname, .comments .paramname {color: darkgreen;}
 .comments .columntype, .comments .paramtype, .comments .returntype {font-style: italic; color: #8e9e8e;}
 .comments .todo {padding-left: 30px; text-indent: -30px; margin-top: 10px;}
@@ -137,11 +138,11 @@ function toggleTree(blockElement) {
           toc << "<div class=\"toc-entry\" data-schema=\"#{comment_item.schema}\"><a href=\"##{anchor_name}\">#{CGI.escapeHTML(comment_item.identifier)}</a> #{CGI.escapeHTML(comment_item.arguments_nodefault)}</div>"
 
           html << "<div class=\"comment\">"
-          html << escape_and_br(comment_item.parsed_comment)
+          html << escape_and_br(comment_item.parsed_comment, comments)
 
           unless comment_item.todo.nil? then
             [*comment_item.todo].each{ |comment_item_todo_entry|
-              html << "<div class=\"todo\"><span class=\"todo-badge\">TODO</span>#{escape_and_br(comment_item_todo_entry)}</div>"
+              html << "<div class=\"todo\"><span class=\"todo-badge\">TODO</span>#{escape_and_br(comment_item_todo_entry, comments)}</div>"
             }
           end
 
@@ -150,7 +151,7 @@ function toggleTree(blockElement) {
             comment_item.columns.each{ |column, column_type, column_comment|
               html << "<div class=\"column\"><span class=\"columnname\">#{CGI.escapeHTML(column)}</span>"
               html << " <span class=\"columntype\">#{CGI.escapeHTML(column_type)}</span>" unless column_type.empty?
-              html << " &ndash; <span class=\"columncomment\">#{escape_and_br(column_comment)}</span>" unless column_comment.empty?
+              html << " &ndash; <span class=\"columncomment\">#{escape_and_br(column_comment, comments)}</span>" unless column_comment.empty?
               html << "</div>"
             }
           end
@@ -160,7 +161,7 @@ function toggleTree(blockElement) {
             comment_item.params.each{ |param, param_type, param_comment|
               html << "<div class=\"param\"><span class=\"paramname\">#{CGI.escapeHTML(param)}</span>"
               html << " <span class=\"paramtype\">#{CGI.escapeHTML(param_type)}</span>" unless param_type.empty?
-              html << " &ndash; <span class=\"paramcomment\">#{escape_and_br(param_comment)}</span>" unless param_comment.empty?
+              html << " &ndash; <span class=\"paramcomment\">#{escape_and_br(param_comment, comments)}</span>" unless param_comment.empty?
               html << "</div>"
             }
           end
@@ -169,7 +170,7 @@ function toggleTree(blockElement) {
             html << "<div class=\"note\">Returns:</div><div class=\"returns\">"
             html << "<span class=\"returntype\">#{comment_item.returns[0]}</span>" unless comment_item.returns[0].empty?
             html << " &ndash; " unless comment_item.returns[0].empty? || comment_item.returns[1].empty?
-            html << "#{escape_and_br(comment_item.returns[1])}" unless comment_item.returns[1].empty?
+            html << "#{escape_and_br(comment_item.returns[1], comments)}" unless comment_item.returns[1].empty?
             html << "</div>"
           end
 
@@ -180,10 +181,23 @@ function toggleTree(blockElement) {
               html << ", " if idx > 0
               see_object, see_comment_item = find_item(comments, comment_item_see_entries[idx])
               if see_comment_item.nil? then
-                html << escape_and_br(comment_item_see_entries[idx])
+                html << "<a href=\"#\" class=\"dead-link\" onclick=\"return false;\">" << escape_and_br(comment_item_see_entries[idx], comments) << "</a>"
               else
                 see_anchor_name = get_anchor_name(see_object, see_comment_item)
                 html << "<a href=\"##{see_anchor_name}\">#{CGI.escapeHTML(see_comment_item.identifier + see_comment_item.arguments_nodefault)}</a>"
+              end
+            }
+            html << "</div>"
+          end
+
+          unless !show_dependencies || comment_item.dependencies.empty? then
+            html << "<div class=\"note\">References:</div><div class=\"dependencies\">"
+            comment_item.dependencies.each_index{ |idx|
+              html << ", " if idx > 0
+              dependency_object, dependency_comment_item = find_item_by_oid(comments, *comment_item.dependencies[idx])
+              unless dependency_comment_item.nil? then
+                dependency_anchor_name = get_anchor_name(dependency_object, dependency_comment_item)
+                html << "<a href=\"##{dependency_anchor_name}\">#{CGI.escapeHTML(dependency_comment_item.identifier + dependency_comment_item.arguments_nodefault)}</a>"
               end
             }
             html << "</div>"
@@ -301,6 +315,15 @@ function toggleTree(blockElement) {
     return nil, nil
   end
 
+  def self.find_item_by_oid(comments, class_oid, object_oid)
+    comments.each{ |object, comment_items|
+      comment_items.each{ |_, comment_item|
+        return object, comment_item if comment_item.class_oid == class_oid && comment_item.object_oid == object_oid
+      }
+    }
+    return nil, nil
+  end
+
   def self.find_table(comments, term)
     if comments.has_key?('TABLE') then
       comments['TABLE'].sort.each{ |_, comment_item|
@@ -310,8 +333,24 @@ function toggleTree(blockElement) {
     return nil
   end
 
-  def self.escape_and_br(str)
-    return CGI.escapeHTML(str).gsub("\n", '<br>').gsub(/https?\:\/\/\S+/, '<a href="\0" target="_blank">\0</a>')
+  def self.escape_and_br(str, comments = nil)
+    return CGI.escapeHTML(str).
+        gsub("\n", '<br>').
+        gsub(/(\W)`(.+?)`(\W)/, '\1<code>\2</code>\3'). # backticks for monospace, backtick may not be attached to word character
+        gsub(/https?\:\/\/\S+/, '<a href="\0" target="_blank">\0</a>'). # find external links
+        gsub(/\{\@(?:link|see)\s+(.+?)\s*\}/) { # {@link identifier}
+          if comments.nil? then
+            $1
+          else
+            see_object, see_comment_item = find_item(comments, $1)
+            if see_comment_item.nil? then
+              "<a href=\"#\" class=\"dead-link\" onclick=\"return false;\">#{$1}</a>"
+            else
+              see_anchor_name = get_anchor_name(see_object, see_comment_item)
+              "<a href=\"##{see_anchor_name}\">#{CGI.escapeHTML(see_comment_item.identifier + see_comment_item.arguments_nodefault)}</a>"
+            end
+          end
+        }
   end
 
 end

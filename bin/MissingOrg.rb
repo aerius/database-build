@@ -27,7 +27,7 @@ $logger.open($product_log_path, 'missing_org')
 
 # Collect datasources
 $logger.writeln "Collecting datasources..."
-$datasources = DataSourceCollector.collect($logger, $product_data_path, $common_data_path, nil).keys.sort
+$datasources = DataSourceCollector.collect($logger, $product_data_path, $common_data_paths, nil).keys.sort
 
 # FTP connect
 $ftp_org_path = $sftp_data_path.fix_pathname + $org_dir.fix_pathname
