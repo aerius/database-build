@@ -6,10 +6,12 @@ class CommentItem
   attr_accessor :full_comment, :parsed_comment
   attr_accessor :params, :columns
   attr_accessor :returns, :see, :todo, :file
+  attr_accessor :class_oid, :object_oid, :dependencies
 
   def initialize
     @params = []
     @columns = []
+    @dependencies = []
   end
 
   def identifier
@@ -28,11 +30,11 @@ end
 class CommentCollector
 
   # Walk through source files and collect all comments for database objects.
-  def self.collect(logger, scanned_sql_path, common_sql_path, root_path)
+  def self.collect(logger, scanned_sql_path, common_sql_paths, root_path)
     comments = {}
 
     Dir[scanned_sql_path + '**/*.sql'].each{ |input_sql_filename|
-      processed_files = PostgresTools.process_sql_file_and_return_separate_files(input_sql_filename, common_sql_path)
+      processed_files = PostgresTools.process_sql_file_and_return_separate_files(input_sql_filename, common_sql_paths)
 
       comment = ''
       contents = ''
@@ -163,7 +165,7 @@ class CommentCollector
     comment_item.schema = identifier if object == 'SCHEMA'
     comment_item.schema = '' if comment_item.schema == 'public'
     comment_item.arguments = arguments
-    comment_item.arguments_nodefault = arguments.gsub(/\s*=\s*((E?'\S*')|(\w+))\s*/i, '') # strip default values of optional parameters
+    comment_item.arguments_nodefault = arguments.gsub(/\s*=\s*[^\,\)]+\s*/i, '') # strip default values of optional parameters
     return comment_item
   end
 

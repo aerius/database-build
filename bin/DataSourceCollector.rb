@@ -7,14 +7,14 @@ class DataSourceCollector
 
   # Walk through load sql files of a certain product and find its datasource txt filenames (including references to common).
   # parse_path is the path to e.g. database\src\data\sql\product\
-  def self.collect(logger, parse_path, common_data_path, data_folder = nil)
-    return parse_load_rb(logger, parse_path, common_data_path, data_folder)
+  def self.collect(logger, parse_path, common_data_paths, data_folder = nil)
+    return parse_load_rb(logger, parse_path, common_data_paths, data_folder)
   end
 
  private
 
   # Given a folder, open the load.rb in there and parse the SQL files and folders it references
-  def self.parse_load_rb(logger, parse_path, common_data_path, data_folder = nil)
+  def self.parse_load_rb(logger, parse_path, common_data_paths, data_folder = nil)
     data_folder.chomp!('/') unless data_folder.nil? # for search & replace
 
     parse_path = parse_path.fix_pathname
@@ -51,7 +51,7 @@ class DataSourceCollector
     sql_files.each { |sql_filename|
       sql_filename += '.sql' unless sql_filename.downcase.end_with?('.sql')
       logger.log "Parse for data sources: #{sql_filename}"
-      sql_contents = PostgresTools.process_sql_file(sql_filename, common_data_path)
+      sql_contents = PostgresTools.process_sql_file(sql_filename, common_data_paths)
       datasources.merge!(process_sql(sql_contents, data_folder))
     }
 

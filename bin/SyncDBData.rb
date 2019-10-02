@@ -347,6 +347,6 @@ end
 
 parse_commandline
 
-$datasources = DataSourceCollector.collect($logger, $product_data_path, $common_data_path, nil).keys
+$datasources = DataSourceCollector.collect($logger, $product_data_path, $common_data_paths, nil).keys
 
 sync

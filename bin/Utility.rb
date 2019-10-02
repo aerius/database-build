@@ -5,7 +5,6 @@ ON_WINDOWS = (RUBY_PLATFORM =~ /mswin|mingw|cygwin/)
 # Extend classes
 #
 class String
-
   # Does the string end with the specified +suffix+?
   def ends_with?(suffix)
     suffix = suffix.to_s
@@ -24,6 +23,24 @@ class String
   end
   def fix_filename
     return self.gsub('\\', '/')
+  end
+end
+
+require 'pathname'
+
+class Pathname
+  alias_method :org_relative_path_from, :relative_path_from
+
+  def relative_path_from(base_directory)
+    begin
+      return self.org_relative_path_from(base_directory)
+    rescue ArgumentError => e
+      if e.message.downcase.start_with?('different prefix') then
+        return self
+      else
+        raise
+      end
+    end
   end
 end
 

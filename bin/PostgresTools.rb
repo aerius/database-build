@@ -116,15 +116,15 @@ class PostgresTools
   end
 
   # Read a SQL file while processing all its references to common SQL files ({import_common ...}) and the dbdata folder ({data_folder}).
-  def self.process_sql_file(filename, common_path, data_folder = nil)
+  def self.process_sql_file(filename, common_paths, data_folder = nil)
     data_folder.chomp!('/') unless data_folder.nil? # only for search & replace
-    return process_sql_file_recursive(filename, common_path, data_folder, [])
+    return process_sql_file_recursive(filename, common_paths, data_folder, [])
   end
 
   # Same as process_sql_file() but instead of returning a single string it returns an ProcessedSqlFile-object array per processed (imported) file
-  def self.process_sql_file_and_return_separate_files(filename, common_path)
+  def self.process_sql_file_and_return_separate_files(filename, common_paths)
     separate_files = []
-    process_sql_file_recursive(filename, common_path, nil, [], separate_files)
+    process_sql_file_recursive(filename, common_paths, nil, [], separate_files)
     return separate_files
   end
 
@@ -189,14 +189,14 @@ class PostgresTools
   # Processes a SQL file and returns the new content as a string.
   # Processing means filling in dbdata paths and imports from the common folders.
   # If parameter separate_files is not nil, it is assumed to be an array in which the individual files are added as ProcessedSqlFile objects.
-  def self.process_sql_file_recursive(filename, common_path, data_folder, imported_files, separate_files = nil, default_schema = nil, logger = $logger)
+  def self.process_sql_file_recursive(filename, common_paths, data_folder, imported_files, separate_files = nil, default_schema = nil, logger = $logger)
     if imported_files.include?(filename.strip.downcase) then
       logger.error 'Recurring or circular {import_common} detected! History:' + (imported_files + [filename.strip.downcase]).join("\n")
     end
     imported_files << filename.strip.downcase
 
-    contents = ''
-    File.open(filename, 'r') { |f| contents = f.read }
+    contents = "\n-- -- -- #{filename} -- -- --\n\n"
+    File.open(filename, 'r') { |f| contents << f.read }
 
     # Replace dbdata path identifier
     contents.gsub!("{data_folder}", data_folder) unless data_folder.nil?
@@ -206,37 +206,40 @@ class PostgresTools
     # Replace import statement with file contents
     contents.gsub!(/\{import_common\s+\'(.*)\'\s*\}/i) {
       # Replacement value for gsub block:
-      get_import_common_contents($1, common_path, data_folder, imported_files, separate_files, nil, logger)
+      get_import_common_contents($1, common_paths, data_folder, imported_files, separate_files, nil, logger)
     }
 
     # Special import statement with overridden default schema
     contents.gsub!(/\{import_common_into_schema\s+\'(.*)\'\s*\,\s*\'(.*)\'\s*\}/i) {
       # Replacement value for gsub block:
       "SET search_path TO \"#{$2}\", public;\n\n" +
-        get_import_common_contents($1, common_path, data_folder, imported_files, separate_files, $2, logger) +
+        get_import_common_contents($1, common_paths, data_folder, imported_files, separate_files, $2, logger) +
         "\n\nRESET search_path;"
     }
 
     return contents
   end
 
-  def self.get_import_common_contents(filename, common_path, data_folder, imported_files, separate_files = nil, default_schema = nil, logger = $logger)
-    import_filename = File.expand_path(common_path + filename).fix_filename
-    import_filename += '.sql' if !File.exist?(import_filename) && File.exist?(import_filename + '.sql')
+  def self.get_import_common_contents(filename, common_paths, data_folder, imported_files, separate_files = nil, default_schema = nil, logger = $logger)
+    import_filename = nil
+    common_paths.each { |common_path|
+      import_filename = File.expand_path(common_path + filename).fix_filename
+      import_filename += '.sql' if !File.exist?(import_filename) && File.exist?(import_filename + '.sql')
+      break if File.exist?(import_filename)
+      import_filename = nil
+    }
+    raise "File '#{filename}' not found in common path(s)." if import_filename.nil?
+
     contents = ''
-    if File.exist?(import_filename) then
-      if File.directory?(import_filename) then # Include an entire directory!
-        import_filename = import_filename.fix_pathname
-        Dir[import_filename + '**/*.sql'].sort.each { |sub_import_filename|
-          sub_import_filename = sub_import_filename.fix_filename
-          contents += process_sql_file_recursive(sub_import_filename, common_path, data_folder, imported_files, separate_files, default_schema, logger) + "\n\n"
-        }
-        contents.chomp!("\n\n")
-      else
-        contents = process_sql_file_recursive(import_filename, common_path, data_folder, imported_files, separate_files, default_schema, logger)
-      end
+    if File.directory?(import_filename) then # Include an entire directory!
+      import_filename = import_filename.fix_pathname
+      Dir[import_filename + '**/*.sql'].sort.each { |sub_import_filename|
+        sub_import_filename = sub_import_filename.fix_filename
+        contents += process_sql_file_recursive(sub_import_filename, common_paths, data_folder, imported_files, separate_files, default_schema, logger) + "\n\n"
+      }
+      contents.chomp!("\n\n")
     else
-      raise "File '#{import_filename}' not found."
+      contents = process_sql_file_recursive(import_filename, common_paths, data_folder, imported_files, separate_files, default_schema, logger)
     end
     return contents
   end

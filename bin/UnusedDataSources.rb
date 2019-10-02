@@ -35,7 +35,7 @@ datasources = {}
 parse_path = File.expand_path($product_data_path + '../').fix_pathname
 $logger.writeln "Looking in #{parse_path}..."
 Dir[parse_path.fix_pathname + '*/load.rb'].each{ |load_rb_entry|
-  product_datasources = DataSourceCollector.collect($logger, File.dirname(load_rb_entry), $common_data_path, $dbdata_path)
+  product_datasources = DataSourceCollector.collect($logger, File.dirname(load_rb_entry), $common_data_paths, $dbdata_path)
   datasources.merge!(product_datasources)
   $logger.writeln "#{load_rb_entry} (#{product_datasources.size} datasources found)"
 }

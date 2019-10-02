@@ -5,10 +5,10 @@
 class CommentMerger
 
   # 'comments' is a previously parsed comments. Returns a duplicate with the database structure merged into it.
-  def self.merge_with_database_structure(logger, comments)
+  def self.merge_with_database_structure(logger, comments, collect_dependencies = true)
     merged_comments = deep_dup(comments)
 
-    struct_comments = fetch_database_structure(logger)
+    struct_comments = fetch_database_structure(logger, collect_dependencies)
     struct_comments.each{ |object, struct_comment_items|
       merged_comments[object] = {} unless merged_comments.has_key?(object)
       struct_comment_items.each{ |key, struct_comment_item|
@@ -66,6 +66,10 @@ class CommentMerger
           else
             merged_comment_item.returns[0] = struct_comment_item.returns[0]
           end
+
+          merged_comment_item.class_oid = struct_comment_item.class_oid
+          merged_comment_item.object_oid = struct_comment_item.object_oid
+          merged_comment_item.dependencies = struct_comment_item.dependencies
         end
       }
     }
@@ -75,11 +79,39 @@ class CommentMerger
 
  private
 
-  def self.fetch_database_structure(logger)
+  def self.fetch_database_structure(logger, collect_dependencies)
     comments = {}
 
-    sql_noncatalog_objects = "(SELECT array_agg(objid) || array_agg(DISTINCT pg_namespace.oid) FROM pg_depend INNER JOIN pg_namespace ON (refobjid = pg_namespace.oid) WHERE pg_namespace.oid <> pg_my_temp_schema() AND NOT nspname IN ('information_schema', 'pg_catalog', 'pg_toast'))"
+    sql_noncatalog_objects = "(SELECT array_agg(objid) || array_agg(DISTINCT pg_namespace.oid) FROM pg_depend INNER JOIN pg_namespace ON (refobjid = pg_namespace.oid) WHERE pg_namespace.oid <> pg_my_temp_schema() AND NOT pg_is_other_temp_schema(pg_namespace.oid) AND NOT nspname IN ('information_schema', 'pg_catalog', 'pg_toast'))"
     sql_extension_objects = "(SELECT array_agg(objid) || array_agg(DISTINCT pg_extension.oid) FROM pg_depend INNER JOIN pg_extension ON (refobjid = pg_extension.oid))"
+
+    if collect_dependencies then
+      sql_dependencies = <<-SQL
+        SELECT
+          classid,
+          objid,
+          array_to_string(array_agg(DISTINCT refclassid || ',' || refobjid), '#') AS dependencies
+
+          FROM
+            (SELECT classid, objid, refclassid, refobjid, deptype FROM pg_depend
+             UNION
+             SELECT 'pg_class'::regclass::oid AS classid, ev_class AS objid, refclassid, refobjid, deptype FROM pg_depend INNER JOIN pg_rewrite ON (pg_depend.classid = 'pg_rewrite'::regclass AND pg_depend.objid = pg_rewrite.oid)
+             UNION
+             SELECT 'pg_class'::regclass::oid AS classid, conrelid AS objid, refclassid, refobjid, deptype FROM pg_depend INNER JOIN pg_constraint ON (pg_depend.classid = 'pg_constraint'::regclass AND pg_depend.objid = pg_constraint.oid) WHERE conrelid > 0
+            ) AS dependencies_including_rewrites_and_constraints
+
+          WHERE
+            deptype IN ('n', 'a') AND
+            (pg_identify_object(refclassid, refobjid, 0)).type IN ('aggregate', 'function', 'table', 'type', 'view') AND
+            refobjid IN (SELECT unnest(#{sql_noncatalog_objects})) AND
+            NOT refobjid IN (SELECT unnest(#{sql_extension_objects})) AND
+            NOT (classid = refclassid AND objid = refobjid)
+
+          GROUP BY classid, objid
+      SQL
+    else
+      sql_dependencies = "SELECT 0 AS classid, 0 AS objid, ''::text AS dependencies WHERE FALSE"
+    end
 
     sql = <<-SQL
       SELECT
@@ -107,11 +139,15 @@ class CommentMerger
         pg_class.oid::regclass::text AS identifier,
         relname::text AS identifier_noschema,
         nspname::text AS schema,
-        array_to_string(array_agg(CONCAT(attname, '#', format_type(atttypid, NULL)) ORDER BY attnum), ',') AS columns
+        array_to_string(array_agg(CONCAT(attname, '#', format_type(atttypid, NULL)) ORDER BY attnum), ',') AS columns,
+        'pg_class'::regclass::oid AS class_oid,
+        pg_class.oid AS object_oid,
+        dependencies
 
         FROM pg_class
           INNER JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
           INNER JOIN pg_attribute ON (pg_class.oid = attrelid)
+          LEFT JOIN (#{sql_dependencies}) AS dependencies ON (dependencies.classid = 'pg_class'::regclass AND dependencies.objid = pg_class.oid)
 
         WHERE
           relkind IN ('r', 'v', 'm') AND
@@ -119,7 +155,7 @@ class CommentMerger
           pg_class.oid IN (SELECT unnest(#{sql_noncatalog_objects})) AND
           NOT pg_class.oid IN (SELECT unnest(#{sql_extension_objects}))
 
-        GROUP BY relkind, pg_class.oid, relname, nspname
+        GROUP BY relkind, pg_class.oid, relname, nspname, dependencies
     SQL
     PostgresTools.fetch_sql_command(sql, '', logger).each{ |record|
       object = case record['relkind']
@@ -136,13 +172,16 @@ class CommentMerger
         name_and_type = column.split('#')
         comment_item.columns << [name_and_type[0], name_and_type[1], '']
       }
+      comment_item.class_oid = record['class_oid'].to_i
+      comment_item.object_oid = record['object_oid'].to_i
+      comment_item.dependencies = record['dependencies'].nil? ? [] : record['dependencies'].split('#').map { |class_and_obj_oid| class_and_obj_oid.split(',').map(&:to_i) }
       comments[object] = {} unless comments.has_key?(object)
       comments[object][(comment_item.identifier + comment_item.arguments_nodefault).downcase] = comment_item
     }
 
     sql = <<-SQL
       SELECT
-        (CASE WHEN proisagg THEN 'a' ELSE 'f' END) AS prokind,
+        (CASE WHEN pg_aggregate.aggfnoid IS NULL THEN 'f' ELSE 'a' END) AS prokind,
         pg_proc.oid::regproc::text AS identifier,
         proname::text AS identifier_noschema,
         nspname::text AS schema,
@@ -151,10 +190,15 @@ class CommentMerger
         pg_get_function_result(pg_proc.oid) AS returns,
         array_to_string(proargnames, ',') AS paramnames,
         array_to_string(proargmodes, ',') AS parammodes,
-        (SELECT array_to_string(array_agg(format_type(typ, NULL)), ',') FROM unnest(COALESCE(proallargtypes, proargtypes)) AS typ) AS paramtypes
+        (SELECT array_to_string(array_agg(format_type(typ, NULL)), ',') FROM unnest(COALESCE(proallargtypes, proargtypes)) AS typ) AS paramtypes,
+        'pg_proc'::regclass::oid AS class_oid,
+        pg_proc.oid AS object_oid,
+        dependencies
 
       FROM pg_proc
         INNER JOIN pg_namespace ON (pronamespace = pg_namespace.oid)
+        LEFT JOIN pg_aggregate ON (pg_proc.oid = pg_aggregate.aggfnoid)
+        LEFT JOIN (#{sql_dependencies}) AS dependencies ON (dependencies.classid = 'pg_proc'::regclass AND dependencies.objid = pg_proc.oid)
 
       WHERE
         pg_proc.oid IN (SELECT unnest(#{sql_noncatalog_objects})) AND
@@ -191,6 +235,9 @@ class CommentMerger
           comment_item.params << [paramnames[idx], paramtypes[idx], '']
         }
       end
+      comment_item.class_oid = record['class_oid'].to_i
+      comment_item.object_oid = record['object_oid'].to_i
+      comment_item.dependencies = record['dependencies'].nil? ? [] : record['dependencies'].split('#').map { |class_and_obj_oid| class_and_obj_oid.split(',').map(&:to_i) }
       comments[object] = {} unless comments.has_key?(object)
       comments[object][(comment_item.identifier + comment_item.arguments_nodefault).downcase] = comment_item
     }
@@ -200,10 +247,14 @@ class CommentMerger
         typtype,
         pg_type.oid::regtype::text AS identifier,
         typname::text AS identifier_noschema,
-        nspname::text AS schema
+        nspname::text AS schema,
+        'pg_type'::regclass::oid AS class_oid,
+        pg_type.oid AS object_oid,
+        dependencies
 
         FROM pg_type
           INNER JOIN pg_namespace ON (typnamespace = pg_namespace.oid)
+          LEFT JOIN (#{sql_dependencies}) AS dependencies ON (dependencies.classid = 'pg_type'::regclass AND dependencies.objid = pg_type.oid)
 
         WHERE
           typisdefined AND
@@ -220,6 +271,9 @@ class CommentMerger
       comment_item.identifier_noschema = record['identifier_noschema']
       comment_item.schema = record['schema']
       comment_item.schema = '' if comment_item.schema == 'public'
+      comment_item.class_oid = record['class_oid'].to_i
+      comment_item.object_oid = record['object_oid'].to_i
+      comment_item.dependencies = record['dependencies'].nil? ? [] : record['dependencies'].split('#').map { |class_and_obj_oid| class_and_obj_oid.split(',').map(&:to_i) }
       comments[object] = {} unless comments.has_key?(object)
       comments[object][(comment_item.identifier + comment_item.arguments_nodefault).downcase] = comment_item
     }
