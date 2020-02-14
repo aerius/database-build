@@ -15,6 +15,7 @@ set -e
 
 # default values if not set
 : ${DBCONFIG_PATH:=aerius-database-build-config/config}
+: ${DBRUNSCRIPT:=default}
 
 # add git dependencies
 apk --no-cache add --virtual .git-deps git openssh
@@ -46,7 +47,7 @@ ruby ../../aerius-database-build/bin/SyncDBData.rb settings.rb --from-sftp --to-
 su postgres -c 'pg_ctl start'
 
 # execute database build
-ruby ../../aerius-database-build/bin/Build.rb default settings.rb -v '#' -n "${DATABASE_NAME}"
+ruby ../../aerius-database-build/bin/Build.rb "${DBRUNSCRIPT}" settings.rb -v '#' -n "${DATABASE_NAME}"
 
 # make the image smaller by doing a VACUUM FULL ANALYZE
 su postgres -c "psql -U '${POSTGRES_USER}' -d '${DATABASE_NAME}' -c 'VACUUM FULL ANALYZE'"
@@ -54,6 +55,6 @@ su postgres -c "psql -U '${POSTGRES_USER}' -d '${DATABASE_NAME}' -c 'VACUUM FULL
 # stop PostgreSQL database cleanly
 su postgres -c 'pg_ctl stop'
 
-# image cleanup (removing unneeded db-data, '.git' directory in cloned repo directory and git dependencies)
-rm -rf /"${DBDATA_PATH}" "${GIT_REPOSITORY}"/.git
+# image cleanup (removing unneeded db-data, git directory and git dependencies)
+rm -rf /"${DBDATA_PATH}" "${GIT_REPOSITORY}"
 apk del .git-deps
