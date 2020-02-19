@@ -1,4 +1,4 @@
-FROM mdillon/postgis:12-alpine
+FROM postgis/postgis:12-3.0-alpine
 
 ENV POSTGRES_DB='postgres' \
     POSTGRES_USER='aerius' \
