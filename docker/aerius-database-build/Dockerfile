@@ -22,7 +22,7 @@ RUN apk update && apk upgrade \
     && gem list \
     \
     # fetch repo
-    && curl -L -o aerius-database-build.tar.gz 'https://api.github.com/repos/aerius/aerius-database-build/tarball/master' \
+    && curl -L -o aerius-database-build.tar.gz 'https://api.github.com/repos/aerius/aerius-database-build/tarball/12' \
     && tar xfz aerius-database-build.tar.gz \
     && rm aerius-database-build.tar.gz \
     && mv aerius-aerius-database-build-* aerius-database-build \
