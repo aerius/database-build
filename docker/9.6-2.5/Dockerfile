@@ -1,4 +1,4 @@
-FROM postgis/postgis:12-3.0-alpine
+FROM postgis/postgis:9.6-2.5-alpine
 
 ENV POSTGRES_DB='postgres' \
     POSTGRES_USER='aerius' \
@@ -7,9 +7,9 @@ ENV POSTGRES_DB='postgres' \
     PGDATA='/postgresdata'
 
 RUN apk update && apk upgrade \
-    # add ruby dependencies + curl
+    # add ruby dependencies + curl + inotify-tools
     && apk --no-cache add ruby ruby-irb ruby-rake ruby-io-console ruby-bigdecimal ruby-json ruby-bundler \
-    libstdc++ tzdata bash ca-certificates curl \
+    libstdc++ tzdata bash ca-certificates curl inotify-tools \
     \
     # disable generating documentation for (ruby)gems
     && echo 'gem: --no-document' > /etc/gemrc \
@@ -29,10 +29,7 @@ RUN apk update && apk upgrade \
     \
     # create necessary common folders (required by aerius-database-build - but not used by us yet)
     && mkdir -p aerius-database-common/src/data/sql \
-    && mkdir -p aerius-database-common/src/main/sql \
-    \
-    # Remove chown commands as they slow startup way down, our permissions are okay from the start
-    && sed -i -e 's/^\(.*chown\)/#\1/' /usr/local/bin/docker-entrypoint.sh
+    && mkdir -p aerius-database-common/src/main/sql
 
 # Copy build-database.sh to the image - Dockerfiles that extend on this image
 #  can use it to build a database easily. See script for the requirements.

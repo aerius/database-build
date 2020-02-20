@@ -40,20 +40,26 @@ ruby ../../aerius-database-build/bin/SyncDBData.rb settings.rb --from-sftp --to-
 
 # initialize database
 # (this is a wrapper provided by the postgres image, which will initialize the db if it isn't already and is executed when starting the image for the first time.
-#  Run 'postgres --version' which will trigger the initialization, so we can start building the database.)
-/docker-entrypoint.sh postgres --version
+#  Run 'postgres' which will trigger the initialization and start the database, so we can start building the database.)
+/usr/local/bin/docker-entrypoint.sh postgres &
 
-# start PostgreSQL database
-su postgres -c 'pg_ctl start'
+# The database starts twice. First to set it up and a second time to simply start cleanly.
+# Wait for it to stop once. (Detect socket file being removed)
+inotifywait -e DELETE --include .s.PGSQL.5432 /var/run/postgresql/
+
+# Wait for the DB to finish starting up (the second time)
+while [[ ! -S /var/run/postgresql/.s.PGSQL.5432 ]]; do
+  sleep 0.5s
+done
 
 # execute database build
 ruby ../../aerius-database-build/bin/Build.rb "${DBRUNSCRIPT}" settings.rb -v '#' -n "${DATABASE_NAME}"
 
 # make the image smaller by doing a VACUUM FULL ANALYZE
-su postgres -c "psql -U '${POSTGRES_USER}' -d '${DATABASE_NAME}' -c 'VACUUM FULL ANALYZE'"
+psql -U "${POSTGRES_USER}" -d "${DATABASE_NAME}" -c 'VACUUM FULL ANALYZE'
 
 # stop PostgreSQL database cleanly
-su postgres -c 'pg_ctl stop'
+kill %1
 
 # image cleanup (removing unneeded db-data, git directory and git dependencies)
 rm -rf /"${DBDATA_PATH}" "${GIT_REPOSITORY}"
