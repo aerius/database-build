@@ -11,13 +11,12 @@ for POSTGRES_VERSION in "${POSTGRES_VERSIONS[@]}"; do
 
     # Create directory if it doesn't exist yet
     if [[ ! -d "${VERSION}" ]]; then
-      mkdir "${VERSION}"
+      mkdir -p "docker/${VERSION}"
     fi
 
     # Copy over files and process templates
-    cp build-database.sh "${VERSION}/"
     sed -e 's/%%POSTGRESQL_VERSION%%/'"${POSTGRES_VERSION}"'/g;' \
         -e 's/%%POSTGIS_VERSION%%/'"${POSTGIS_VERSION}"'/g;' \
-        Dockerfile.template > "${VERSION}/Dockerfile"
+        docker/Dockerfile.template > "docker/${VERSION}/Dockerfile"
   done
 done

@@ -9,7 +9,7 @@ ENV POSTGRES_DB='postgres' \
 RUN apk update && apk upgrade \
     # add ruby dependencies + curl + inotify-tools
     && apk --no-cache add ruby ruby-irb ruby-rake ruby-io-console ruby-bigdecimal ruby-json ruby-bundler \
-    libstdc++ tzdata bash ca-certificates curl inotify-tools \
+    libstdc++ tzdata bash ca-certificates inotify-tools \
     \
     # disable generating documentation for (ruby)gems
     && echo 'gem: --no-document' > /etc/gemrc \
@@ -21,16 +21,13 @@ RUN apk update && apk upgrade \
     && ruby --version \
     && gem list \
     \
-    # fetch repo
-    && curl -L -o aerius-database-build.tar.gz 'https://api.github.com/repos/aerius/aerius-database-build/tarball/master' \
-    && tar xfz aerius-database-build.tar.gz \
-    && rm aerius-database-build.tar.gz \
-    && mv aerius-aerius-database-build-* aerius-database-build \
-    \
     # create necessary common folders (required by aerius-database-build - but not used by us yet)
     && mkdir -p aerius-database-common/src/data/sql \
     && mkdir -p aerius-database-common/src/main/sql
 
 # Copy build-database.sh to the image - Dockerfiles that extend on this image
 #  can use it to build a database easily. See script for the requirements.
-COPY build-database.sh /
+COPY docker/build-database.sh /
+
+# Copy source code of the build script to the image
+COPY bin/ /aerius-database-build/bin
