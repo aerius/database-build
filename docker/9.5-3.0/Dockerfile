@@ -29,5 +29,11 @@ RUN apk update && apk upgrade \
 #  can use it to build a database easily. See script for the requirements.
 COPY docker/build-database.sh /
 
+# Copy over start-database.sh which can do some extra steps before/after starting the database.
+COPY docker/start-database.sh /
+
 # Copy source code of the build script to the image
 COPY bin/ /aerius-database-build/bin
+
+# Override current CMD - the argument is the command we override so can wrap it
+CMD ["/start-database.sh", "postgres"]
