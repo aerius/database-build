@@ -1,22 +1,37 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-declare POSTGRES_VERSIONS=(9.5 9.6 10 11 12)
-declare POSTGIS_VERSIONS=(2.5 3.0)
+# Change current directory to directory of script so it can be called from everywhere
+SCRIPT_PATH=$(readlink -f "${0}")
+SCRIPT_DIR=$(dirname "${SCRIPT_PATH}")
+cd "${SCRIPT_DIR}"
 
-for POSTGRES_VERSION in "${POSTGRES_VERSIONS[@]}"; do
-  for POSTGIS_VERSION in "${POSTGIS_VERSIONS[@]}"; do
-    echo "PostgreSQL: ${POSTGRES_VERSION} - PostGIS: ${POSTGIS_VERSION}"
-    VERSION="${POSTGRES_VERSION}-${POSTGIS_VERSION}"
+# Key is the PostgreSQL version and values are the PostGIS versions images are available for that PostgreSQL version.
+declare -A IMAGE_VERSIONS=(
+  [13]="3.1 3.0"
+  [12]="3.1 3.0 2.5"
+  [11]="3.1 3.0 2.5"
+  [10]="3.1 3.0 2.5"
+  [9.6]="3.1 3.0 2.5"
+  [9.5]="3.0 2.5"
+)
+
+# Read in current version of the script
+BUILD_VERSION=$(<VERSION)
+
+for POSTGRESQL_VERSION in "${!IMAGE_VERSIONS[@]}"; do
+  for POSTGIS_VERSION in ${IMAGE_VERSIONS[${POSTGRESQL_VERSION}]}; do
+    echo "# Processing - PostgreSQL: ${POSTGRESQL_VERSION} - PostGIS: ${POSTGIS_VERSION}"
+    IMAGE_TAG="${BUILD_VERSION}-psql_${POSTGRESQL_VERSION}-pgis_${POSTGIS_VERSION}"
 
     # Create directory if it doesn't exist yet
-    if [[ ! -d "${VERSION}" ]]; then
-      mkdir -p "docker/${VERSION}"
+    if [[ ! -d "${IMAGE_TAG}" ]]; then
+      mkdir -p "docker/${IMAGE_TAG}"
     fi
 
     # Copy over files and process templates
-    sed -e 's/%%POSTGRESQL_VERSION%%/'"${POSTGRES_VERSION}"'/g;' \
+    sed -e 's/%%POSTGRESQL_VERSION%%/'"${POSTGRESQL_VERSION}"'/g;' \
         -e 's/%%POSTGIS_VERSION%%/'"${POSTGIS_VERSION}"'/g;' \
-        docker/Dockerfile.template > "docker/${VERSION}/Dockerfile"
+        docker/Dockerfile.template > "docker/${IMAGE_TAG}/Dockerfile"
   done
 done
