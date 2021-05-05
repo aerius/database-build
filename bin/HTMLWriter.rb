@@ -21,14 +21,15 @@ class HTMLWriter
     html << <<-'END_HTML_HEADER'
 <style>
 body, table {font-size: 10pt; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; line-height: 1.4em;}
-a {text-decoration: none;}
+a {text-decoration: none; color: #2196f3;}
+a:visited {color: #1976d2;}
 a.dead-link {text-decoration: line-through; cursor: not-allowed;}
 .header {position: fixed; left: 0; top: 0; right: 0; height: 30px; line-height: 30px; font-size: 12pt; padding: 10px; white-space: nowrap; background-color: #eee;}
 .header .generated {float: right; text-align: right; font-size: 8pt; color: silver;}
 .header .title {display: inline-block; font-weight: bold; margin-right: 10px;}
 .header .schemas {display: inline-block;}
-.header .schemas .schema {margin-left: 10px; padding: 5px; cursor: pointer; color: white; border-radius: 4px; background-color: #088;}
-.header .schemas .schema.active {background-color: #0aa;}
+.header .schemas .schema {margin-left: 10px; padding: 5px; cursor: pointer; color: white; border-radius: 4px; background-color: #00bcd4; transition: all 0.25s ease;}
+.header .schemas .schema.active {box-shadow: inset 0px 0px 15px 3px rgba(0,0,0,0.33);}
 .toc {position: fixed; left: 0; top: 50px; bottom: 0; width: 280px; overflow: auto; font-size: 9pt; padding: 10px; white-space: nowrap;}
 .toc .toc-entry {color: gray;}
 .toc .toc-header {text-transform: lowercase; font-weight: bold; cursor: pointer;}
@@ -45,16 +46,16 @@ a.dead-link {text-decoration: line-through; cursor: not-allowed;}
 .comments .block {margin-top: 1em; margin-bottom: 1em; padding: 10px; border: 1px solid #ddd;}
 .comments .identifier {font-weight: bold; font-size: 12pt; padding-bottom: 5px; border-bottom: 1px solid #eee;}
 .comments .identifier > span {float: left;}
-.comments .schema {float: left; font-weight: normal; color: #066;}
+.comments .schema {float: left; font-weight: normal; color: #3f51b5;}
 .comments .arguments {font-weight: normal; font-style: italic; margin-left: 4px; color: #444;}
 .comments .fileref {font-size: 8pt; font-weight: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; padding-left: 20px; text-align: right; color: darkgray;}
 .comments .comment {padding-top: 5px;}
 .comments .column, .comments .param, .comments .returns, .comments .seealso, .comments .dependencies, .comments .todo {padding-left: 60px; text-indent: -30px;}
 .comments .columnname, .comments .columntype, .comments .paramname, .comments .paramtype, .comments .returntype, code {font-family: Consolas, monospace;}
-.comments .columnname, .comments .paramname {color: darkgreen;}
+.comments .columnname, .comments .paramname {color: #e91e63;}
 .comments .columntype, .comments .paramtype, .comments .returntype {font-style: italic; color: #8e9e8e;}
 .comments .todo {padding-left: 30px; text-indent: -30px; margin-top: 10px;}
-.comments .todo .todo-badge {color: white; font-size: 8pt; font-weight: bold; padding: 3px; margin-right: 4px; border-radius: 4px; background-color: #f60;}
+.comments .todo .todo-badge {color: white; font-size: 8pt; font-weight: bold; padding: 3px; margin-right: 4px; border-radius: 4px; background-color: #ff9800;}
 .comments .note {font-style: italic; margin-top: 10px;}
 .datasources-table {margin-top: 1em; margin-bottom: 1em; border-collapse: collapse; border: 1px solid #ddd;}
 .datasources-table td, .datasources-table th { text-align: left; vertical-align: top; padding: 10px; border-bottom: 1px solid #eee;}
@@ -110,7 +111,7 @@ function toggleTree(blockElement) {
       html << "</div>"
 
       html << "<div class=\"comments\">"
-      comments.sort_by{ |object, _| ['SCHEMA','TABLE','VIEW','MATERIALIZED VIEW','FUNCTION','AGGREGATE','TYPE','DOMAIN'].index(object)}.each{ |object, comment_items|
+      comments.sort_by{ |object, _| ['SCHEMA','TABLE','VIEW','MATERIALIZED VIEW','FUNCTION','PROCEDURE','AGGREGATE','TYPE','DOMAIN'].index(object)}.each{ |object, comment_items|
 
         last_item = nil
 

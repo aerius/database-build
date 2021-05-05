@@ -76,7 +76,7 @@ class CommentCollector
               arguments = nil
               if /^\s*CREATE\s+(MATERIALIZED VIEW)\s+([\w\.]+)\s*/i.match(contents) ||
                  /^\s*CREATE.*\s+(TABLE|VIEW|TYPE|DOMAIN|SCHEMA)\s+([\w\.]+)\s*/i.match(contents) ||
-                 /^\s*CREATE.*\s+(FUNCTION|AGGREGATE)\s+([\w\.]+)\s*(\(.*\))\s*/i.match(contents) then
+                 /^\s*CREATE.*\s+(FUNCTION|AGGREGATE|PROCEDURE)\s+([\w\.]+)\s*(\(.*\))\s*/i.match(contents) then
                 object = $1.upcase
                 identifier = $2
                 arguments = $3 || ''
@@ -126,7 +126,7 @@ class CommentCollector
     headername = identifier
     altheadername = identifier
     altheadername = altheadername.split('.')[1] if altheadername.include?('.')
-    if (comment_lines.size >= 2) && ((comment_lines[1] == '-' * comment_lines[1].length) || (comment_lines[1] == '=' * comment_lines[1].length)) then
+    if (comment_lines.size >= 2) && (comment_lines[1].length > 0) && ((comment_lines[1] == '-' * comment_lines[1].length) || (comment_lines[1] == '=' * comment_lines[1].length)) then
       header_mismatch = (comment_lines[0] != headername && comment_lines[0] != altheadername)
       logger.major_hint "sql comment for \"#{headername}\" has header \"#{comment_lines[0]}\"" if header_mismatch
       logger.minor_hint "sql comment for \"#{headername}\" has wrong dashed line length" if !header_mismatch && comment_lines[0].length != comment_lines[1].length

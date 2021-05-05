@@ -206,6 +206,10 @@ class ScriptCommands
     }
   end
 
+  def execute_sql_file(sqlfilename)
+    run_sql sqlfilename, :sql_as_is
+  end
+
   def reindex_database
     ensure_database_name
     $logger.writeln_with_timing("Re-indexing database #{$database_name}...") {
@@ -296,6 +300,17 @@ class ScriptCommands
     filename = File.expand_path($product_output_path + filename).fix_filename
     $logger.writeln "Generating HTML documentation in '#{$product_output_path}'..."
     HTMLWriter.create_html(filename, $database_name, comments, $datasources, !params.include?(:no_dependencies))
+  end
+
+  def generate_datasources_json(filename = '')
+    require 'json'
+    ensure_database_name
+    ensure_datasourcesinfo_collected
+    filename = "#{$database_name}_datasources.json" if filename.empty?
+    filename = File.expand_path($product_output_path + filename).fix_filename
+    $logger.writeln "Generating datasources-JSON in '#{$product_output_path}'..."
+    datasources = $datasources.reduce({}) { |accum, (filename, tablename)| (accum[tablename] ||= []) << File.basename(filename); accum }
+    File.write(filename, JSON.pretty_generate(datasources))
   end
 
   def run_unit_tests(*params)
