@@ -16,7 +16,7 @@ class CommentMerger
         merged_comment_item = nil
         if merged_comments[object].has_key?(key) then
           merged_comment_item = merged_comments[object][key]
-        elsif object == 'FUNCTION' || object == 'AGGREGATE' then
+        elsif object == 'FUNCTION' || object == 'AGGREGATE' || object == 'PROCEDURE' then
           # try again without parameter definition (only accept when there is only 1 match)
           function_without_args = key.match(/^([^\(]+)/)[1].strip
           matched_comment_item_keys = merged_comments[object].keys.select{ |functiondef| function_without_args == functiondef.match(/^([^\(]+)/)[1].strip[0..62] }
@@ -102,7 +102,7 @@ class CommentMerger
 
           WHERE
             deptype IN ('n', 'a') AND
-            (pg_identify_object(refclassid, refobjid, 0)).type IN ('aggregate', 'function', 'table', 'type', 'view') AND
+            (pg_identify_object(refclassid, refobjid, 0)).type IN ('aggregate', 'function', 'procedure', 'table', 'type', 'view') AND
             refobjid IN (SELECT unnest(#{sql_noncatalog_objects})) AND
             NOT refobjid IN (SELECT unnest(#{sql_extension_objects})) AND
             NOT (classid = refclassid AND objid = refobjid)
@@ -181,7 +181,11 @@ class CommentMerger
 
     sql = <<-SQL
       SELECT
-        (CASE WHEN pg_aggregate.aggfnoid IS NULL THEN 'f' ELSE 'a' END) AS prokind,
+        (CASE
+          WHEN (pg_identify_object('pg_proc'::regclass::oid, pg_proc.oid, 0)).type = 'procedure' THEN 'p'
+          WHEN NOT pg_aggregate.aggfnoid IS NULL THEN 'a'
+          ELSE 'f'
+         END) AS prokind,
         pg_proc.oid::regproc::text AS identifier,
         proname::text AS identifier_noschema,
         nspname::text AS schema,
@@ -208,6 +212,7 @@ class CommentMerger
       object = case record['prokind']
         when 'f' then 'FUNCTION'
         when 'a' then 'AGGREGATE'
+        when 'p' then 'PROCEDURE'
         else next
       end
       comment_item = create_empty_comment_item()
@@ -216,7 +221,7 @@ class CommentMerger
       comment_item.schema = '' if comment_item.schema == 'public'
       comment_item.arguments = record['arguments']
       comment_item.arguments_nodefault = record['arguments_nodefault']
-      comment_item.returns = [record['returns'], '']
+      comment_item.returns = record['returns'].nil? ? nil : [record['returns'], '']
       paramtypes = record['paramtypes'].nil? ? [] : record['paramtypes'].split(',')
       parammodes = record['parammodes'].nil? ? [] : record['parammodes'].split(',')
       paramnames = record['paramnames'].nil? ? [] : record['paramnames'].split(',')
