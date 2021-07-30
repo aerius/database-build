@@ -12,7 +12,7 @@ _main "${@}" &
 if [[ -n "${POST_STARTUP_SQL}" ]] && [[ -n "${DATABASE_NAME}" ]]; then
   echo 'Post startup SQL found..'
   echo 'Waiting for PostgreSQL to start up..'
-  while [[ ! -S /var/run/postgresql/.s.PGSQL.5432 ]]; do
+  until pg_isready -q -d "${DATABASE_NAME}" -U "${POSTGRES_USER}" -h "$(hostname -i)"; do
     sleep 0.1s
   done
   echo 'PostgreSQL is up!'
