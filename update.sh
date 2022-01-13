@@ -8,8 +8,9 @@ cd "${SCRIPT_DIR}"
 
 # Key is the PostgreSQL version and values are the PostGIS versions images are available for that PostgreSQL version.
 declare -A IMAGE_VERSIONS=(
-  [13]="3.1 3.0"
-  [12]="3.1 3.0 2.5"
+  [14]="3.2 3.1"
+  [13]="3.2 3.1 3.0"
+  [12]="3.2 3.1 3.0 2.5"
   [11]="3.1 3.0 2.5"
   [10]="3.1 3.0 2.5"
   [9.6]="3.1 3.0 2.5"
