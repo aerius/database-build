@@ -11,6 +11,7 @@ set -e
 # default values if not set
 : ${DBCONFIG_PATH:=aerius-database-build-config/config}
 : ${DBRUNSCRIPT:=default}
+: ${DBDATA_CLEANUP:=true} # A reason not to clean it up would be to cache the files using buildkit
 
 # If the source code isn't made available by the extending Dockerfile we need to use git to check it out
 USE_GIT=! [[ -d "${DBSOURCE_PATH}" ]]
@@ -89,7 +90,9 @@ kill %1
 wait %1
 
 # image cleanup (removing unneeded db-data, git directory and git dependencies)
-rm -rf "${DBDATA_PATH}"
+if [[ "${DBDATA_CLEANUP}" == 'true' ]]; then
+  rm -rf "${DBDATA_PATH}"
+fi
 [[ ${USE_GIT} ]] && rm -rf "${GIT_REPOSITORY}"
 [[ ${USE_GIT} ]] && apk del .git-deps
 
