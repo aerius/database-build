@@ -11,6 +11,7 @@ set -e
 # default values if not set
 : ${DBCONFIG_PATH:=aerius-database-build-config/config}
 : ${DBRUNSCRIPT:=default}
+: ${DBSETTINGS_PATH:=settings.rb}
 : ${DBDATA_CLEANUP:=true} # A reason not to clean it up would be to cache the files using buildkit
 
 # If the source code isn't made available by the extending Dockerfile we need to use git to check it out
@@ -59,7 +60,7 @@ echo "\$sftp_data_readonly_password = '${SFTP_READONLY_PASSWORD}'" >> "${DBCONFI
 # sync db-data files we need
 echo 'Syncing database data files..'
 cd "${DBSOURCE_PATH}/"
-ruby /aerius-database-build/bin/SyncDBData.rb settings.rb --from-sftp --to-local
+ruby /aerius-database-build/bin/SyncDBData.rb "${DBSETTINGS_PATH}" --from-sftp --to-local
 
 # initialize database
 # (this is a wrapper provided by the postgres image, which will initialize the db if it isn't already and is executed when starting the image for the first time.
@@ -78,7 +79,7 @@ while [[ ! -S /var/run/postgresql/.s.PGSQL.5432 ]]; do
 done
 
 # execute database build
-ruby /aerius-database-build/bin/Build.rb "${DBRUNSCRIPT}" settings.rb -v "${DATABASE_VERSION}" -n "${DATABASE_NAME}"
+ruby /aerius-database-build/bin/Build.rb "${DBRUNSCRIPT}" "${DBSETTINGS_PATH}" -v "${DATABASE_VERSION}" -n "${DATABASE_NAME}"
 
 # make the image smaller by doing a VACUUM FULL ANALYZE
 psql -U "${POSTGRES_USER}" -d "${DATABASE_NAME}" -c 'VACUUM FULL ANALYZE'
