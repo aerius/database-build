@@ -222,25 +222,25 @@ class PostgresTools
 
   def self.get_import_common_contents(filename, common_paths, data_folder, imported_files, separate_files = nil, default_schema = nil, logger = $logger)
     import_filename = nil
+    was_found = false
+    contents = ''
     common_paths.each { |common_path|
       import_filename = File.expand_path(common_path + filename).fix_filename
       import_filename += '.sql' if !File.exist?(import_filename) && File.exist?(import_filename + '.sql')
-      break if File.exist?(import_filename)
-      import_filename = nil
+      if File.directory?(import_filename) then # Include an entire directory!
+        import_filename = import_filename.fix_pathname
+        Dir[import_filename + '**/*.sql'].sort.each { |sub_import_filename|
+          sub_import_filename = sub_import_filename.fix_filename
+          contents += process_sql_file_recursive(sub_import_filename, common_paths, data_folder, imported_files, separate_files, default_schema, logger) + "\n\n"
+        }
+        contents.chomp!("\n\n")
+        was_found = true
+      elsif File.exist?(import_filename) then
+        contents = process_sql_file_recursive(import_filename, common_paths, data_folder, imported_files, separate_files, default_schema, logger)
+        was_found = true
+      end
     }
-    raise "File '#{filename}' not found in common path(s)." if import_filename.nil?
-
-    contents = ''
-    if File.directory?(import_filename) then # Include an entire directory!
-      import_filename = import_filename.fix_pathname
-      Dir[import_filename + '**/*.sql'].sort.each { |sub_import_filename|
-        sub_import_filename = sub_import_filename.fix_filename
-        contents += process_sql_file_recursive(sub_import_filename, common_paths, data_folder, imported_files, separate_files, default_schema, logger) + "\n\n"
-      }
-      contents.chomp!("\n\n")
-    else
-      contents = process_sql_file_recursive(import_filename, common_paths, data_folder, imported_files, separate_files, default_schema, logger)
-    end
+    raise "File '#{filename}' not found in common path(s)." if !was_found
     return contents
   end
 
