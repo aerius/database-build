@@ -22,7 +22,7 @@ if [[ -n "${POST_STARTUP_SQL}" ]] && [[ -n "${DATABASE_NAME}" ]]; then
   docker_process_sql --dbname="${DATABASE_NAME}" <<< "${POST_STARTUP_SQL}"
 fi
 
-# When container is being stopped do a proper shutdown given other containers to stop also
+# When container is being stopped do a proper shutdown
 trap_shutdown() {
   echo 'Container is being stopped.. Attempting proper shutdown..'
   su postgres -s /bin/sh -c "pg_ctl stop"
