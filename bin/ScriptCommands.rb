@@ -428,6 +428,7 @@ class ScriptCommands
     require 'etc'
     add_constant 'CURRENT_DATABASE_NAME', get_database_name(), schema
     add_constant 'CURRENT_DATABASE_VERSION', get_version(), schema unless $version.nil?
+    add_constant 'CURRENT_DATABASE_PRODUCT', $product.to_s, schema unless $product.nil?
     add_constant 'CURRENT_GIT_REVISION', Utility.get_git_hash, schema if !$vcs.nil? && $vcs == :git
     add_constant 'CURRENT_SVN_REVISION', Utility.get_svn_head_revision, schema if !$vcs.nil? && $vcs == :svn
     add_constant 'CURRENT_DATABASE_BUILD_DATE', Time.now.strftime('%d-%m-%Y %H:%M:%S'), schema
