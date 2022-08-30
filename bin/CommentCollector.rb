@@ -160,7 +160,7 @@ class CommentCollector
 
   def self.create_comment_item(object, identifier, arguments)
     comment_item = CommentItem.new
-	comment_item.object = object
+    comment_item.object = object
     comment_item.identifier_noschema = identifier.include?('.') ? identifier.split('.')[1] : identifier
     comment_item.schema = identifier.include?('.') ? identifier.split('.')[0] : ''
     comment_item.schema = identifier if object == 'SCHEMA'
