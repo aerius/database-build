@@ -2,7 +2,7 @@
 # Representation of a parsed comment for a database object
 #
 class CommentItem
-  attr_accessor :identifier_noschema, :schema, :arguments, :arguments_nodefault
+  attr_accessor :identifier_noschema, :schema, :object, :arguments, :arguments_nodefault
   attr_accessor :full_comment, :parsed_comment
   attr_accessor :params, :columns
   attr_accessor :returns, :see, :todo, :file
@@ -15,7 +15,7 @@ class CommentItem
   end
 
   def identifier
-    if @schema == '' || @schema == @identifier_noschema then
+    if @schema == '' || @object == 'SCHEMA' then
       @identifier_noschema
     else
       @schema + '.' + @identifier_noschema
@@ -160,6 +160,7 @@ class CommentCollector
 
   def self.create_comment_item(object, identifier, arguments)
     comment_item = CommentItem.new
+    comment_item.object = object
     comment_item.identifier_noschema = identifier.include?('.') ? identifier.split('.')[1] : identifier
     comment_item.schema = identifier.include?('.') ? identifier.split('.')[0] : ''
     comment_item.schema = identifier if object == 'SCHEMA'
