@@ -115,7 +115,7 @@ begin
   end
   FileUtils.mkdir_p($product_temp_path)
 
-  FileUtils.mkdir_p($product_output_path) unless File.exists?($product_output_path)
+  FileUtils.mkdir_p($product_output_path) unless File.exist?($product_output_path)
 
   # Initialize per product
   $comments_collected = false
