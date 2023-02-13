@@ -166,7 +166,7 @@ class Utility
     parent_path = parent_path.fix_pathname
     ['15', '14', '13', '12', '11', '10', '9.6', '9.5', '9.4', '9.3', '9.2'].each{ |version|
       pg_path = parent_path + 'PostgreSQL/' + version + '/bin/'
-      return pg_path if File.exists?(pg_path) && File.directory?(pg_path)
+      return pg_path if File.exist?(pg_path) && File.directory?(pg_path)
     }
     return parent_path + 'PostgreSQL/9.5/bin/'
   end

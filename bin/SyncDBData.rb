@@ -234,7 +234,7 @@ end
 
 def file_exists(filename, fs)
   if fs.nil? then
-    return File.exists?(filename)
+    return File.exist?(filename)
   else
     filename_dir = File.dirname(filename)
     filename_file = File.basename(filename)
@@ -246,7 +246,7 @@ end
 def make_file_dir(filename, fs)
   filename_dir = File.dirname(filename)
   if fs.nil? then
-    FileUtils.mkpath(filename_dir) unless File.exists?(filename_dir) && File.directory?(filename_dir)
+    FileUtils.mkpath(filename_dir) unless File.exist?(filename_dir) && File.directory?(filename_dir)
   else
     fs.mkpath(filename_dir) unless fs.dir_exists?(filename_dir)
     fs.chdir(filename_dir) unless fs.getdir == filename_dir

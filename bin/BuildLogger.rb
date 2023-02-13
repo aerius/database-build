@@ -10,7 +10,7 @@ class BuildLogger
   end
 
   def open(log_path, prefix = '', suffix = '')
-    FileUtils.mkdir_p(log_path) unless File.exists?(log_path)
+    FileUtils.mkdir_p(log_path) unless File.exist?(log_path)
     prefix = prefix + '_' unless prefix.empty?
     suffix = '_' + suffix unless suffix.empty?
     @log_filename = log_path + "#{prefix}output#{suffix}.log"
