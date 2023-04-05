@@ -15,7 +15,7 @@ jobs:
         id: get_project_version
         run: |
           VERSION=$(<VERSION)
-          echo "::set-output name=version::${VERSION}"
+          echo "version::${VERSION}" >> $GITHUB_OUTPUT
       - if: github.event_name == 'release' || endsWith(steps.get_project_version.outputs.version, '-SNAPSHOT')
         name: Login to AERIUS Container Registry
         uses: docker/login-action@v1 
