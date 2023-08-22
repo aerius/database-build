@@ -15,8 +15,8 @@ RUN apk update && apk upgrade \
     && echo 'gem: --no-document' > /etc/gemrc \
     \
     # install needed (ruby)gems
-    && gem install net-ssh -v 4.2.0 \
-    && gem install net-sftp -v 2.1.2 \
+    && gem install net-ssh -v 7.2.0 \
+    && gem install net-sftp -v 4.0.0 \
     && gem install clbustos-rtf \
     && ruby --version \
     && gem list \
