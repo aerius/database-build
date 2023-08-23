@@ -154,6 +154,13 @@ def parse_commandline
   require 'FTPUploader.rb' if $source == :ftp || $target == :ftp
   require 'SFTPUploader.rb' if $source == :sftp || $target == :sftp
 
+  connect
+
+  $source_path.chomp!('/')
+  $target_path.chomp!('/')
+end
+
+def connect
   if $source == :ftp then
     if /^(ftp\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($from_ftp) then
       ftp_host = $2
@@ -225,9 +232,6 @@ def parse_commandline
   else
     $logger.error "No target found! Specify either --to-ftp, --to-sftp or --to-local."
   end
-
-  $source_path.chomp!('/')
-  $target_path.chomp!('/')
 end
 
 # ---------
@@ -330,7 +334,15 @@ def sync
         if skip then
           puts 'OK.'
         else
-          copy_file(copy_from, $src_fs, copy_to, $tgt_fs)
+          counter = 0
+          max_attempts = 5
+          begin
+            counter += 1
+            copy_file(copy_from, $src_fs, copy_to, $tgt_fs)
+          rescue => e
+            $logger.writeln "copy file failed, attempt #{counter}, message #{e.message}`"
+            (connect; retry;) unless counter > max_attempts
+          end
         end
       else
         if $continue then
