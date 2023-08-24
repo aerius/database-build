@@ -155,9 +155,6 @@ def parse_commandline
   require 'SFTPUploader.rb' if $source == :sftp || $target == :sftp
 
   connect
-
-  $source_path.chomp!('/')
-  $target_path.chomp!('/')
 end
 
 def connect
@@ -232,6 +229,9 @@ def connect
   else
     $logger.error "No target found! Specify either --to-ftp, --to-sftp or --to-local."
   end
+  
+  $source_path.chomp!('/')
+  $target_path.chomp!('/')
 end
 
 # ---------
@@ -312,43 +312,47 @@ end
 def sync
   $datasources.each { |datasource|
     [false, true].each{ |is_infofile|
-
       datasource = datasource.chomp(File.extname(datasource)) + '.info' if is_infofile
-
       copy_from = datasource.gsub('{data_folder}', $source_path)
-      if file_exists(copy_from, $src_fs) then
-        print '  ' + copy_from + ' ... '
 
-        copy_to = datasource.gsub('{data_folder}', $target_path)
-        make_file_dir(copy_to, $tgt_fs)
-
-        skip = false
-        if file_exists(copy_to, $tgt_fs) then
-          if file_size(copy_from, $src_fs) == file_size(copy_to, $tgt_fs) then
-            if compare_file_time(copy_from, $src_fs, copy_to, $tgt_fs) then
-              skip = true
+      counter = 0
+      max_attempts = 5
+      begin
+        counter += 1
+        if file_exists(copy_from, $src_fs) then
+          print '  ' + copy_from + ' ... '
+  
+          copy_to = datasource.gsub('{data_folder}', $target_path)
+          make_file_dir(copy_to, $tgt_fs)
+  
+          skip = false
+          if file_exists(copy_to, $tgt_fs) then
+            if file_size(copy_from, $src_fs) == file_size(copy_to, $tgt_fs) then
+              if compare_file_time(copy_from, $src_fs, copy_to, $tgt_fs) then
+                skip = true
+              end
             end
           end
-        end
-
-        if skip then
-          puts 'OK.'
-        else
-          counter = 0
-          max_attempts = 5
-          begin
-            counter += 1
+  
+          if skip then
+            puts 'OK.'
+          else
             copy_file(copy_from, $src_fs, copy_to, $tgt_fs)
-          rescue => e
-            $logger.writeln "copy file failed, attempt #{counter}, message #{e.message}`"
-            (connect; retry;) unless counter > max_attempts
+          end
+        else
+          if $continue then
+            $logger.writeln "File not found: #{copy_from}" unless is_infofile
+          else
+            $logger.error "File not found: #{copy_from}" unless is_infofile
           end
         end
-      else
-        if $continue then
-          $logger.writeln "File not found: #{copy_from}" unless is_infofile
+      rescue => e
+        if counter <= max_attempts then
+          $logger.writeln "copy file failed, attempt #{counter}, message #{e.message}"
+          connect
+          retry
         else
-          $logger.error "File not found: #{copy_from}" unless is_infofile
+          raise e
         end
       end
     }
