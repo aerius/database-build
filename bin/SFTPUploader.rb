@@ -27,7 +27,7 @@ class SFTPUploader
   def connect(host, port, username, password, remote_path)
     @logger.log "SFTP connect: #{host}:#{port}, username: #{username}, remote folder: #{remote_path}"
     begin
-      @sftp = Net::SFTP.start(host, username, { :port => port, :password => password, :compression => false })
+      @sftp = Net::SFTP.start(host, username, { :port => port, :password => password, :compression => false, :encryption => '3des-cbc' })
     rescue Net::SSH::Exception => e
       if e.message.include?('Creation of file mapping failed with error: 998') then
         raise e, "#{e} -- Possible fix: Try closing Pageant.exe", e.backtrace
