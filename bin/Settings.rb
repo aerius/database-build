@@ -63,7 +63,11 @@ else
 end
 #$svn_root_url = 'https://repository...' # Override in ..\AppSettings.rb
 
-# SFTP for syncing data files
+# HTTPS for syncing data files
+$https_data_path = 'https://a.b.c/xyz' # Override in ..\AppSettings.rb
+$https_data_username = 'REDACTED' # Override in ..\UserSettings.rb
+$https_data_password = 'REDACTED' # Override in ..\UserSettings.rb
+# or SFTP
 $sftp_data_path = 'sftp://a.b.c/xyz' # Override in ..\AppSettings.rb
 $sftp_data_readonly_username = 'REDACTED' # Override in ..\UserSettings.rb
 $sftp_data_readonly_password = 'REDACTED' # Override in ..\UserSettings.rb

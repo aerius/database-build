@@ -26,6 +26,7 @@ def display_help
   puts "  -f --from-local     Sync from local db-data folder. Supply db-data path if different from default"
   puts "     --from-ftp       Sync from $ftp_data FTP. Supply FTP path if different from default"
   puts "     --from-sftp      Sync from $sftp_data SFTP. Supply SFTP path if different from default"
+  puts "     --from-https     Sync from $https_data HTTPS. Supply HTTPS url if different from default"
   puts "  -l --to-local       Sync to local db-data folder. Supply path if different from default"
   puts "  -t --to-ftp         Sync to $ftp_data FTP. Supply FTP path if different from default"
   puts "  -s --to-sftp        Sync to $sftp_data SFTP. Supply SFTP path if different from default"
@@ -41,6 +42,7 @@ GetoptLong.new(
     ['--path', '-p', GetoptLong::REQUIRED_ARGUMENT],
     ['--from-ftp', GetoptLong::OPTIONAL_ARGUMENT],
     ['--from-sftp', GetoptLong::OPTIONAL_ARGUMENT],
+    ['--from-https', GetoptLong::OPTIONAL_ARGUMENT],
     ['--from-local', '-f', GetoptLong::OPTIONAL_ARGUMENT],
     ['--to-ftp', '-t', GetoptLong::OPTIONAL_ARGUMENT],
     ['--to-sftp', '-s', GetoptLong::OPTIONAL_ARGUMENT],
@@ -70,8 +72,9 @@ $from_local = $dbdata_path
 $to_local = $from_local   # deprecated: NAS path = $oti_nas_path.fix_pathname + $dbdata_dir.fix_pathname
 $from_ftp = $ftp_data_path.fix_pathname + $dbdata_dir.fix_pathname unless $ftp_data_path.nil?
 $to_ftp = $from_ftp
-$from_sftp = $sftp_data_path.fix_pathname + $dbdata_dir.fix_pathname
+$from_sftp = $sftp_data_path.fix_pathname + $dbdata_dir.fix_pathname unless $sftp_data_path.nil?
 $to_sftp = $from_sftp
+$from_https = $https_data_path.fix_pathname + $dbdata_dir.fix_pathname unless $https_data_path.nil?
 
 # ---------
 
@@ -108,6 +111,10 @@ def parse_commandline
         raise 'Can only have one source' unless $source.nil?
         $source = :sftp
         $from_sftp = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
+      when '--from-https'
+        raise 'Can only have one source' unless $source.nil?
+        $source = :https
+        $from_https = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
       when '--from-local'
         raise 'Can only have one source' unless $source.nil?
         $source = :local
@@ -135,6 +142,8 @@ def parse_commandline
     $logger.writeln "Syncing from FTP (#{$from_ftp})"
   elsif $source == :sftp then
     $logger.writeln "Syncing from SFTP (#{$from_sftp})"
+  elsif $source == :https then
+    $logger.writeln "Syncing from SFTP (#{$from_https})"
   elsif $source == :local then
     $logger.writeln "Syncing from local (#{$from_local})"
   end
@@ -153,6 +162,7 @@ def parse_commandline
 
   require 'FTPUploader.rb' if $source == :ftp || $target == :ftp
   require 'SFTPUploader.rb' if $source == :sftp || $target == :sftp
+  require 'HTTPSUploader.rb' if $source == :https
 
   connect
 end
@@ -184,6 +194,19 @@ def connect
     $src_fs.connect sftp_data_host, sftp_data_port, $sftp_data_readonly_username, $sftp_data_readonly_password, sftp_data_remote_path
     $source_path = sftp_data_remote_path
 
+  elsif $source == :https then
+    if /^(https\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($from_https) then
+      https_base_url = $from_https
+      $https_data_username = nil if $https_data_username == 'REDACTED'
+      $https_data_password = nil if $https_data_password == 'REDACTED'
+      $logger.warn 'Username and/or password not specified. If needed, specify $https_data_username and $https_data_password in the project user settings' if $https_data_username.nil? || $https_data_password.nil?
+    else
+      $logger.error "Not a valid HTTPS location: #{$from_https}"
+    end
+    $src_fs = HTTPSUploader.new($logger)
+    $src_fs.connect https_base_url, $https_data_username, $https_data_password
+    $source_path = ''
+
   elsif $source == :local then
     $logger.error "Source path empty or not given." if $from_local.to_s.strip.empty?
     $logger.error "Source path '#{$from_local}' not found." unless (File.exist?($from_local) && File.directory?($from_local))
@@ -191,7 +214,7 @@ def connect
     $source_path = $from_local
 
   else
-    $logger.error "No source found! Specify either --from-ftp, --from-sftp or --from-local."
+    $logger.error "No source found! Specify either --from-ftp, --from-sftp, --from-https or --from-local."
   end
 
   if $target == :ftp then
