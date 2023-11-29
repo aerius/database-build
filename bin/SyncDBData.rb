@@ -6,6 +6,7 @@ $LOAD_PATH.delete('.') if $LOAD_PATH.include?('.')
 
 require 'fileutils'
 require 'getoptlong'
+require 'zlib'
 
 require 'Utility.rb'
 require 'DataSourceCollector.rb'
@@ -330,6 +331,66 @@ def copy_file(copy_from, fs_from, copy_to, fs_to)
   end
 end
 
+def sync_normal(datasource, copy_from)
+  print '  ' + copy_from + ' ... '
+
+  copy_to = datasource.gsub('{data_folder}', $target_path)
+  make_file_dir(copy_to, $tgt_fs)
+
+  skip = false
+  if file_exists(copy_to, $tgt_fs) then
+    if file_size(copy_from, $src_fs) == file_size(copy_to, $tgt_fs) then
+      if compare_file_time(copy_from, $src_fs, copy_to, $tgt_fs) then
+        skip = true
+      end
+    end
+  end
+
+  if skip then
+    puts 'OK.'
+  else
+    copy_file(copy_from, $src_fs, copy_to, $tgt_fs)
+  end
+end
+
+def unzip_gzipped_file(gzip_file, target_file)
+  # Unzip as well, as the rest of the build script still expects normal txt files.
+  print "  Unzipping #{gzip_file} ... "
+  Zlib::GzipReader.open(gzip_file) do | input_stream |
+    File.open(target_file, "w") do |output_stream|
+      IO.copy_stream(input_stream, output_stream)
+    end
+  end
+  File.utime(File.atime(gzip_file), File.mtime(gzip_file), target_file)
+  puts "Done."
+end
+
+def sync_gzipped(datasource, copy_from)
+  gzip_copy_from = "#{copy_from}.gz"
+	print "  #{gzip_copy_from} ... "
+  
+  copy_to = datasource.gsub('{data_folder}', $target_path)
+  make_file_dir(copy_to, $tgt_fs)
+  gzip_copy_to = "#{copy_to}.gz"
+
+  skip = false
+  if file_exists(copy_to, $tgt_fs) && file_exists(gzip_copy_to, $tgt_fs) then
+    if file_size(gzip_copy_from, $src_fs) == file_size(gzip_copy_to, $tgt_fs) then
+      if compare_file_time(gzip_copy_from, $src_fs, copy_to, $tgt_fs) then
+        skip = true
+      end
+    end
+  end
+
+  if skip then
+    puts 'OK.'
+  else
+    copy_file(gzip_copy_from, $src_fs, gzip_copy_to, $tgt_fs)
+    # Unzip as well, as the rest of the build script still expects normal txt files.
+    unzip_gzipped_file(gzip_copy_to, copy_to)
+  end
+end
+
 # ---------
 
 def sync
@@ -343,25 +404,9 @@ def sync
       begin
         counter += 1
         if file_exists(copy_from, $src_fs) then
-          print '  ' + copy_from + ' ... '
-  
-          copy_to = datasource.gsub('{data_folder}', $target_path)
-          make_file_dir(copy_to, $tgt_fs)
-  
-          skip = false
-          if file_exists(copy_to, $tgt_fs) then
-            if file_size(copy_from, $src_fs) == file_size(copy_to, $tgt_fs) then
-              if compare_file_time(copy_from, $src_fs, copy_to, $tgt_fs) then
-                skip = true
-              end
-            end
-          end
-  
-          if skip then
-            puts 'OK.'
-          else
-            copy_file(copy_from, $src_fs, copy_to, $tgt_fs)
-          end
+          sync_normal(datasource, copy_from)
+        elsif file_exists("#{copy_from}.gz", $src_fs) then
+          sync_gzipped(datasource, copy_from)
         else
           if $continue then
             $logger.writeln "File not found: #{copy_from}" unless is_infofile
