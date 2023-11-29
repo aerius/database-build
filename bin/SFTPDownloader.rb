@@ -14,9 +14,9 @@ rescue LoadError => e
 end
 
 ##
-# Utility class for several SFTP actions. Similar to FTPUploader so easily interchangeable.
+# Utility class for several SFTP actions. Similar to HTTPSDownloader and FTPDownloader so easily interchangeable.
 #
-class SFTPUploader
+class SFTPDownloader
 
   def initialize(logger)
     @logger = logger
@@ -38,13 +38,6 @@ class SFTPUploader
     chdir(remote_path)
   end
 
-  def upload_file(filename)
-    @logger.log "SFTP upload: #{filename}"
-    @sftp.upload!(filename, @currdir + File.basename(filename))
-  end
-  def upload_binary_file(filename); upload_file(filename); end
-  def upload_text_file(filename); upload_file(filename); end
-
   def download_file(filename, download_to_path)
     @logger.log "SFTP download: #{filename}"
     @sftp.download!(filename, download_to_path)
@@ -65,24 +58,6 @@ class SFTPUploader
   def chdir(remote_path)
     remote_path = @sftp.realpath!(remote_path.fix_pathname).name
     @currdir = remote_path.fix_pathname
-  end
-
-  def mkpath(remote_path)
-    #remote_path = @sftp.realpath!(remote_path.fix_pathname).name
-    @sftp.mkdir!(remote_path.fix_pathname)
-    chdir(remote_path)
-  end
-
-  def dir_exists?(remote_path)
-    #return true if remote_path == @currdir
-    begin
-      #remote_path = @sftp.realpath!(remote_path.fix_pathname).name
-      handle = @sftp.opendir!(remote_path.fix_pathname)
-      @sftp.close!(handle)
-      return true
-    rescue Net::SFTP::StatusException
-      return false
-    end
   end
 
   def file_exists?(remote_file)

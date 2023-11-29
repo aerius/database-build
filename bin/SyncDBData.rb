@@ -29,8 +29,6 @@ def display_help
   puts "     --from-sftp      Sync from $sftp_data SFTP. Supply SFTP path if different from default"
   puts "     --from-https     Sync from $https_data HTTPS. Supply HTTPS url if different from default"
   puts "  -l --to-local       Sync to local db-data folder. Supply path if different from default"
-  puts "  -t --to-ftp         Sync to $ftp_data FTP. Supply FTP path if different from default"
-  puts "  -s --to-sftp        Sync to $sftp_data SFTP. Supply SFTP path if different from default"
   puts "  -c --continue       Continue on file not found errors"
   puts "  -i --info           Displays defaults path (does not run)"
   puts "  -h --help           This help"
@@ -45,8 +43,6 @@ GetoptLong.new(
     ['--from-sftp', GetoptLong::OPTIONAL_ARGUMENT],
     ['--from-https', GetoptLong::OPTIONAL_ARGUMENT],
     ['--from-local', '-f', GetoptLong::OPTIONAL_ARGUMENT],
-    ['--to-ftp', '-t', GetoptLong::OPTIONAL_ARGUMENT],
-    ['--to-sftp', '-s', GetoptLong::OPTIONAL_ARGUMENT],
     ['--to-local', '-l', GetoptLong::OPTIONAL_ARGUMENT],
     ['--continue', '-c', GetoptLong::NO_ARGUMENT],
     ['--info', '-i', GetoptLong::NO_ARGUMENT],
@@ -124,16 +120,6 @@ def parse_commandline
         $source = :local
         $source_overwritten = true
         $from_local = File.expand_path(argument.to_s).fix_pathname unless argument.to_s.strip.empty?
-      when '--to-ftp'
-        raise 'Can only have one target' if $target_overwritten
-        $target = :ftp
-        $target_overwritten = true
-        $to_ftp = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
-      when '--to-sftp'
-        raise 'Can only have one target' if $target_overwritten
-        $target = :sftp
-        $target_overwritten = true
-        $to_sftp = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
       when '--to-local'
         raise 'Can only have one target' if $target_overwritten
         $target = :local
@@ -156,21 +142,15 @@ def parse_commandline
     $logger.writeln "Syncing from local (#{$from_local})"
   end
 
-  if $target == :ftp then
-    $logger.writeln "Syncing to FTP (#{$to_ftp}):"
-  elsif $target == :sftp then
-    $logger.writeln "Syncing to SFTP (#{$to_sftp}):"
-  elsif $target == :local then
-    $logger.writeln "Syncing to local (#{$to_local}):"
+  $logger.writeln "Syncing to local (#{$to_local}):"
+
+  if ($target != :local) then
+    $logger.error "Sorry, syncing to (S)FTP or HTTPS is not supported (anymore)."
   end
 
-  if ($source == :ftp || $source == :sftp) && ($target == :ftp || $target == :sftp) then
-    $logger.error "Sorry, (S)FTP to (S)FTP syncing not yet supported."
-  end
-
-  require 'FTPUploader.rb' if $source == :ftp || $target == :ftp
-  require 'SFTPUploader.rb' if $source == :sftp || $target == :sftp
-  require 'HTTPSUploader.rb' if $source == :https
+  require 'FTPDownloader.rb' if $source == :ftp
+  require 'SFTPDownloader.rb' if $source == :sftp
+  require 'HTTPSDownloader.rb' if $source == :https
 
   connect
 end
@@ -185,7 +165,7 @@ def connect
     else
       $logger.error "Not a valid FTP location: #{$from_ftp}"
     end
-    $src_fs = FTPUploader.new($logger)
+    $src_fs = FTPDownloader.new($logger)
     $src_fs.connect ftp_host, ftp_port, $ftp_data_username, $ftp_data_password, ftp_remote_path
     $source_path = ftp_remote_path
 
@@ -198,7 +178,7 @@ def connect
     else
       $logger.error "Not a valid SFTP location: #{$from_sftp}"
     end
-    $src_fs = SFTPUploader.new($logger)
+    $src_fs = SFTPDownloader.new($logger)
     $src_fs.connect sftp_data_host, sftp_data_port, $sftp_data_readonly_username, $sftp_data_readonly_password, sftp_data_remote_path
     $source_path = sftp_data_remote_path
 
@@ -211,7 +191,7 @@ def connect
     else
       $logger.error "Not a valid HTTPS location: #{$from_https}"
     end
-    $src_fs = HTTPSUploader.new($logger)
+    $src_fs = HTTPSDownloader.new($logger)
     $src_fs.connect https_base_url, $https_data_username, $https_data_password
     $source_path = ''
 
@@ -225,41 +205,10 @@ def connect
     $logger.error "No source found! Specify either --from-ftp, --from-sftp, --from-https or --from-local."
   end
 
-  if $target == :ftp then
-    if /^(ftp\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($to_ftp) then
-      ftp_host = $2
-      ftp_port = ($4 || 21).to_i
-      ftp_remote_path = $5 || ''
-      $logger.error 'Specify $ftp_data_username and $ftp_data_password in the project user settings' if $ftp_data_username == 'REDACTED' || $ftp_data_password == 'REDACTED'
-    else
-      $logger.error "Not a valid FTP location: #{$to_ftp}"
-    end
-    $tgt_fs = FTPUploader.new($logger)
-    $tgt_fs.connect ftp_host, ftp_port, $ftp_data_username, $ftp_data_password, ftp_remote_path
-    $target_path = ftp_remote_path
-
-  elsif $target == :sftp then
-    if /^(sftp\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($to_sftp) then
-      sftp_data_host = $2
-      sftp_data_port = ($4 || 22).to_i
-      sftp_data_remote_path = $5 || ''
-      $logger.error 'Specify $sftp_data_username and $sftp_data_password in the project user settings' if $sftp_data_username == 'REDACTED' || $sftp_data_password == 'REDACTED'
-    else
-      $logger.error "Not a valid SFTP location: #{$to_sftp}"
-    end
-    $tgt_fs = SFTPUploader.new($logger)
-    $tgt_fs.connect sftp_data_host, sftp_data_port, $sftp_data_username, $sftp_data_password, sftp_data_remote_path
-    $target_path = sftp_data_remote_path
-
-  elsif $target == :local then
-    $logger.error "Target path empty or not given." if $to_local.to_s.strip.empty?
-    $logger.error "Target path '#{$to_local}' not found." unless (File.exist?($to_local) && File.directory?($to_local))
-    $tgt_fs = nil
-    $target_path = $to_local
-
-  else
-    $logger.error "No target found! Specify either --to-ftp, --to-sftp or --to-local."
-  end
+  $logger.error "Target path empty or not given." if $to_local.to_s.strip.empty?
+  $logger.error "Target path '#{$to_local}' not found." unless (File.exist?($to_local) && File.directory?($to_local))
+  $tgt_fs = nil
+  $target_path = $to_local
   
   $source_path.chomp!('/')
   $target_path.chomp!('/')
@@ -278,14 +227,9 @@ def file_exists(filename, fs)
   end
 end
 
-def make_file_dir(filename, fs)
+def make_file_dir(filename)
   filename_dir = File.dirname(filename)
-  if fs.nil? then
-    FileUtils.mkpath(filename_dir) unless File.exist?(filename_dir) && File.directory?(filename_dir)
-  else
-    fs.mkpath(filename_dir) unless fs.dir_exists?(filename_dir)
-    fs.chdir(filename_dir) unless fs.getdir == filename_dir
-  end
+  FileUtils.mkpath(filename_dir) unless File.exist?(filename_dir) && File.directory?(filename_dir)
 end
 
 def file_size(filename, fs)
@@ -323,10 +267,6 @@ def copy_file(copy_from, fs_from, copy_to, fs_to)
     rv = system("COPY /Y \"#{copy_from}\" \"#{copy_to}\" > NUL")
     $logger.error 'Error during copy' unless rv && ($? == 0)
     puts 'Copied.'
-  elsif fs_from.nil? then
-    copy_from.gsub!('/', File::SEPARATOR)
-    fs_to.upload_text_file(copy_from)
-    puts 'Uploaded.'
   elsif fs_to.nil? then
     copy_to.gsub!('/', File::SEPARATOR)
     original_mtime = file_time(copy_from, fs_from)
@@ -342,7 +282,7 @@ def sync_normal(datasource, copy_from)
   print '  ' + copy_from + ' ... '
 
   copy_to = datasource.gsub('{data_folder}', $target_path)
-  make_file_dir(copy_to, $tgt_fs)
+  make_file_dir(copy_to)
 
   skip = false
   if file_exists(copy_to, $tgt_fs) then
@@ -377,7 +317,7 @@ def sync_gzipped(datasource, copy_from)
   print "  #{gzip_copy_from} ... "
   
   copy_to = datasource.gsub('{data_folder}', $target_path)
-  make_file_dir(copy_to, $tgt_fs)
+  make_file_dir(copy_to)
   gzip_copy_to = "#{copy_to}.gz"
 
   skip = false

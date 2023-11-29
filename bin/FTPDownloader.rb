@@ -1,9 +1,9 @@
 require 'net/ftp'
 
 ##
-# Utility class for several FTP actions. Similar to SFTPUploader so easily interchangeable.
+# Utility class for several FTP actions. Similar to HTTPSDownloader and SFTPDownloader so easily interchangeable.
 #
-class FTPUploader
+class FTPDownloader
 
   def initialize(logger)
     @logger = logger
@@ -17,16 +17,6 @@ class FTPUploader
     @ftp.connect(host, port)
     @ftp.login(username, password)
     @ftp.chdir(remote_path)
-  end
-
-  def upload_binary_file(filename)
-    @logger.log "FTP binary upload: #{filename}"
-    @ftp.putbinaryfile(filename)
-  end
-
-  def upload_text_file(filename)
-    @logger.log "FTP text upload: #{filename}"
-    @ftp.puttextfile(filename)
   end
 
   def download_binary_file(filename, download_to_path)
@@ -50,40 +40,6 @@ class FTPUploader
 
   def chdir(remote_path)
     @ftp.chdir(remote_path)
-  end
-
-  def mkpath(remote_path)
-    currpath = @ftp.pwd
-    @ftp.chdir '/' if remote_path.starts_with?('/')
-    remote_path.split('/').each do |subdir|
-      if subdir == '' then
-        next
-      elsif subdir == '..' then
-        @ftp.chdir '..'
-        next
-      end
-      begin
-        @ftp.chdir subdir
-      rescue Net::FTPPermError
-        @logger.log "FTP make dir: #{subdir}"
-        @ftp.mkdir subdir
-        @ftp.chdir subdir
-      end
-    end
-    @ftp.chdir currpath
-  end
-
-  def dir_exists?(remote_path)
-    currpath = @ftp.pwd
-    return true if remote_path == currpath
-    begin
-      @ftp.chdir(remote_path)
-      return true
-    rescue Net::FTPPermError
-      return false
-    ensure
-      @ftp.chdir(currpath)
-    end
   end
 
   def file_exists?(remote_path)

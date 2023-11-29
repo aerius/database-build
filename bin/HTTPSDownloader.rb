@@ -4,9 +4,9 @@ require 'uri'
 require 'time'
 
 ##
-# Utility class for several HTTPS actions. Similar to FTPUploader and SFTPUploader so easily interchangeable.
+# Utility class for several HTTPS actions. Similar to FTPDownloader and SFTPDownloader so easily interchangeable.
 #
-class HTTPSUploader
+class HTTPSDownloader
 
   def initialize(logger)
     @logger = logger
@@ -20,12 +20,6 @@ class HTTPSUploader
     @username = username
     @password = password
   end
-
-  def upload_file(filename)
-    raise "Upload file not supported with HTTPS version"
-  end
-  def upload_binary_file(filename); upload_file(filename); end
-  def upload_text_file(filename); upload_file(filename); end
 
   def download_file(filename, download_to_path)
     @logger.log "HTTPS download: #{filename}"
@@ -54,14 +48,6 @@ class HTTPSUploader
 
   def chdir(remote_path)
     @currdir = remote_path.fix_pathname
-  end
-
-  def mkpath(remote_path)
-    raise "Creating remote path not supported with HTTPS version"
-  end
-
-  def dir_exists?(remote_path)
-    # No way to check this (afaik), but probably not needed as it's only needed in upload.
   end
 
   def file_exists?(remote_file)
@@ -94,12 +80,6 @@ class HTTPSUploader
       resp = http.request(req)
       return Time.parse(resp.get_fields('last-modified')[0])
     end
-  end
-
-  def get_filenames(remote_path, pattern = '*')
-    files = []
-		# Unsure if this possible and/or required.
-    return files
   end
 
   private
