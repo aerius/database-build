@@ -51,8 +51,12 @@ mkdir -p "${PGDATA}" && chown -R postgres:postgres "${PGDATA}" && chmod 777 "${P
 # create db-data folder for the repo
 mkdir -p "${DBDATA_PATH}"
 
-# configure repo with the readonly SFTP password given as argument if set
+# configure repo with the readonly SFTP password given if set
 [[ -n "${SFTP_READONLY_PASSWORD}" ]] && echo "\$sftp_data_readonly_password = '${SFTP_READONLY_PASSWORD}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
+
+# configure repo with the HTTPS credentials given if set
+[[ -n "${HTTPS_DATA_USERNAME}" ]] && echo "\$https_data_username = '${HTTPS_DATA_USERNAME}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
+[[ -n "${HTTPS_DATA_PASSWORD}" ]] && echo "\$https_data_password = '${HTTPS_DATA_PASSWORD}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
 
 # Set git support off in the build script
 ! [[ ${USE_GIT} ]] && echo "\$vcs = :none" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
