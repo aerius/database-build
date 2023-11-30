@@ -79,13 +79,13 @@ $from_https = $https_data_path.fix_pathname + $dbdata_dir.fix_pathname unless $h
 
 # ---------
 
-$source = nil
-$target = nil
 $source_path = nil
 $target_path = nil
 $src_fs = nil
 $tgt_fs = nil
 $continue = false
+$source_overwritten = false
+$target_overwritten = false
 
 # ---------
 
@@ -105,32 +105,39 @@ def parse_commandline
     case option.downcase
       when '--path'; $product_data_path = File.expand_path(argument.to_s).fix_pathname
       when '--from-ftp'
-        raise 'Can only have one source' unless $source.nil?
+        raise 'Can only have one source' if $source_overwritten
         $source = :ftp
+        $source_overwritten = true
         $from_ftp = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
       when '--from-sftp'
-        raise 'Can only have one source' unless $source.nil?
+        raise 'Can only have one source' if $source_overwritten
         $source = :sftp
+        $source_overwritten = true
         $from_sftp = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
       when '--from-https'
-        raise 'Can only have one source' unless $source.nil?
+        raise 'Can only have one source' if $source_overwritten
         $source = :https
+        $source_overwritten = true
         $from_https = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
       when '--from-local'
-        raise 'Can only have one source' unless $source.nil?
+        raise 'Can only have one source' if $source_overwritten
         $source = :local
+        $source_overwritten = true
         $from_local = File.expand_path(argument.to_s).fix_pathname unless argument.to_s.strip.empty?
       when '--to-ftp'
-        raise 'Can only have one target' unless $target.nil?
+        raise 'Can only have one target' if $target_overwritten
         $target = :ftp
+        $target_overwritten = true
         $to_ftp = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
       when '--to-sftp'
-        raise 'Can only have one target' unless $target.nil?
+        raise 'Can only have one target' if $target_overwritten
         $target = :sftp
+        $target_overwritten = true
         $to_sftp = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
       when '--to-local'
-        raise 'Can only have one target' unless $target.nil?
+        raise 'Can only have one target' if $target_overwritten
         $target = :local
+        $target_overwritten = true
         $to_local = File.expand_path(argument.to_s).fix_pathname unless argument.to_s.strip.empty?
       when '--continue'
         $continue = true
