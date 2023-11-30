@@ -403,10 +403,10 @@ def sync
       max_attempts = 5
       begin
         counter += 1
-        if file_exists(copy_from, $src_fs) then
-          sync_normal(datasource, copy_from)
-        elsif file_exists("#{copy_from}.gz", $src_fs) then
+        if file_exists("#{copy_from}.gz", $src_fs) then
           sync_gzipped(datasource, copy_from)
+        elsif file_exists(copy_from, $src_fs) then
+          sync_normal(datasource, copy_from)
         else
           if $continue then
             $logger.writeln "File not found: #{copy_from}" unless is_infofile
