@@ -367,7 +367,7 @@ end
 
 def sync_gzipped(datasource, copy_from)
   gzip_copy_from = "#{copy_from}.gz"
-	print "  #{gzip_copy_from} ... "
+  print "  #{gzip_copy_from} ... "
   
   copy_to = datasource.gsub('{data_folder}', $target_path)
   make_file_dir(copy_to, $tgt_fs)
