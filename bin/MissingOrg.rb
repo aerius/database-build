@@ -33,7 +33,7 @@ $datasources = DataSourceCollector.collect($logger, $product_data_path, $common_
 $ftp_org_path = $sftp_data_path.fix_pathname + $org_dir.fix_pathname
 $logger.writeln "Connecting to SFTP (#{$ftp_org_path})..."
 
-require 'SFTPUploader.rb'
+require 'SFTPDownloader.rb'
 
 if /^(sftp\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($ftp_org_path) then
   sftp_data_host = $2
@@ -43,7 +43,7 @@ if /^(sftp\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($ftp_org_path) then
 else
   $logger.error "Not a valid SFTP location: #{$ftp_org_path}"
 end
-$fs = SFTPUploader.new($logger)
+$fs = SFTPDownloader.new($logger)
 
 # Collect FTP files
 $logger.writeln "Scanning SFTP for .txt files..."
