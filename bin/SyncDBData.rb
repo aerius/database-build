@@ -144,7 +144,7 @@ def parse_commandline
   elsif $source == :sftp then
     $logger.writeln "Syncing from SFTP (#{$from_sftp})"
   elsif $source == :https then
-    $logger.writeln "Syncing from SFTP (#{$from_https})"
+    $logger.writeln "Syncing from HTTPS (#{$from_https})"
   elsif $source == :local then
     $logger.writeln "Syncing from local (#{$from_local})"
   end
