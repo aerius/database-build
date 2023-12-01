@@ -3,7 +3,6 @@
 set -e
 
 # validations
-: ${SFTP_READONLY_PASSWORD?'SFTP_READONLY_PASSWORD must be provided'}
 : ${DBDATA_PATH?'DBDATA_PATH must be provided'}
 : ${DBSOURCE_PATH?'DBSOURCE_PATH must be provided'}
 : ${DATABASE_NAME?'DATABASE_NAME must be provided'}
@@ -52,8 +51,12 @@ mkdir -p "${PGDATA}" && chown -R postgres:postgres "${PGDATA}" && chmod 777 "${P
 # create db-data folder for the repo
 mkdir -p "${DBDATA_PATH}"
 
-# configure repo with the readonly SFTP password given as argument
-echo "\$sftp_data_readonly_password = '${SFTP_READONLY_PASSWORD}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
+# configure repo with the readonly SFTP password given if set
+[[ -n "${SFTP_READONLY_PASSWORD}" ]] && echo "\$sftp_data_readonly_password = '${SFTP_READONLY_PASSWORD}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
+
+# configure repo with the HTTPS credentials given if set
+[[ -n "${HTTPS_DATA_USERNAME}" ]] && echo "\$https_data_username = '${HTTPS_DATA_USERNAME}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
+[[ -n "${HTTPS_DATA_PASSWORD}" ]] && echo "\$https_data_password = '${HTTPS_DATA_PASSWORD}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
 
 # Set git support off in the build script
 ! [[ ${USE_GIT} ]] && echo "\$vcs = :none" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
@@ -61,7 +64,7 @@ echo "\$sftp_data_readonly_password = '${SFTP_READONLY_PASSWORD}'" >> "${DBCONFI
 # sync db-data files we need
 echo 'Syncing database data files..'
 cd "${DBSOURCE_PATH}/"
-ruby /aerius-database-build/bin/SyncDBData.rb "${DBSETTINGS_BASE_DIRECTORY}/${DBSETTINGS_PATH}" --from-sftp --to-local
+ruby /aerius-database-build/bin/SyncDBData.rb "${DBSETTINGS_BASE_DIRECTORY}/${DBSETTINGS_PATH}" --to-local
 
 # initialize database
 # (this is a wrapper provided by the postgres image, which will initialize the db if it isn't already and is executed when starting the image for the first time.
