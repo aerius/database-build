@@ -104,7 +104,6 @@ class Globals
 
     # Standalone paths and settings
     raise 'Database name prefix not set ($database_name_prefix)' if $database_name_prefix.nil?
-    raise 'Database function prefix not set ($db_function_prefix)' if $db_function_prefix.nil?
     raise 'PostgreSQL bin path not set ($pg_bin_path)' if $pg_bin_path.nil?
     raise "PostgreSQL bin path not found ($pg_bin_path = \"#{$pg_bin_path}\")" unless ((File.exist?($pg_bin_path) && File.directory?($pg_bin_path)) || (!ON_WINDOWS && $pg_bin_path.empty?))
     raise "PostgreSQL username not set ($pg_username)" if $pg_username.nil?
