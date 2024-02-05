@@ -237,7 +237,7 @@ class ScriptCommands
   def synchronize_serials
     ensure_database_name
     $logger.writeln "Synchronizing all serials..."
-    PostgresTools.execute_sql_command("SELECT setup.#{$db_function_prefix}_synchronize_all_serials()");
+    PostgresTools.execute_sql_command("SELECT #{$db_essentials_function_prefix}synchronize_all_serials()");
   end
   alias_method :synchronise_serials, :synchronize_serials
 
@@ -318,7 +318,7 @@ class ScriptCommands
     $logger.write "Running unit tests... "
     unittest_count = 0
     unittest_failed = 0
-    functions = PostgresTools.fetch_sql_command("SELECT * FROM setup.#{$db_function_prefix}_list_unittest_functions('#{$db_function_prefix}_unittest_')");
+    functions = PostgresTools.fetch_sql_command("SELECT * FROM #{$db_essentials_function_prefix}list_unittest_functions('#{$db_unittest_prefix}')");
     $logger.write 'none found.' if functions.empty?
     $logger.writeln ''
     functions.each{ |function|
@@ -328,7 +328,7 @@ class ScriptCommands
         unittest_count += 1
         function_returns = function['returns']
         $logger.major_hint "#{function_name}() returns \"#{function_returns}\"; should have no return value" if function_returns != 'void'
-        rv = PostgresTools.fetch_sql_command("BEGIN; SELECT * FROM setup.#{$db_function_prefix}_execute_unittest('#{function_name}'); ROLLBACK;");
+        rv = PostgresTools.fetch_sql_command("BEGIN; SELECT * FROM #{$db_essentials_function_prefix}execute_unittest('#{function_name}'); ROLLBACK;");
         if rv.empty? then
           $logger.warn "Could not read result from #{function_name}()"
         elsif rv[0].has_key?('errcode') then
@@ -354,7 +354,7 @@ class ScriptCommands
   def validate_contents(*params)
     ensure_database_name
     $logger.writeln_with_timing("Validating database contents...") {
-      PostgresTools.execute_sql_command("\\set VERBOSITY terse \n SELECT setup.#{$db_function_prefix}_validate_all()");
+      PostgresTools.execute_sql_command("\\set VERBOSITY terse \n SELECT #{$db_essentials_function_prefix}validate_all()");
       if params.include?(:abort_on_errors) then
         rs = PostgresTools.fetch_sql_command("SELECT number_of_tests FROM setup.last_validation_run_view WHERE result = 'error'");
         num_errors = rs[0]['number_of_tests'].to_i
@@ -367,7 +367,7 @@ class ScriptCommands
     ensure_database_name
     filename = File.expand_path($product_output_path + '{title}_{datesuffix}.csv').fix_filename
     $logger.writeln_with_timing("Creating database summary in '#{$product_output_path}'...") {
-      PostgresTools.execute_sql_command("SELECT setup.#{$db_function_prefix}_output_summary_table('#{filename}')");
+      PostgresTools.execute_sql_command("SELECT #{$db_essentials_function_prefix}output_summary_table('#{filename}')");
     }
   end
 
@@ -439,7 +439,7 @@ class ScriptCommands
   def cluster_tables
     ensure_database_name
     $logger.writeln "Clustering all tables..."
-    PostgresTools.execute_sql_command("SELECT setup.#{$db_function_prefix}_cluster_all_tables()");
+    PostgresTools.execute_sql_command("SELECT #{$db_essentials_function_prefix}cluster_all_tables()");
   end
 
   def terminate_connections
