@@ -137,8 +137,7 @@ LANGUAGE plpgsql IMMUTABLE RETURNS NULL ON NULL INPUT;
  * Type used as a return type in the case where a key-value pair is returned.
  * Intended for use by the aggregate function db_max_with_key, but can be used for other means as well.
  */
-CREATE TYPE system.key_value_rs
- AS
+CREATE TYPE system.key_value_rs AS
 (
 	key numeric,
 	value numeric
@@ -170,8 +169,7 @@ LANGUAGE plpgsql IMMUTABLE;
  * This function is used to shape the endresult into the correct type.
  */
 CREATE OR REPLACE FUNCTION system.db_max_with_key_ffunc(state numeric[2])
-	RETURNS system.key_value_rs
- AS
+	RETURNS system.key_value_rs AS
 $BODY$
 BEGIN
 	RETURN (state[1], state[2]);
