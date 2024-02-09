@@ -10,10 +10,8 @@
 CREATE OR REPLACE FUNCTION system.db_output_summary_table(filespec text)
 	RETURNS void AS
 $BODY$
-DECLARE
-	filename text;
-	query text;
 BEGIN
+	RAISE NOTICE '** Empty output summary table function...';
 END;
 $BODY$
 LANGUAGE plpgsql VOLATILE;
