@@ -62,6 +62,16 @@ class ScriptCommands
     return $version
   end
 
+  def get_database_build_version()
+    version_file = File.join(File.dirname($0), "/../VERSION").fix_filename;
+    
+    if !File.exist?(version_file) then
+      raise "Could not find database-build VERSION."
+    end
+    
+    return File.read(version_file).strip
+  end
+
   def set_dbdata_path(dbdata_path)
     $dbdata_path = File.expand_path(dbdata_path.to_s).fix_pathname
     raise "Cannot find table data file path: #{$dbdata_path}" unless File.exist?($dbdata_path) && File.directory?($dbdata_path)
@@ -434,6 +444,7 @@ class ScriptCommands
     add_constant 'CURRENT_DATABASE_BUILD_DATE', Time.now.strftime('%d-%m-%Y %H:%M:%S'), schema
     add_constant 'CURRENT_DATABASE_BUILD_USER', Etc.getlogin, schema rescue nil
     add_constant 'CURRENT_DATABASE_BUILD_NODE', Etc.uname[:nodename], schema rescue nil
+    add_constant 'CURRENT_DATABASE_BUILD_VERSION', get_database_build_version(), schema
   end
 
   def cluster_tables
