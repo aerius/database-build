@@ -1,10 +1,10 @@
 /*
- * db_protect_table
- * ----------------
+ * protect_table
+ * -------------
  * Simple trigger function to make a table readonly.
  * Useful for 'abstract base tables'.
  */
-CREATE OR REPLACE FUNCTION system.db_protect_table()
+CREATE OR REPLACE FUNCTION system.protect_table()
 	RETURNS trigger AS
 $BODY$
 BEGIN
@@ -15,12 +15,12 @@ LANGUAGE plpgsql;
 
 
 /*
- * db_raise_notice
- * ---------------
+ * raise_notice
+ * ------------
  * Function for showing report messages, mainly during a database build.
  * This is a wrapper around the plpgsql notice function, so this can be called from normal SQL (outside a function).
  */
-CREATE OR REPLACE FUNCTION system.db_raise_notice(message text)
+CREATE OR REPLACE FUNCTION system.raise_notice(message text)
 	RETURNS void AS
 $BODY$
 DECLARE

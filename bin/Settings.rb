@@ -40,8 +40,8 @@ $on_build_server = false
 $dbdata_dir = 'db-data/'
 $org_dir = 'org/'
 
-$db_essentials_function_prefix = 'system.db_'
-$db_unittest_prefix = 'system.db_unittest_'
+$db_essentials_function_prefix = 'system.'
+$db_unittest_prefix = 'system.unittest_'
 
 # VCS
 $vcs = nil  # :git or :svn

@@ -21,14 +21,14 @@ CREATE TYPE system.validation_result AS (
 
 
 /*
- * db_validate_all
- * ---------------
- * Empty (default) db_validate_all function.
+ * validate_all
+ * ------------
+ * Empty (default) validate_all function.
  *
  * Called during build by ruby build script.
  * Can be overwritten by each product to perform some actual validations.
  */
-CREATE OR REPLACE FUNCTION system.db_validate_all()
+CREATE OR REPLACE FUNCTION system.validate_all()
 	RETURNS TABLE (validaton_result_id integer, validation_run_id integer, name regproc, result system.validation_result_type) AS
 $BODY$
 BEGIN
