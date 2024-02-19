@@ -14,12 +14,12 @@ CREATE TABLE system.constants (
 
 
 /*
- * db_constant
- * -----------
+ * constant
+ * --------
  * Function returning the value of a database or web application constant.
  * When the constant does not exist in the view system.constants_view, an exception is raised.
  */
-CREATE OR REPLACE FUNCTION system.db_constant(constant_key text)
+CREATE OR REPLACE FUNCTION system.constant(constant_key text)
 	RETURNS text AS
 $BODY$
 DECLARE
@@ -36,12 +36,12 @@ LANGUAGE plpgsql STABLE;
 
 
 /*
- * db_set_constant
- * ---------------
+ * set_constant
+ * ------------
  * Function to change the value of a web application constant.
  * When the constant does not yet exist in the system.constants table, an exception is raised.
  */
-CREATE OR REPLACE FUNCTION system.db_set_constant(constant_key text, constant_value text)
+CREATE OR REPLACE FUNCTION system.set_constant(constant_key text, constant_value text)
 	RETURNS void AS
 $BODY$
 BEGIN
@@ -56,20 +56,20 @@ LANGUAGE plpgsql VOLATILE;
 
 
 /*
- * db_get_git_revision
- * -------------------
+ * get_git_revision
+ * ----------------
  * Function returning the revision value, which is stored as a web application constant.
  */
-CREATE OR REPLACE FUNCTION system.db_get_git_revision()
+CREATE OR REPLACE FUNCTION system.get_git_revision()
 	RETURNS text AS
 $BODY$
 	SELECT CASE
 	WHEN EXISTS (SELECT 1 FROM system.constants WHERE key = 'CURRENT_GIT_REVISION') THEN
-		system.db_constant('CURRENT_GIT_REVISION')
+		system.constant('CURRENT_GIT_REVISION')
 	WHEN EXISTS (SELECT 1 FROM system.constants WHERE key = 'CURRENT_DATABASE_VERSION') THEN
-		reverse(split_part(reverse(system.db_constant('CURRENT_DATABASE_VERSION')), '_', 1))
+		reverse(split_part(reverse(system.constant('CURRENT_DATABASE_VERSION')), '_', 1))
 	ELSE
-		reverse(split_part(reverse(system.db_constant('CURRENT_DATABASE_NAME')), '_', 1))
+		reverse(split_part(reverse(system.constant('CURRENT_DATABASE_NAME')), '_', 1))
 	END;
 $BODY$
 LANGUAGE SQL STABLE;

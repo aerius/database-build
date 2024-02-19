@@ -1,10 +1,10 @@
------------------------------------------------------------
--- Interpolate functions ----------------------------------
------------------------------------------------------------
+--------------------------------------------------------
+-- Interpolate functions -------------------------------
+--------------------------------------------------------
 
 /*
- * db_linear_interpolate
- * ---------------------
+ * linear_interpolate
+ * ------------------
  * Linear interpolation function.
  *
  * xb, yb = Start point
@@ -12,7 +12,7 @@
  * xi = the x value to interpolate the y value for.
  * Expects a float for each value, and returns a float.
  */
-CREATE OR REPLACE FUNCTION system.db_linear_interpolate(xb float, xe float, yb float, ye float, xi float)
+CREATE OR REPLACE FUNCTION system.linear_interpolate(xb float, xe float, yb float, ye float, xi float)
 	RETURNS float AS
 $BODY$
 DECLARE
@@ -28,8 +28,8 @@ LANGUAGE plpgsql IMMUTABLE;
 
 
 /*
- * db_linear_interpolate
- * ---------------------
+ * linear_interpolate
+ * ------------------
  * Linear interpolation function.
  *
  * xb, yb = Start point
@@ -39,7 +39,7 @@ LANGUAGE plpgsql IMMUTABLE;
  * Expects real values for yb and ye.
  * Returns a real value.
  */
-CREATE OR REPLACE FUNCTION system.db_linear_interpolate(xb integer, xe integer, yb real, ye real, xi integer)
+CREATE OR REPLACE FUNCTION system.linear_interpolate(xb integer, xe integer, yb real, ye real, xi integer)
 	RETURNS real AS
 $BODY$
 DECLARE
@@ -54,16 +54,16 @@ $BODY$
 LANGUAGE plpgsql IMMUTABLE;
 
 
------------------------------------------------------------
--- Percentile functions -----------------------------------
------------------------------------------------------------
+--------------------------------------------------------
+-- Percentile functions --------------------------------
+--------------------------------------------------------
 
 /*
- * db_percentile_sorted_array
- * --------------------------
+ * percentile_sorted_array
+ * -----------------------
  * Function to calculate the percentile based on a sorted array.
  */
-CREATE OR REPLACE FUNCTION system.db_percentile_sorted_array(sorted_array numeric[], percentile int)
+CREATE OR REPLACE FUNCTION system.percentile_sorted_array(sorted_array numeric[], percentile int)
 	RETURNS numeric AS
 $BODY$
 DECLARE
@@ -96,46 +96,46 @@ LANGUAGE plpgsql IMMUTABLE RETURNS NULL ON NULL INPUT;
 
 
 /*
- * db_percentile
- * -------------
+ * percentile
+ * ----------
  * Function to calculate the percentile based on an unsorted list.
  * Remark: there is no aggregate version of this function due to very bad performance.
  */
-CREATE OR REPLACE FUNCTION system.db_percentile(unsorted_array numeric[], percentile int)
+CREATE OR REPLACE FUNCTION system.percentile(unsorted_array numeric[], percentile int)
 	RETURNS numeric AS
 $BODY$
 BEGIN
-	RETURN system.db_percentile_sorted_array((SELECT array_agg(v) FROM (SELECT v FROM unnest(unsorted_array) AS v WHERE v IS NOT NULL ORDER BY 1) AS t), percentile);
+	RETURN system.percentile_sorted_array((SELECT array_agg(v) FROM (SELECT v FROM unnest(unsorted_array) AS v WHERE v IS NOT NULL ORDER BY 1) AS t), percentile);
 END;
 $BODY$
 LANGUAGE plpgsql IMMUTABLE RETURNS NULL ON NULL INPUT;
 
 
 /*
- * db_median
- * ---------
+ * median
+ * ------
  * Function to calculate the median based on an unsorted list. Identical to 50% percentile.
  * Remark: there is no aggregate version of this function due to very bad performance.
  */
-CREATE OR REPLACE FUNCTION system.db_median(unsorted_array numeric[])
+CREATE OR REPLACE FUNCTION system.median(unsorted_array numeric[])
 	RETURNS numeric AS
 $BODY$
 BEGIN
-	RETURN system.db_percentile(unsorted_array, 50);
+	RETURN system.percentile(unsorted_array, 50);
 END;
 $BODY$
 LANGUAGE plpgsql IMMUTABLE RETURNS NULL ON NULL INPUT;
 
 
------------------------------------------------------------
--- Max with key aggregation (db_max_with_key) -------------
------------------------------------------------------------
+--------------------------------------------------------
+-- Max with key aggregation (max_with_key) -------------
+--------------------------------------------------------
 
 /*
  * key_value_rs
  * ------------
  * Type used as a return type in the case where a key-value pair is returned.
- * Intended for use by the aggregate function db_max_with_key, but can be used for other means as well.
+ * Intended for use by the aggregate function max_with_key, but can be used for other means as well.
  */
 CREATE TYPE system.key_value_rs AS
 (
@@ -144,11 +144,11 @@ CREATE TYPE system.key_value_rs AS
 );
 
 /*
- * db_max_with_key_sfunc
- * ---------------------
- * State function for 'db_max_with_key'.
+ * max_with_key_sfunc
+ * ------------------
+ * State function for 'max_with_key'.
  */
-CREATE OR REPLACE FUNCTION system.db_max_with_key_sfunc(state numeric[2], e1 numeric, e2 numeric)
+CREATE OR REPLACE FUNCTION system.max_with_key_sfunc(state numeric[2], e1 numeric, e2 numeric)
 	RETURNS numeric[2] AS
 $BODY$
 BEGIN
@@ -163,12 +163,12 @@ LANGUAGE plpgsql IMMUTABLE;
 
 
 /*
- * db_max_with_key_ffunc
- * ---------------------
- * Final function for 'db_max_with_key'.
+ * max_with_key_ffunc
+ * ------------------
+ * Final function for 'max_with_key'.
  * This function is used to shape the endresult into the correct type.
  */
-CREATE OR REPLACE FUNCTION system.db_max_with_key_ffunc(state numeric[2])
+CREATE OR REPLACE FUNCTION system.max_with_key_ffunc(state numeric[2])
 	RETURNS system.key_value_rs AS
 $BODY$
 BEGIN
@@ -179,32 +179,32 @@ LANGUAGE plpgsql IMMUTABLE;
 
 
 /*
- * db_max_with_key
- * ---------------
+ * max_with_key
+ * ------------
  * Aggregate function to determine the maximum value in a list of key-values, returning both the key and the value.
  * Input consists of 2 numeric arguments, first should be the key, second should be the value.
  * Output is of the type system.key_value_rs
  (which also consists of a numeric key and numeric value).
  */
-CREATE AGGREGATE system.db_max_with_key(numeric, numeric) (
-	SFUNC = system.db_max_with_key_sfunc,
+CREATE AGGREGATE system.max_with_key(numeric, numeric) (
+	SFUNC = system.max_with_key_sfunc,
 	STYPE = numeric[2],
-	FINALFUNC = system.db_max_with_key_ffunc,
+	FINALFUNC = system.max_with_key_ffunc,
 	INITCOND = '{NULL,NULL}'
 );
 
 
------------------------------------------------------------
--- Weighted average aggregation (db_weighted_avg) ---------
------------------------------------------------------------
+--------------------------------------------------------
+-- Weighted average aggregation (weighted_avg) ---------
+--------------------------------------------------------
 
 /*
- * db_weighted_avg_sfunc
- * ---------------------
- * State function for the weighted average function 'db_weighted_avg'.
+ * weighted_avg_sfunc
+ * ------------------
+ * State function for the weighted average function 'weighted_avg'.
  * Collects the total of weighted values and the total of weights in an array with 2 values.
  */
-CREATE OR REPLACE FUNCTION system.db_weighted_avg_sfunc(state numeric[], value numeric, weight numeric)
+CREATE OR REPLACE FUNCTION system.weighted_avg_sfunc(state numeric[], value numeric, weight numeric)
 	RETURNS numeric[] AS
 $BODY$
 BEGIN
@@ -215,12 +215,12 @@ LANGUAGE plpgsql IMMUTABLE RETURNS NULL ON NULL INPUT;
 
 
 /*
- * db_weighted_avg_ffunc
- * ---------------------
- * Final function for the weighted average function 'db_weighted_avg'.
+ * weighted_avg_ffunc
+ * ------------------
+ * Final function for the weighted average function 'weighted_avg'.
  * Divides the total of the weighted values by the total of the weights (which were collected in an array with 2 values).
  */
-CREATE OR REPLACE FUNCTION system.db_weighted_avg_ffunc(state numeric[])
+CREATE OR REPLACE FUNCTION system.weighted_avg_ffunc(state numeric[])
 	RETURNS numeric AS
 $BODY$
 BEGIN
@@ -235,38 +235,38 @@ LANGUAGE plpgsql IMMUTABLE RETURNS NULL ON NULL INPUT;
 
 
 /*
- * db_weighted_avg
- * ---------------
+ * weighted_avg
+ * ------------
  * Aggregate function to determine a weighted average.
  * First parameter is the value, second parameter is the weight.
  * NULL values are skipped, and if there are no non-NULL values, NULL will be returned.
  */
-CREATE AGGREGATE system.db_weighted_avg(numeric, numeric) (
-	SFUNC = system.db_weighted_avg_sfunc,
+CREATE AGGREGATE system.weighted_avg(numeric, numeric) (
+	SFUNC = system.weighted_avg_sfunc,
 	STYPE = numeric[],
-	FINALFUNC = system.db_weighted_avg_ffunc,
+	FINALFUNC = system.weighted_avg_ffunc,
 	INITCOND = '{NULL,NULL}'
 );
 
 
------------------------------------------------------------
--- Distibute enum aggregation (db_distribute_enum) --------
------------------------------------------------------------
+--------------------------------------------------------
+-- Distibute enum aggregation (distribute_enum) --------
+--------------------------------------------------------
 
 /*
- * db_distribute_enum_sfunc
- * ------------------------
- * State function for enum distribution function 'db_distribute_enum'.
+ * distribute_enum_sfunc
+ * ---------------------
+ * State function for enum distribution function 'distribute_enum'.
  * Tracks an array with an element for each value in the enum, and sums the weight according to the supplied enum values.
  */
-CREATE OR REPLACE FUNCTION system.db_distribute_enum_sfunc(state numeric[], key anyenum, weight numeric)
+CREATE OR REPLACE FUNCTION system.distribute_enum_sfunc(state numeric[], key anyenum, weight numeric)
 	RETURNS numeric[] AS
 $BODY$
 BEGIN
 	IF array_length(state, 1) IS NULL THEN
 		state := array_fill(0, ARRAY[array_length(enum_range(key), 1)]);
 	END IF;
-	state[system.db_enum_to_index(key)] := state[system.db_enum_to_index(key)] + weight;
+	state[system.enum_to_index(key)] := state[system.enum_to_index(key)] + weight;
 	RETURN state;
 END;
 $BODY$
@@ -274,8 +274,8 @@ LANGUAGE plpgsql IMMUTABLE RETURNS NULL ON NULL INPUT;
 
 
 /*
- * db_distribute_enum
- * ------------------
+ * distribute_enum
+ * ---------------
  * Aggregate function to count the occurrence of values in an enum, weighted if need be.
  * First parameter is an enum value, second parameter is the weight which should be summed for that enum value.
  * As an example, the weight can be 1 to count the number of occurrences of each enum value, or a 'surface' column to sum the surface per enum value.
@@ -283,8 +283,8 @@ LANGUAGE plpgsql IMMUTABLE RETURNS NULL ON NULL INPUT;
  * Each element consists of the summed value for each respective enum value.
  * NULL values are skipped, and if there are no non-NULL values, NULL will be returned.
  */
-CREATE AGGREGATE system.db_distribute_enum(anyenum, numeric) (
-	SFUNC = system.db_distribute_enum_sfunc,
+CREATE AGGREGATE system.distribute_enum(anyenum, numeric) (
+	SFUNC = system.distribute_enum_sfunc,
 	STYPE = numeric[],
 	INITCOND = '{}'
 );

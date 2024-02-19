@@ -1,6 +1,6 @@
 /*
- * db_checksum_all
- * ---------------
+ * checksum_all
+ * ------------
  * Function to generate checksums for all important database objects.
  * In the case of tables, a separate checksum is made for the structure and the data.
  * For the data checksums some tables can be skipped, for example when the content is dynamic and it does not make sense to check/compare checksums.
@@ -13,7 +13,7 @@
  * @param v_excluded_data_tables List of tables for which no data checksum should be generated.
  * @return Per object type a name or description of the object, and the checksum of the definiton/data of that object
  */
-CREATE OR REPLACE FUNCTION system.db_checksum_all(v_excluded_data_tables regclass[] = NULL)
+CREATE OR REPLACE FUNCTION system.checksum_all(v_excluded_data_tables regclass[] = NULL)
 	RETURNS TABLE(objecttype text, description text, checksum bigint) AS
 $BODY$
 DECLARE

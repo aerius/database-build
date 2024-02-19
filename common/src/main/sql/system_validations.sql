@@ -1,9 +1,9 @@
 /*
- * db_perform_and_report_validation
- * --------------------------------
+ * perform_and_report_validation
+ * -----------------------------
  * Function to execute a validation function, logging the information in the appropriate validation tables.
  */
-CREATE OR REPLACE FUNCTION system.db_perform_and_report_validation(function_name regproc, params text = NULL)
+CREATE OR REPLACE FUNCTION system.perform_and_report_validation(function_name regproc, params text = NULL)
 	 RETURNS void AS
 $BODY$
 DECLARE
@@ -15,22 +15,22 @@ BEGIN
 	LOOP
 		validation_result := GREATEST(validation_result, rec.result);
 		INSERT INTO system.validation_logs(validation_run_id, name, result, object, message)
-			VALUES(system.db_current_validation_run_id(), function_name, rec.result, rec.object, rec.message);
+			VALUES(system.current_validation_run_id(), function_name, rec.result, rec.object, rec.message);
 	END LOOP;
 	INSERT INTO system.validation_results(validation_run_id, name, result)
-		VALUES(system.db_current_validation_run_id(), function_name, validation_result);
+		VALUES(system.current_validation_run_id(), function_name, validation_result);
 END;
 $BODY$
 LANGUAGE plpgsql VOLATILE;
 
 
 /*
- * db_current_validation_run_id
- * ----------------------------
+ * current_validation_run_id
+ * -------------------------
  * Function to determine the current validation_run_id.
  * A new validation run is created if this ID does not exist yet.
  */
-CREATE OR REPLACE FUNCTION system.db_current_validation_run_id()
+CREATE OR REPLACE FUNCTION system.current_validation_run_id()
 	 RETURNS integer AS
 $BODY$
 DECLARE
@@ -55,12 +55,12 @@ LANGUAGE plpgsql VOLATILE;
 
 
 /*
- * db_to_validation_result
- * -----------------------
+ * to_validation_result
+ * --------------------
  * Function to transform separate validation result variables into a validation result type (system.validation_result).
  * Variation where the object being tested is supplied as text.
  */
-CREATE OR REPLACE FUNCTION system.db_to_validation_result(v_result system.validation_result_type, v_object text, v_message text)
+CREATE OR REPLACE FUNCTION system.to_validation_result(v_result system.validation_result_type, v_object text, v_message text)
 	 RETURNS system.validation_result AS
 $BODY$
 BEGIN
@@ -71,12 +71,12 @@ LANGUAGE plpgsql IMMUTABLE;
 
 
 /*
- * db_to_validation_result
- * -----------------------
+ * to_validation_result
+ * --------------------
  * Function to transform separate validation result variables into a validation result type (system.validation_result).
  * Variation where the object being tested is supplied as a regclass (database reference).
  */
-CREATE OR REPLACE FUNCTION system.db_to_validation_result(v_result system.validation_result_type, v_object regclass, v_message text)
+CREATE OR REPLACE FUNCTION system.to_validation_result(v_result system.validation_result_type, v_object regclass, v_message text)
 	 RETURNS system.validation_result AS
 $BODY$
 BEGIN
@@ -87,11 +87,11 @@ LANGUAGE plpgsql IMMUTABLE;
 
 
 /*
- * db_validate_tables_not_empty
- * ----------------------------
+ * validate_tables_not_empty
+ * -------------------------
  * Function to list tables that are empty; exception for those that shouldn't be.
  */
-CREATE OR REPLACE FUNCTION system.db_validate_tables_not_empty()
+CREATE OR REPLACE FUNCTION system.validate_tables_not_empty()
 	 RETURNS SETOF system.validation_result AS
 $BODY$
 DECLARE
@@ -107,7 +107,7 @@ BEGIN
 	LOOP
 		EXECUTE 'SELECT 1 FROM ' || rec.tablename || ' LIMIT 1' INTO rec_in_table;
 		IF rec_in_table IS NULL THEN
-			RETURN NEXT system.db_to_validation_result('hint', rec.tablename, 'Table is empty');
+			RETURN NEXT system.to_validation_result('hint', rec.tablename, 'Table is empty');
 		END IF;
 	END LOOP;
 	RETURN;
@@ -117,12 +117,12 @@ LANGUAGE plpgsql STABLE;
 
 
 /*
- * db_validate_incorrect_imports
- * -----------------------------
+ * validate_incorrect_imports
+ * --------------------------
  * Function to validat if there are tables that contain '\N' in a text(like) column.
  * This is an indication that something failed on import.
  */
-CREATE OR REPLACE FUNCTION system.db_validate_incorrect_imports()
+CREATE OR REPLACE FUNCTION system.validate_incorrect_imports()
 	 RETURNS SETOF system.validation_result AS
 $BODY$
 DECLARE
@@ -139,7 +139,7 @@ BEGIN
 	LOOP
 		EXECUTE 'SELECT COUNT(*) FROM ' || rec.tablename || ' WHERE "' || rec.column_name || E'" = E''\\\\N''' INTO num_records;
 		IF num_records > 0 THEN
-			RETURN NEXT system.db_to_validation_result('error', rec.tablename,
+			RETURN NEXT system.to_validation_result('error', rec.tablename,
 				format(E'Column "%s" has %s records containing \\N', rec.column_name, num_records));
 		END IF;
 	END LOOP;

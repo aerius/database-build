@@ -1,5 +1,3 @@
-{import_common 'toolbox/types.sql'}
-
 {import_common 'toolbox/type-conversion-functions.sql'}
 {import_common 'toolbox/math-functions.sql'}
 

@@ -1,6 +1,6 @@
 /*
- * db_synchronize_all_serials
- * --------------------------
+ * synchronize_all_serials
+ * -----------------------
  * Function to synchronize serials/sequences.
  * All functions with naming convention tablename_columnname_seq are set to the max value of that column in that table.
  *
@@ -8,7 +8,7 @@
  * This function makes sure sequences match the content once again.
  * This is for instance used after a database build.
  */
-CREATE OR REPLACE FUNCTION system.db_synchronize_all_serials()
+CREATE OR REPLACE FUNCTION system.synchronize_all_serials()
 	RETURNS void AS
 $BODY$
 DECLARE
@@ -35,12 +35,12 @@ LANGUAGE plpgsql VOLATILE;
 
 
 /*
- * db_cluster_all_tables
- * ---------------------
+ * cluster_all_tables
+ * ------------------
  * Function to cluster all tables in the database based on their primary key.
  * Once the constraint (in this case the primary key) has been set, in the future clustering can be done by using: CLUSTER databasname.
  */
-CREATE OR REPLACE FUNCTION system.db_cluster_all_tables()
+CREATE OR REPLACE FUNCTION system.cluster_all_tables()
 	RETURNS void AS
 $BODY$
 DECLARE

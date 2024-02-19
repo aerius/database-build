@@ -1,13 +1,13 @@
 /*
- * db_list_unittest_functions
- * --------------------------
+ * list_unittest_functions
+ * -----------------------
  * Function that returns a list of all functions starting with the supplied prefix.
  * Functions that are part of an extension or part of the PostgreSQL catalog are not returned.
  * Returns the function name (including schema), the arguments and the return value of the function.
  *
  * Called during build by ruby build script.
  */
-CREATE OR REPLACE FUNCTION system.db_list_unittest_functions(v_prefix text)
+CREATE OR REPLACE FUNCTION system.list_unittest_functions(v_prefix text)
 	RETURNS TABLE(name regproc, args text, returns text) AS
 $BODY$
 DECLARE
@@ -38,8 +38,8 @@ LANGUAGE plpgsql STABLE;
 
 
 /*
- * db_execute_unittest
- * -------------------
+ * execute_unittest
+ * ----------------
  * Function to execute the supplied (unit test) function.
  * In case of an exception (which should be the case when an assert in the unit test fails), the exception is caught, parsed,
  * and the exception message, line number and first context line number are all returned in a record.
@@ -48,7 +48,7 @@ LANGUAGE plpgsql STABLE;
  *
  * Called during build by ruby build script to execute a unittest.
  */
-CREATE OR REPLACE FUNCTION system.db_execute_unittest(v_function regproc)
+CREATE OR REPLACE FUNCTION system.execute_unittest(v_function regproc)
 	RETURNS TABLE(errcode text, message text, linenr integer, context text) AS
 $BODY$
 DECLARE
