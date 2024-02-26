@@ -1,3 +1,3 @@
-{import_common 'all_system.sql'}
+{import_common 'system/all.sql'}
 
-{import_common 'public_types.sql'}
+{import_common 'public/types.sql'}
