@@ -33,13 +33,15 @@ $database_tablespace = ''
 $database_collation = '' # Can override in ..\AppSettings.rb in case you need to force it, otherwise it is taken from the template
 
 #$database_name_prefix = '...' # Override in ..\AppSettings.rb
-#$db_function_prefix = '...' # Override in ..\AppSettings.rb
 
 $on_build_server = false
 
 # Datasource files .. relative paths on the FTP
 $dbdata_dir = 'db-data/'
 $org_dir = 'org/'
+
+$db_essentials_function_prefix = 'system.'
+$db_unittest_prefix = 'system.unittest_'
 
 # VCS
 $vcs = nil  # :git or :svn
