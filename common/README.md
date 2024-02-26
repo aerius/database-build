@@ -14,4 +14,4 @@ Common toolbox.
 Set of assertion functions.
 
 ## types
-Set of custom data types. Unlike the other modules, this module will be added to the pulic schema.
+Set of custom data types. Unlike the other modules, this module will be added to the public schema.
