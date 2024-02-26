@@ -29,9 +29,12 @@ class HTTPSDownloader
     Net::HTTP.start(uri.host, uri.port, :use_ssl => true) do |http|
       req = Net::HTTP::Get.new(uri.request_uri)
       set_auth(req)
-      resp = http.request(req)
-      open(download_to_path, "wb") do |file|
-          file.write(resp.body)
+      http.request(req) do |resp|
+        open(download_to_path, "wb") do |file|
+          resp.read_body do |body|
+            file.write(body)
+          end
+        end
       end
     end
   end
