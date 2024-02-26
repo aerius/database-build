@@ -82,7 +82,6 @@ class Globals
     raise "Use either $common_data_path or $common_data_paths, not both" if !$common_data_path.nil? && !$common_data_paths.nil?
     $common_data_paths = [] if $common_data_paths.nil? || !$common_data_paths.is_a?(Array)
     $common_data_paths = [$common_data_path] if $common_data_paths.empty? && !$common_data_path.nil?
-    raise "Common SQL path(s) not set ($common_data_path or $common_data_paths)" if $common_data_paths.empty?
     $common_data_paths.each_with_index { |common_data_path, idx|
       raise "Common SQL path not found ($common_data_paths[#{idx}] = \"#{common_data_path}\")" unless (File.exist?(common_data_path) && File.directory?(common_data_path))
     }
