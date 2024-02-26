@@ -38,7 +38,7 @@ LANGUAGE plpgsql VOLATILE;
  * cluster_all_tables
  * ------------------
  * Function to cluster all tables in the database based on their primary key.
- * Once the constraint (in this case the primary key) has been set, in the future clustering can be done by using: CLUSTER databasname.
+ * Once the constraint (in this case the primary key) has been set, in the future clustering can be done by using: CLUSTER databasename.
  */
 CREATE OR REPLACE FUNCTION system.cluster_all_tables()
 	RETURNS void AS
