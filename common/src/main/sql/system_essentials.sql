@@ -1,6 +1,6 @@
 {import_common 'essentials/schema.sql'}
 
-{import_common 'essentials/postgres.sql'}
+{import_common 'essentials/postgres-maintenance.sql'}
 {import_common 'essentials/unittests.sql'}
 {import_common 'essentials/validations.sql'}
 {import_common 'essentials/summaries.sql'}
