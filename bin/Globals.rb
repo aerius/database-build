@@ -74,6 +74,8 @@ class Globals
     raise "Use either $common_sql_path or $common_sql_paths, not both" if !$common_sql_path.nil? && !$common_sql_paths.nil?
     $common_sql_paths = [] if $common_sql_paths.nil? || !$common_sql_paths.is_a?(Array)
     $common_sql_paths = [$common_sql_path] if $common_sql_paths.empty? && !$common_sql_path.nil?
+    # Add database-build common sql path
+    $common_sql_paths << File.expand_path("../common/src/main/sql", File.dirname($0)).fix_pathname
     raise "Common SQL path(s) not set ($common_sql_path or $common_sql_paths)" if $common_sql_paths.empty?
     $common_sql_paths.each_with_index { |common_sql_path, idx|
       raise "Common SQL path not found ($common_sql_paths[#{idx}] = \"#{common_sql_path}\")" unless (File.exist?(common_sql_path) && File.directory?(common_sql_path))
