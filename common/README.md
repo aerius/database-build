@@ -5,7 +5,7 @@ Below you will find a brief description of the general database modules. More in
 The bare essential functionality for building the database.
 
 ## validations
-The extended validation functionality. If you want to implement validations you will need this modules as well.
+The extended validation functionality. If you want to implement validations you will need this module as well.
 
 ## toolbox
 Common toolbox.
