@@ -366,9 +366,9 @@ class ScriptCommands
     $logger.writeln_with_timing("Validating database contents...") {
       PostgresTools.execute_sql_command("\\set VERBOSITY terse \n SELECT #{$db_essentials_function_prefix}validate_all()");
       if params.include?(:abort_on_errors) then
-        rs = PostgresTools.fetch_sql_command("SELECT number_of_tests FROM setup.last_validation_run_view WHERE result = 'error'");
+        rs = PostgresTools.fetch_sql_command("SELECT number_of_tests FROM system.last_validation_run_view WHERE result = 'error'");
         num_errors = rs[0]['number_of_tests'].to_i
-        $logger.error "Validation yielded #{num_errors} error(s), please consult the logs and setup.last_validation_logs_view" if num_errors > 0
+        $logger.error "Validation yielded #{num_errors} error(s), please consult the logs and system.last_validation_logs_view" if num_errors > 0
       end
     }
   end
