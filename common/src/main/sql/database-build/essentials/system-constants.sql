@@ -17,7 +17,7 @@ CREATE TABLE system.constants (
  * constant
  * --------
  * Function returning the value of a database or web application constant.
- * When the constant does not exist in the view system.constants_view, an exception is raised.
+ * When the constant does not exist in the table system.constants, an exception is raised.
  */
 CREATE OR REPLACE FUNCTION system.constant(constant_key text)
 	RETURNS text AS
@@ -25,9 +25,9 @@ $BODY$
 DECLARE
 	constant_value text;
 BEGIN
-	SELECT value INTO constant_value FROM system.constants_view WHERE key = constant_key;
+	SELECT value INTO constant_value FROM system.constants WHERE key = constant_key;
 	IF constant_value IS NULL THEN
-		RAISE EXCEPTION 'Could not find a public or system constant value for ''%''!', constant_key;
+		RAISE EXCEPTION 'Could not find a system constant value for ''%''!', constant_key;
 	END IF;
 	RETURN constant_value;
 END;
