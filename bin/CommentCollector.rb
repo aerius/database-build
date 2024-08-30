@@ -75,7 +75,8 @@ class CommentCollector
               identifier = nil
               arguments = nil
               if /^\s*CREATE\s+(MATERIALIZED VIEW)\s+([\w\.]+)\s*/i.match(contents) ||
-                 /^\s*CREATE.*\s+(TABLE|VIEW|TYPE|DOMAIN|SCHEMA)\s+([\w\.]+)\s*/i.match(contents) ||
+                 /^\s*CREATE.*\s+(TABLE|VIEW|TYPE|DOMAIN)\s+([\w\.]+)\s*/i.match(contents) ||
+                 /^\s*CREATE.*\s+(SCHEMA)(?:\s+IF\s+NOT\s+EXISTS)?\s+([\w\.]+)\s*/i.match(contents) ||
                  /^\s*CREATE.*\s+(FUNCTION|AGGREGATE|PROCEDURE)\s+([\w\.]+)\s*(\(.*\))\s*/i.match(contents) then
                 object = $1.upcase
                 identifier = $2
