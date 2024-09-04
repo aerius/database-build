@@ -74,6 +74,8 @@ class Globals
     raise "Use either $common_sql_path or $common_sql_paths, not both" if !$common_sql_path.nil? && !$common_sql_paths.nil?
     $common_sql_paths = [] if $common_sql_paths.nil? || !$common_sql_paths.is_a?(Array)
     $common_sql_paths = [$common_sql_path] if $common_sql_paths.empty? && !$common_sql_path.nil?
+    # Add database-build common sql path
+    $common_sql_paths << File.expand_path("../common/src/main/sql", File.dirname($0)).fix_pathname
     raise "Common SQL path(s) not set ($common_sql_path or $common_sql_paths)" if $common_sql_paths.empty?
     $common_sql_paths.each_with_index { |common_sql_path, idx|
       raise "Common SQL path not found ($common_sql_paths[#{idx}] = \"#{common_sql_path}\")" unless (File.exist?(common_sql_path) && File.directory?(common_sql_path))
@@ -82,7 +84,6 @@ class Globals
     raise "Use either $common_data_path or $common_data_paths, not both" if !$common_data_path.nil? && !$common_data_paths.nil?
     $common_data_paths = [] if $common_data_paths.nil? || !$common_data_paths.is_a?(Array)
     $common_data_paths = [$common_data_path] if $common_data_paths.empty? && !$common_data_path.nil?
-    raise "Common SQL path(s) not set ($common_data_path or $common_data_paths)" if $common_data_paths.empty?
     $common_data_paths.each_with_index { |common_data_path, idx|
       raise "Common SQL path not found ($common_data_paths[#{idx}] = \"#{common_data_path}\")" unless (File.exist?(common_data_path) && File.directory?(common_data_path))
     }
@@ -104,7 +105,6 @@ class Globals
 
     # Standalone paths and settings
     raise 'Database name prefix not set ($database_name_prefix)' if $database_name_prefix.nil?
-    raise 'Database function prefix not set ($db_function_prefix)' if $db_function_prefix.nil?
     raise 'PostgreSQL bin path not set ($pg_bin_path)' if $pg_bin_path.nil?
     raise "PostgreSQL bin path not found ($pg_bin_path = \"#{$pg_bin_path}\")" unless ((File.exist?($pg_bin_path) && File.directory?($pg_bin_path)) || (!ON_WINDOWS && $pg_bin_path.empty?))
     raise "PostgreSQL username not set ($pg_username)" if $pg_username.nil?

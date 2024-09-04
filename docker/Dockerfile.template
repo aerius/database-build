@@ -35,5 +35,11 @@ COPY docker/start-database.sh /
 # Copy source code of the build script to the image
 COPY bin/ /aerius-database-build/bin
 
+# Copy source code of the common modules to the image
+COPY common/ /aerius-database-build/common
+
+# Copy VERSION file to the image
+COPY VERSION /aerius-database-build
+
 # Override current CMD - the argument is the command we override so can wrap it
 CMD ["/start-database.sh", "postgres"]
