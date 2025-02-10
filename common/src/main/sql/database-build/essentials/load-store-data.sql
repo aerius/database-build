@@ -2,7 +2,8 @@
  * load_table
  * ----------
  * Function to copy the data of the supplied file to the supplied table.
- * The file should contain tab-separated text without a header, or tab-separated text with a header when the optional parameter is set to true.
+ * The file should contain tab-separated text with a header as default, as exported by the functions system.store_query and system.store_table. 
+ * Optional, also tab-separated text without a header can be imported if the optional parameter is set to false.
  *
  * @param tablename The table to copy to.
  * @param filespec The file to copy from
@@ -53,8 +54,9 @@ LANGUAGE plpgsql VOLATILE;
  * In the filename the parts {tablename} or {queryname} can be used, these will be replaced by the supplied queryname.
  * Additionally, the part {datesuffix} can be used, which will be replaced with the current date in YYYYMMDD format.
  *
- * The export is tab-separated CSV.
- * The optional parameter use_pretty_csv_format can be used to generate a file with (true) or without (false) a header.
+ * The export is a tab-separated CSV and must have a header (as default) for import files elsewhere in the SQL code.
+ * However, if desired, the optional parameter use_pretty_csv_format can be used to generate a file without a header for other purposes.  
+ * For this, false must be given as parameter. The default value is true; so if a parameter is not given, the file will have a header.
  *
  * @param queryname The name of the query.
  * @param sql_in The actual query string to export the results for.
@@ -109,8 +111,9 @@ LANGUAGE plpgsql VOLATILE;
  * In the filename the parts {tablename} or {queryname} can be used, these will be replaced by the supplied table name.
  * Additionally, the part {datesuffix} can be used, which will be replaced with the current date in YYYYMMDD format.
  *
- * The export is tab-separated CSV.
- * The optional parameter use_pretty_csv_format can be used to generate a file with (true) or without (false) a header. The default is true.
+ * The export is a tab-separated CSV and must have a header (as default) for import files elsewhere in the SQL code.
+ * However, if desired, the optional parameter use_pretty_csv_format can be used to generate a file without a header for other purposes.  
+ * For this, false must be given as parameter. The default value is true; so if a parameter is not given, the file will have a header.
  *
  * @param tablename The name of the table to export.
  * @param filespec The file to export to.
