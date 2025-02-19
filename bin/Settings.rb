@@ -34,14 +34,12 @@ $database_collation = '' # Can override in ..\AppSettings.rb in case you need to
 
 #$database_name_prefix = '...' # Override in ..\AppSettings.rb
 
-$on_build_server = false
-
-# Datasource files .. relative paths on the FTP
-$dbdata_dir = 'db-data/'
+# Datasource files .. common relative paths compared to base paths like https_data_path
+$dbdata_dir = 'dbdata/'
 $org_dir = 'org/'
 
 $db_essentials_function_prefix = 'system.'
-$db_unittest_prefix = 'system.unittest_'
+$db_unittest_prefix = 'unittest_'
 
 # VCS
 $vcs = nil  # :git or :svn
