@@ -41,7 +41,7 @@ $dbdata_dir = 'db-data/'
 $org_dir = 'org/'
 
 $db_essentials_function_prefix = 'system.'
-$db_unittest_prefix = 'system.unittest_'
+$db_unittest_prefix = 'unittest_'
 
 # VCS
 $vcs = nil  # :git or :svn
