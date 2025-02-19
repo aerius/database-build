@@ -34,8 +34,6 @@ $database_collation = '' # Can override in ..\AppSettings.rb in case you need to
 
 #$database_name_prefix = '...' # Override in ..\AppSettings.rb
 
-$on_build_server = false
-
 # Datasource files .. common relative paths compared to base paths like https_data_path
 $dbdata_dir = 'dbdata/'
 $org_dir = 'org/'
