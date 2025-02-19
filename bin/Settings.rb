@@ -36,8 +36,8 @@ $database_collation = '' # Can override in ..\AppSettings.rb in case you need to
 
 $on_build_server = false
 
-# Datasource files .. relative paths on the FTP
-$dbdata_dir = 'db-data/'
+# Datasource files .. common relative paths compared to base paths like https_data_path
+$dbdata_dir = 'dbdata/'
 $org_dir = 'org/'
 
 $db_essentials_function_prefix = 'system.'
