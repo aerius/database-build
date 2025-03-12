@@ -136,7 +136,7 @@ BEGIN
 			FROM
 				(SELECT column_name
 					FROM information_schema.columns
-					WHERE (CASE WHEN table_schema = ANY (string_to_array(current_setting('search_path'), ',')) 
+					WHERE (CASE WHEN table_schema = ANY (string_to_array(current_setting('search_path'), ', ')) 
 						THEN table_name 
 						ELSE table_schema || '.' || table_name END)::text = tablename::text
 					ORDER BY ordinal_position
