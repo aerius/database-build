@@ -69,7 +69,7 @@ ruby /aerius-database-build/bin/SyncDBData.rb "${DBSETTINGS_BASE_DIRECTORY}/${DB
 # initialize database
 # (this is a wrapper provided by the postgres image, which will initialize the db if it isn't already and is executed when starting the image for the first time.
 # Run 'postgres' which will trigger the initialization and start the database, so we can start building the database.)
-/usr/local/bin/docker-entrypoint.sh postgres &
+/usr/local/bin/docker-entrypoint.sh postgres --wal_level=minimal --fsync=off --full_page_writes=off --synchronous_commit=off --work_mem=32MB --max_wal_size=4GB --checkpoint_timeout=60min --maintenance_work_mem=2GB --autovacuum=off --max_wal_senders=0 &
 
 # The database starts twice. First to set it up and a second time to simply start cleanly.
 # Wait for it to stop once. (Detect socket file being removed)
@@ -93,6 +93,13 @@ kill %1
 
 # Wait for the PostgreSQL process to end
 wait %1
+
+# Reset the WAL to reduce image size even more
+if [[ "$(id -u)" = '0' ]]; then
+  gosu postgres pg_resetwal --pgdata "${PGDATA}"
+else
+  pg_resetwal --pgdata "${PGDATA}"
+fi
 
 # image cleanup (removing unneeded db-data, git directory and git dependencies)
 if [[ "${DBDATA_CLEANUP}" == 'true' ]]; then
