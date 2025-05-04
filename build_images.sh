@@ -23,7 +23,7 @@ while read DIRECTORY; do
   if [[ "${PUSH_IMAGES:-}" == 'true' ]]; then
     IMAGES_TO_PUSH+=("${IMAGE_NAME}":"${IMAGE_TAG}")
   fi
-done < <(find docker/ -maxdepth 1 -type d -name '*-*-*')
+done < <(find docker/ -maxdepth 1 -type d -name '*-psql_*-pgis_*')
 
 # If there are images to push, do so
 for IMAGE_TO_PUSH in "${IMAGES_TO_PUSH[@]}"; do
