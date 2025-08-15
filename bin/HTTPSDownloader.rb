@@ -24,7 +24,7 @@ class HTTPSDownloader
   def download_file(filename, download_to_path)
     @logger.log "HTTPS download: #{filename}"
     
-    uri = URI(@base_url + filename)
+    uri = URI(@base_url + filename.delete_prefix('/'))
 
     Net::HTTP.start(uri.host, uri.port, :use_ssl => true) do |http|
       req = Net::HTTP::Get.new(uri.request_uri)
@@ -50,7 +50,7 @@ class HTTPSDownloader
   end
 
   def chdir(remote_path)
-    @currdir = remote_path.fix_pathname
+    @currdir = remote_path.fix_pathname.delete_prefix('/')
   end
 
   def file_exists?(remote_file)
