@@ -8,7 +8,7 @@ ENV POSTGRES_DB='postgres' \
 
 RUN apk update && apk upgrade \
     # add ruby dependencies + curl + inotify-tools
-    && apk --no-cache add ruby ruby-irb ruby-rake ruby-io-console ruby-bigdecimal ruby-json ruby-bundler \
+    && apk --no-cache add ruby ruby-rake ruby-bigdecimal ruby-bundler \
     libstdc++ tzdata bash ca-certificates inotify-tools \
     \
     # disable generating documentation for (ruby)gems
