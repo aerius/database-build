@@ -15,8 +15,9 @@ RUN apk update && apk upgrade \
     && echo 'gem: --no-document' > /etc/gemrc \
     \
     # install needed (ruby)gems
-    && gem install net-ssh -v 7.2.0 \
-    && gem install net-sftp -v 4.0.0 \
+    && gem install net-ssh \
+    && gem install net-sftp \
+    && gem install getoptlong \
     && gem install clbustos-rtf \
     && ruby --version \
     && gem list \
