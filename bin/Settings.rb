@@ -86,3 +86,11 @@ HINT_LEVEL_OFF = 0
 HINT_LEVEL_MAJOR = 1
 HINT_LEVEL_ALL = 2
 $hint_level = HINT_LEVEL_ALL
+
+# Line ending handling for database comments
+# Options:
+#   :windows  - Force Windows line endings (\r\n) for all comments
+#   :unix     - Force Unix line endings (\n) for all comments (default)
+# This affects how comments are stored in the database and subsequently
+# how they appear in jOOQ-generated code.
+$line_ending_mode = :unix

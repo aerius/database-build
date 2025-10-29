@@ -58,7 +58,7 @@ class CommentCollector
                   n = line.ends_with?('**/') ? 3 : 2
                   line = line[0, line.length-n].strip
                   line = line[1, line.length-1].strip if line.starts_with?('*')
-                  comment << "\n" unless line.empty? || comment.empty?
+                  comment << $line_ending unless line.empty? || comment.empty?
                   comment << line
                   before_was_a_comment_block = true
                 end
@@ -115,15 +115,18 @@ class CommentCollector
 
     parse_comment_tags(logger, comment_item)
 
-    comment_item.full_comment += "\n\n" unless comment_item.full_comment.empty?
+    comment_item.full_comment += $line_ending + $line_ending unless comment_item.full_comment.empty?
     comment_item.full_comment += "@file " + file
 
     comments[object] = {} unless comments.has_key?(object)
     comments[object][(comment_item.identifier + comment_item.arguments_nodefault).downcase] = comment_item
   end
 
+
   def self.split_comment_without_header(logger, comment, identifier)
-    comment_lines = comment.strip.split("\n")
+    # Normalize line endings to the configured format
+    normalized_comment = comment.gsub(/\r\n|\r/, $line_ending)
+    comment_lines = normalized_comment.strip.split($line_ending)
     headername = identifier
     altheadername = identifier
     altheadername = altheadername.split('.')[1] if altheadername.include?('.')
@@ -138,6 +141,7 @@ class CommentCollector
       logger.major_hint "sql comment for \"#{comment_lines[0]}\" has no dashed line"
       comment_lines.delete_at(0)
     end
+
     return comment_lines
   end
 
@@ -151,7 +155,7 @@ class CommentCollector
           comment_line.end_with?('<br>') ||
           next_line.start_with?('@') then
         full_comment.chomp!('<br>')
-        full_comment << "\n"
+        full_comment << $line_ending
       else
         full_comment << " "
       end
