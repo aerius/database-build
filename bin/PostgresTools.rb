@@ -108,7 +108,7 @@ class PostgresTools
   # Execute PostgreSQL comand(s) from a file on the current database.
   def self.execute_sql_file(filename)
     execute_postgres_command "#{get_psql()} --dbname \"#{$database_name}\" --file \"#{filename}\" --echo-all",  "Error executing SQL file: #{filename}", filename
-    record(File.read(filename)) unless @@recorder_file.nil?
+    record(File.read(filename, mode: 'r', universal_newline: true)) unless @@recorder_file.nil?
   end
 
   def self.dump_database(filename)
@@ -130,8 +130,8 @@ class PostgresTools
 
   def self.start_recording(filename)
     stop_recording unless @@recorder_file.nil?
-    # Open in binary mode to prevent OS-specific newline translation; we normalize ourselves
-    @@recorder_file = File.open(filename, 'wb')
+    # Use universal_newline to ensure Unix line endings in recorded SQL
+    @@recorder_file = File.open(filename, mode: 'w', universal_newline: true)
   end
 
   def self.stop_recording
@@ -197,7 +197,7 @@ class PostgresTools
     imported_files << filename.strip.downcase
 
     contents = "\n-- -- -- #{filename} -- -- --\n\n"
-    File.open(filename, 'r') { |f| contents << f.read }
+    File.open(filename, mode: 'r', universal_newline: true) { |f| contents << f.read }
 
     # Replace dbdata path identifier
     contents.gsub!("{data_folder}", data_folder) unless data_folder.nil?
@@ -221,16 +221,12 @@ class PostgresTools
     return contents
   end
 
-  # Helper: normalize to Unix newlines and write file in binary mode
-  # Binary mode avoids platform newline conversion; caller ensures contents are normalized
+  # Helper: write file with Unix newlines using universal_newline encoding
+  # This automatically converts any line endings to Unix format (\n)
   def self.write_unix_newline_file(filename, contents)
-    File.open(filename, 'wb') { |f| f.write(normalize_to_unix_newlines(contents)) }
+    File.open(filename, mode: 'w', universal_newline: true) { |f| f.write(contents) }
   end
 
-  # Helper: normalize any string's line endings to Unix ("\n")
-  def self.normalize_to_unix_newlines(str)
-    str.gsub(/\r\n|\r|\n/, "\n")
-  end
 
   def self.get_import_common_contents(filename, common_paths, data_folder, imported_files, separate_files = nil, default_schema = nil, logger = $logger)
     import_filename = nil
@@ -305,10 +301,9 @@ class PostgresTools
 
   def self.record(sql, *options)
     unless @@recorder_file.nil?
-      normalized_sql = normalize_to_unix_newlines(sql)
       appender = "\n\n"
-      appender = ';' + appender unless normalized_sql.strip.end_with?(';')
-      @@recorder_file.write(normalized_sql + appender)  # I think write operations are atomic, i.e. thread-safe.
+      appender = ';' + appender unless sql.strip.end_with?(';')
+      @@recorder_file.write(sql + appender)  # universal_newline handles line ending conversion
     end
   end
 
