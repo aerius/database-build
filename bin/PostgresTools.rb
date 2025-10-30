@@ -130,6 +130,7 @@ class PostgresTools
 
   def self.start_recording(filename)
     stop_recording unless @@recorder_file.nil?
+    # Open in binary mode to prevent OS-specific newline translation; we normalize ourselves
     @@recorder_file = File.open(filename, 'wb')
   end
 
@@ -221,6 +222,7 @@ class PostgresTools
   end
 
   # Helper: normalize to Unix newlines and write file in binary mode
+  # Binary mode avoids platform newline conversion; caller ensures contents are normalized
   def self.write_unix_newline_file(filename, contents)
     File.open(filename, 'wb') { |f| f.write(normalize_to_unix_newlines(contents)) }
   end
