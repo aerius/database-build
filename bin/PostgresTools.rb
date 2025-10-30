@@ -24,7 +24,7 @@ class PostgresTools
   # Execute PostgreSQL command(s) outside of a database.
   def self.execute_external_sql_command(command)
     filename = $product_temp_path + 'execute_external_sql_command.tmp'
-    File.open(filename, 'w') { |f| f.write(command) }
+    write_unix_newline_file(filename, command)
     execute_postgres_command "#{get_psql()} --dbname \"postgres\" --file \"#{filename}\" --echo-all", "Error executing SQL external command: #{command}"
     # External commands aren't executed from inside a database; however it seems that if you do not specify a dbname, PostgreSQL will make something up.
     # It will use the username as database name and complain if that doesn't exist. So we force "postgres" as dbname because this default database always exists.
@@ -33,7 +33,7 @@ class PostgresTools
   # Execute PostgreSQL command(s) on the current database.
   def self.execute_sql_command(command, original_filename = '')
     filename = $product_temp_path + 'execute_sql_command.tmp'
-    File.open(filename, 'w') { |f| f.write(command) }
+    write_unix_newline_file(filename, command)
     execute_postgres_command "#{get_psql()} --dbname \"#{$database_name}\" --file \"#{filename}\" --echo-all",  "Error executing SQL command: #{command}", original_filename
     record(command)
   end
@@ -64,7 +64,7 @@ class PostgresTools
               variation_logger.hint_level = $hint_level
               variation_logger.open($product_log_path, '', variation_tag)
               filename = $product_temp_path + "execute_sql_command_multithread_#{variation_tag}.tmp"
-              File.open(filename, 'w') { |f| f.write(command_variation) }
+              write_unix_newline_file(filename, command_variation)
               psql_cmd = "#{get_psql(variation_logger)} --dbname \"#{$database_name}\" --file \"#{filename}\" --echo-all"
               execute_postgres_command psql_cmd,  "Error executing SQL command: #{command_variation}", original_filename, variation_logger
               record(command_variation)
@@ -84,7 +84,7 @@ class PostgresTools
   # Execute a PostgreSQL command on the current database and returns the resultset as an array of hashes { columname string => value string }.
   def self.fetch_sql_command(command, original_filename = '', logger = $logger)
     filename = $product_temp_path + 'execute_sql_command.tmp'
-    File.open(filename, 'w') { |f| f.write(command) }
+    write_unix_newline_file(filename, command)
     str = fetch_postgres_command("#{get_psql()} --dbname \"#{$database_name}\" --file \"#{filename}\" --tuples-only --expanded",  "Error executing SQL command: #{command}", original_filename, logger)
     # String to array with hashes...
     rv = []
@@ -130,7 +130,7 @@ class PostgresTools
 
   def self.start_recording(filename)
     stop_recording unless @@recorder_file.nil?
-    @@recorder_file = File.open(filename, 'w')
+    @@recorder_file = File.open(filename, 'wb')
   end
 
   def self.stop_recording
@@ -220,6 +220,16 @@ class PostgresTools
     return contents
   end
 
+  # Helper: normalize to Unix newlines and write file in binary mode
+  def self.write_unix_newline_file(filename, contents)
+    File.open(filename, 'wb') { |f| f.write(normalize_to_unix_newlines(contents)) }
+  end
+
+  # Helper: normalize any string's line endings to Unix ("\n")
+  def self.normalize_to_unix_newlines(str)
+    str.gsub(/\r\n|\r|\n/, "\n")
+  end
+
   def self.get_import_common_contents(filename, common_paths, data_folder, imported_files, separate_files = nil, default_schema = nil, logger = $logger)
     import_filename = nil
     was_found = false
@@ -293,9 +303,10 @@ class PostgresTools
 
   def self.record(sql, *options)
     unless @@recorder_file.nil?
+      normalized_sql = normalize_to_unix_newlines(sql)
       appender = "\n\n"
-      appender = ';' + appender unless sql.strip.end_with?(';')
-      @@recorder_file.write(sql + appender)  # I think write operations are atomic, i.e. thread-safe.
+      appender = ';' + appender unless normalized_sql.strip.end_with?(';')
+      @@recorder_file.write(normalized_sql + appender)  # I think write operations are atomic, i.e. thread-safe.
     end
   end
 
