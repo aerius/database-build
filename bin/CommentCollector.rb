@@ -30,6 +30,7 @@ end
 class CommentCollector
 
   # Walk through source files and collect all comments for database objects.
+  # Walk source SQL, extract Javadoc-style object comments into an in-memory map
   def self.collect(logger, scanned_sql_path, common_sql_paths, root_path)
     comments = {}
 
@@ -104,6 +105,7 @@ class CommentCollector
 
  private
 
+  # Convert a raw parsed comment block to a CommentItem and add to the map
   def self.process_comment_block(logger, comments, object, identifier, arguments, comment, file, default_schema = nil)
     comment_item = create_comment_item(object, identifier, arguments)
     comment_item.file = file
@@ -123,6 +125,7 @@ class CommentCollector
   end
 
 
+  # Normalize line endings, strip optional header lines, return content lines
   def self.split_comment_without_header(logger, comment, identifier)
     # Normalize line endings to the configured format
     normalized_comment = comment.gsub(/\r\n|\r/, $line_ending)
@@ -145,6 +148,7 @@ class CommentCollector
     return comment_lines
   end
 
+  # Re-wrap lines with simple heuristics and emit configured line endings
   def self.fix_wrapping(comment_lines)
     full_comment = ''
     comment_lines.each_with_index{ |comment_line, idx|
@@ -165,6 +169,7 @@ class CommentCollector
     return full_comment.strip
   end
 
+  # Create a new CommentItem with parsed identity and signature fields
   def self.create_comment_item(object, identifier, arguments)
     comment_item = CommentItem.new
     comment_item.object = object
@@ -177,6 +182,7 @@ class CommentCollector
     return comment_item
   end
 
+  # Parse @param/@column/@return/@see/@todo/@file tags into structured fields
   def self.parse_comment_tags(logger, comment_item)
     accepted_keywords = ['@param', '@column', '@return', '@returns', '@see', '@todo', '@file']
     tagless_comment = ''
