@@ -155,6 +155,8 @@ class CommentCollector
           comment_line.end_with?('<br>') ||
           next_line.start_with?('@') then
         full_comment.chomp!('<br>')
+        # Ensure no trailing space before starting a new line/paragraph
+        full_comment.rstrip!
         full_comment << $line_ending
       else
         full_comment << " "
