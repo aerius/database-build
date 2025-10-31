@@ -303,7 +303,7 @@ class PostgresTools
     unless @@recorder_file.nil?
       appender = "\n\n"
       appender = ';' + appender unless sql.strip.end_with?(';')
-      @@recorder_file.write(sql + appender)  # universal_newline handles line ending conversion
+      @@recorder_file.write(sql + appender) # I think write operations are atomic, i.e. thread-safe.
     end
   end
 
