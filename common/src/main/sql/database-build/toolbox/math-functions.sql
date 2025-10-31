@@ -36,18 +36,18 @@ LANGUAGE plpgsql IMMUTABLE;
  * xe, ye = End point
  * xi = the x value to interpolate the y value for.
  * Expects integer values for xb,xe and xi.
- * Expects real values for yb and ye.
- * Returns a real value.
+ * Expects numeric values for yb and ye.
+ * Returns a numeric value.
  */
-CREATE OR REPLACE FUNCTION system.linear_interpolate(xb integer, xe integer, yb real, ye real, xi integer)
-	RETURNS real AS
+CREATE OR REPLACE FUNCTION system.linear_interpolate(xb integer, xe integer, yb numeric, ye numeric, xi integer)
+	RETURNS numeric AS
 $BODY$
 DECLARE
 BEGIN
 	IF xe - xb = 0 THEN
 		RETURN yb;
 	ELSE
-		RETURN yb + ( (xi - xb)::real / (xe - xb) ) * (ye - yb);
+		RETURN yb + ( (xi - xb)::numeric / (xe - xb) ) * (ye - yb);
 	END IF;
 END;
 $BODY$
@@ -69,7 +69,7 @@ $BODY$
 DECLARE
 	array_size 		int;
 	index 			int;
-	percentile_by_index 	real;
+	percentile_by_index 	numeric;
 BEGIN
 	IF array_length(sorted_array, 1) IS NULL THEN -- No empty arrays
 		RETURN NULL;
