@@ -8,15 +8,6 @@ CREATE DOMAIN posint AS integer
 
 
 /*
- * posreal
- * -------
- * Real (decimal) value type which can only be positive or 0.
- */
-CREATE DOMAIN posreal AS real
-	CHECK (VALUE >= 0::real);
-
-
-/*
  * posnum
  * -------
  * Numeric (decimal) value type which can only be positive or 0.
