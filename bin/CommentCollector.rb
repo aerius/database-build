@@ -151,8 +151,11 @@ class CommentCollector
           comment_line.end_with?('<br>') ||
           next_line.start_with?('@') then
         full_comment.chomp!('<br>')
+        # Avoid leaving a trailing space at end of line
+        full_comment.rstrip!
         full_comment << "\n"
       else
+        # Join wrapped lines into the same sentence to create readable paragraphs
         full_comment << " "
       end
     }
