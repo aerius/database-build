@@ -9,7 +9,7 @@ CREATE DOMAIN posint AS integer
 
 /*
  * posnum
- * -------
+ * ------
  * Numeric (decimal) value type which can only be positive or 0.
  */
 CREATE DOMAIN posnum AS numeric
