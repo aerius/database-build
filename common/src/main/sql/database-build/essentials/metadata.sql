@@ -3,29 +3,30 @@
  * --------
  * Table that stores the source import-file per imported table and creates a checksum during the import-proces.
  * - @column filename The filename of the import file imported via the load_table function (which has been extended for this purpose with this functionality).
+ * - @column checksum_before The checksum of the table before import. This is populated by the load_table function. If it's '0', the table contains no data.
  * - @column checksum The checksum of the table after import. This is populated by the load_table function. If it's '0', the table contains no data.
  * - @column timestamp The date/time of the import, is filled by the load_table function.
  */
 CREATE TABLE system.metadata (
 	metadata_id integer GENERATED ALWAYS AS IDENTITY,
 	tablename text NOT NULL,
-	filename text NULL,
+	timestamp timestamp NOT NULL,
+	filename text NOT NULL,
+	checksum bigint NOT NULL,
 	checksum_before bigint NULL,
-	checksum bigint NULL,
-	timestamp timestamp NULL,
-
-	CONSTRAINT metadata_pkey PRIMARY KEY (metadata_id)
+	
+	CONSTRAINT metadata_pkey PRIMARY KEY (tablename, timestamp)
 );
 
 
 /*
- * checksum_table
- * --------------
+ * determine_checksum
+ * ------------------
  * Function that returns a checksum value for a given tablename. 
  * Used by functions that populate the checksum in the metadata table, allowing table content comparisons between databases in different locations.
  * @param v_tablename The table name for which the checksum should be generated.
  */
-CREATE OR REPLACE FUNCTION system.checksum_table(v_tablename text)
+CREATE OR REPLACE FUNCTION system.determine_checksum(v_tablename text)
 	RETURNS SETOF bigint AS
 $BODY$
 DECLARE v_sql text;
@@ -53,23 +54,18 @@ $BODY$
 DECLARE
 	v_checksum bigint;
 BEGIN
-	v_checksum := system.checksum_table(tablename::text);
+	v_checksum := system.determine_checksum(tablename::text);
 	RAISE NOTICE '% Insert imported file in metadata table @ %', tablename, timeofday();
 	
-	EXECUTE format(
-			'DO $$ 
-			BEGIN 
-				INSERT INTO system.metadata (tablename, filename, checksum_before, checksum, timestamp) 
-					VALUES (
-						''%s'',
-						SPLIT_PART(''%s'', ''/'', -1),
-						%L,
-						%L,
-						clock_timestamp()::timestamp); 
-			END 
-			$$',
-			tablename, filename, checksum_before, v_checksum
-	);
+	INSERT INTO system.metadata (tablename, filename, checksum_before, checksum, timestamp) 
+		VALUES (
+			tablename,
+			SPLIT_PART(filename, '/', -1),
+			checksum_before,
+			v_checksum,
+			clock_timestamp()::timestamp
+	); 
+	
 END;
 $BODY$
 LANGUAGE plpgsql VOLATILE;

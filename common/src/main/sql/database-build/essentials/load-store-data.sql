@@ -7,7 +7,7 @@
  * Optional, also tab-separated text without a header can be imported if the optional parameter is set to false.
  *
  * @param tablename The table to copy to.
- * @param filespec The file to copy from
+ * @param filespec The file to copy from.
  * @param use_pretty_csv_format Optional parameter to specify if file contains a header (true) or not (false). Default true.
  */
 CREATE OR REPLACE FUNCTION system.load_table(tablename regclass, filespec text, use_pretty_csv_format boolean = TRUE)
@@ -20,7 +20,7 @@ DECLARE
 	delimiter_to_use text = E'\t';
 	sql text;
 	v_checksum_before bigint;
-	v_register_metadata text;
+	v_register_metadata boolean;
 BEGIN
 	-- set encoding
 	EXECUTE 'SHOW client_encoding' INTO current_encoding;
@@ -29,9 +29,11 @@ BEGIN
 	filename := replace(filespec, '{tablename}', tablename::text);
 	filename := replace(filename, '{datesuffix}', to_char(current_timestamp, 'YYYYMMDD'));
 
-	v_checksum_before := system.checksum_table(tablename::text);
+	v_register_metadata := system.get_register_metadata();
 
-	v_register_metadata := system.get_constant('REGISTER_METADATA');
+	IF v_register_metadata IS TRUE THEN
+		v_checksum_before := system.determine_checksum(tablename::text);
+	END IF;
 
 	IF filename LIKE '%{revision}%' THEN
 		filename := replace(filename, '{revision}', system.get_git_revision());
@@ -47,10 +49,8 @@ BEGIN
 	EXECUTE sql;
 	RAISE NOTICE '% Done @ %', sql, timeofday();
 
-	IF v_register_metadata::boolean IS TRUE THEN
-
+	IF v_register_metadata IS TRUE THEN
 		PERFORM system.register_metadata(tablename::text, filename, v_checksum_before);
-
 	END IF;
 
 	-- reset encoding
