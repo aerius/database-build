@@ -11,4 +11,6 @@
 
 {import_common 'database-build/essentials/system-constants.sql'}
 
+{import_common 'database-build/essentials/metadata.sql'}
+
 {import_common 'database-build/essentials/load-store-data.sql'}

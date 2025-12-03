@@ -3,6 +3,7 @@
  * ----------
  * Function to copy the data of the supplied file to the supplied table.
  * The file should contain tab-separated text with a header as default, as exported by the functions system.store_query and system.store_table. 
+ * The version of the loaded table can be documented in the metadata- table, this is controlled by constant 'REGISTER_METADATA' in the system.constants table. If this constant is false or not present, metadata is not registered.
  * Optional, also tab-separated text without a header can be imported if the optional parameter is set to false.
  *
  * @param tablename The table to copy to.
@@ -18,6 +19,8 @@ DECLARE
 	extra_options text = '';
 	delimiter_to_use text = E'\t';
 	sql text;
+	v_checksum_before bigint;
+	v_register_metadata text;
 BEGIN
 	-- set encoding
 	EXECUTE 'SHOW client_encoding' INTO current_encoding;
@@ -25,6 +28,10 @@ BEGIN
 
 	filename := replace(filespec, '{tablename}', tablename::text);
 	filename := replace(filename, '{datesuffix}', to_char(current_timestamp, 'YYYYMMDD'));
+
+	v_checksum_before := system.checksum_table(tablename::text);
+
+	v_register_metadata := system.get_constant('REGISTER_METADATA');
 
 	IF filename LIKE '%{revision}%' THEN
 		filename := replace(filename, '{revision}', system.get_git_revision());
@@ -40,11 +47,18 @@ BEGIN
 	EXECUTE sql;
 	RAISE NOTICE '% Done @ %', sql, timeofday();
 
+	IF v_register_metadata::boolean IS TRUE THEN
+
+		PERFORM system.register_metadata(tablename::text, filename, v_checksum_before);
+
+	END IF;
+
 	-- reset encoding
 	EXECUTE 'SET client_encoding TO ' || current_encoding;
 END;
 $BODY$
 LANGUAGE plpgsql VOLATILE;
+
 
 
 /*

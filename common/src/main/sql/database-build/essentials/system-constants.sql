@@ -36,6 +36,29 @@ LANGUAGE plpgsql STABLE;
 
 
 /*
+ * get_constant
+ * ------------
+ * Function simular to 'constant': returning the value of a database or web application constant.
+ * The difference with 'constant' is that when the constant does not exist in the table system.constants, NULL is returned.
+ * Used in the load_table function for registering metadata.
+ */
+CREATE OR REPLACE FUNCTION system.get_constant(constant_key text)
+	RETURNS text AS
+$BODY$
+DECLARE
+	constant_value text;
+BEGIN
+	SELECT value INTO constant_value FROM system.constants WHERE key = constant_key;
+	IF constant_value IS NULL THEN
+		RETURN NULL;
+	END IF;
+	RETURN constant_value;
+END;
+$BODY$
+LANGUAGE plpgsql STABLE;
+
+
+/*
  * set_constant
  * ------------
  * Function to change the value of a web application constant.
