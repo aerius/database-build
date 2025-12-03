@@ -32,7 +32,7 @@ BEGIN
 	v_register_metadata := system.get_register_metadata();
 
 	IF v_register_metadata IS TRUE THEN
-		v_checksum_before := system.determine_checksum(tablename::text);
+		v_checksum_before := system.determine_checksum_table(tablename::text);
 	END IF;
 
 	IF filename LIKE '%{revision}%' THEN

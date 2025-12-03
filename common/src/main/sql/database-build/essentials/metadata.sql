@@ -2,18 +2,17 @@
  * metadata
  * --------
  * Table that stores the source import-file per imported table and creates a checksum during the import-proces.
- * - @column filename The filename of the import file imported via the load_table function (which has been extended for this purpose with this functionality).
- * - @column checksum_before The checksum of the table before import. This is populated by the load_table function. If it's '0', the table contains no data.
- * - @column checksum The checksum of the table after import. This is populated by the load_table function. If it's '0', the table contains no data.
  * - @column timestamp The date/time of the import, is filled by the load_table function.
- */
+ * - @column filename The filename of the import file imported via the load_table function (which has been extended for this purpose with this functionality).
+ * - @column checksum The checksum of the table after import. This is populated by the load_table function. If it's '0', the table contains no data.
+ * - @column checksum_before The checksum of the table before import. This is populated by the load_table function. If it's '0', the table contains no data.
+  */
 CREATE TABLE system.metadata (
-	metadata_id integer GENERATED ALWAYS AS IDENTITY,
 	tablename text NOT NULL,
 	timestamp timestamp NOT NULL,
 	filename text NOT NULL,
 	checksum bigint NOT NULL,
-	checksum_before bigint NULL,
+	checksum_before bigint,
 	
 	CONSTRAINT metadata_pkey PRIMARY KEY (tablename, timestamp)
 );
@@ -26,7 +25,7 @@ CREATE TABLE system.metadata (
  * Used by functions that populate the checksum in the metadata table, allowing table content comparisons between databases in different locations.
  * @param v_tablename The table name for which the checksum should be generated.
  */
-CREATE OR REPLACE FUNCTION system.determine_checksum(v_tablename text)
+CREATE OR REPLACE FUNCTION system.determine_checksum_table(v_tablename text)
 	RETURNS SETOF bigint AS
 $BODY$
 DECLARE v_sql text;
@@ -54,8 +53,9 @@ $BODY$
 DECLARE
 	v_checksum bigint;
 BEGIN
-	v_checksum := system.determine_checksum(tablename::text);
 	RAISE NOTICE '% Insert imported file in metadata table @ %', tablename, timeofday();
+
+	v_checksum := system.determine_checksum_table(tablename::text);
 	
 	INSERT INTO system.metadata (tablename, filename, checksum_before, checksum, timestamp) 
 		VALUES (
@@ -69,3 +69,35 @@ BEGIN
 END;
 $BODY$
 LANGUAGE plpgsql VOLATILE;
+
+
+/*
+ * last_metadata_files_view
+ * ------------------------
+ * Returns the metadata information of the last imported import-files per table from the metadata table.
+ */
+CREATE OR REPLACE VIEW system.last_metadata_files_view AS
+WITH metadata_last_file AS (
+	SELECT 
+		tablename,
+		timestamp,
+		filename,
+		checksum,
+		checksum_before,
+		ROW_NUMBER() OVER (PARTITION BY tablename ORDER BY tablename, timestamp DESC) AS row_no
+		
+		FROM system.metadata 
+)
+SELECT 
+	tablename,
+	timestamp,
+	filename,
+	checksum,
+	checksum_before
+
+	FROM metadata_last_file 
+
+	WHERE row_no = 1 
+
+	ORDER BY tablename 
+;
