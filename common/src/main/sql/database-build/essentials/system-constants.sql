@@ -76,13 +76,12 @@ LANGUAGE SQL STABLE;
 
 
 /*
- * get_register_metadata
- * ---------------------
- * Function simular to 'constant': returning the value of a database or web application constant.
- * The difference with 'constant' is that when the constant does not exist in the table system.constants, NULL is returned.
+ * should_register_metadata
+ * ------------------------
+ * Function that determines if the metadata should be registered, based on the constant "REGISTER_METADATA".
  * Used in the load_table function for registering metadata.
  */
-CREATE OR REPLACE FUNCTION system.get_register_metadata()
+CREATE OR REPLACE FUNCTION system.should_register_metadata()
 	RETURNS boolean AS
 $BODY$
 	SELECT CASE
