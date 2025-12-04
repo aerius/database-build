@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION system.protect_table()
 	RETURNS trigger AS
 $BODY$
 BEGIN
-	RAISE EXCEPTION '%.% is a protected/readonly table!', TG_TABLE_SCHEMA, TG_TABLE_NAME;
+	RAISE EXCEPTION '%.% is a protected/read-only table!', TG_TABLE_SCHEMA, TG_TABLE_NAME;
 END;
 $BODY$
 LANGUAGE plpgsql;
