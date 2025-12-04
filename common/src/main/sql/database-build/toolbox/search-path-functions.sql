@@ -1,4 +1,6 @@
 /**
+ * get_search_path
+ * ---------------
  * Returns the current PostgreSQL search_path as a text string.
  */
 CREATE OR REPLACE FUNCTION system.get_search_path()
@@ -12,6 +14,8 @@ LANGUAGE plpgsql VOLATILE;
 
 
 /**
+ * set_search_path
+ * ---------------
  * Sets the PostgreSQL search_path for the current session. Applies only to the current session.
  *
  * @param path A comma-separated list of schemas to set as the new search_path.
@@ -29,6 +33,8 @@ LANGUAGE plpgsql VOLATILE;
 
 
 /**
+ * get_search_path_schema
+ * ----------------------
  * Returns the schema at a specific index within the current search_path, or NULL if out of range.
  *
  * @param index 1-based index of the schema to retrieve.
