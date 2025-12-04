@@ -271,7 +271,7 @@ DECLARE
 	rec record;
 	num_records integer;
 BEGIN
-	-->> Text fields containing the string \N indicate that NULL values were incorrectly imported
+	-- Text fields containing the string \N indicate that NULL values were incorrectly imported
 	RAISE NOTICE '* Searching for incorrect COPY FROM imports: NULL values...';
 	FOR rec IN
 		SELECT (table_schema || '.' || table_name)::regclass AS tablename, column_name
