@@ -37,7 +37,7 @@ LANGUAGE plpgsql VOLATILE;
  * ----------------------
  * Returns the schema at a specific index within the current search_path, or NULL if out of range.
  *
- * @param index 1-based index of the schema to retrieve.
+ * @param index 1-based index (standard Postgres) of the schema to retrieve.
  * @param return_user If TRUE, resolves '$user' to current_user; if FALSE, skips '$user' and returns the next schema.
  */
 CREATE OR REPLACE FUNCTION system.get_search_path_schema(index int, return_user boolean = FALSE)
