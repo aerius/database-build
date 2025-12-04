@@ -1,7 +1,7 @@
 /*
  * protect_table
  * -------------
- * Simple trigger function to make a table readonly.
+ * Simple trigger function to make a table read-only.
  * Useful for 'abstract base tables'.
  */
 CREATE OR REPLACE FUNCTION system.protect_table()

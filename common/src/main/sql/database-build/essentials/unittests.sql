@@ -44,7 +44,7 @@ LANGUAGE plpgsql STABLE;
  * In case of an exception (which should be the case when an assert in the unit test fails), the exception is caught, parsed,
  * and the exception message, line number and first context line number are all returned in a record.
  * A unit test should fail on the first exception, so this function should never return more than 1 record.
- * When no records are returned, the unit test was succesfull.
+ * When no records are returned, the unit test was successful.
  *
  * Called during build by ruby build script to execute a unittest.
  */

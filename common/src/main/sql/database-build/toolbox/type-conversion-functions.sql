@@ -1,7 +1,7 @@
 /*
  * array_to_index
  * -------------- 
- * Index (starting by 1, standard postgres) of the first element in anyarray that is equal to anyelement.
+ * Index (starting by 1, standard Postgres) of the first element in anyarray that is equal to anyelement.
  * Returns NULL when anylement is not present in anyarray.
  */
 CREATE OR REPLACE FUNCTION system.array_to_index(anyarray anyarray, anyelement anyelement)
@@ -18,7 +18,7 @@ LANGUAGE sql IMMUTABLE;
 /*
  * enum_to_index
  * -------------
- * Index (starting by 1, standard postgres) of anyenum in the type definition of it's enum type.
+ * Index (starting by 1, standard Postgres) of anyenum in the type definition of it's enum type.
  */
 CREATE OR REPLACE FUNCTION system.enum_to_index(anyenum anyenum)
 	RETURNS integer AS
@@ -31,7 +31,7 @@ LANGUAGE sql IMMUTABLE;
 /*
  * enum_by_index
  * -------------
- * Anynum on index position (starting by 1, standard postgres) in the type definition of its enum type.
+ * Anynum on index position (starting by 1, standard Postgres) in the type definition of its enum type.
  * Returns NULL when the index is invalid.
  */
 CREATE OR REPLACE FUNCTION system.enum_by_index(anyenum anyenum, index integer)

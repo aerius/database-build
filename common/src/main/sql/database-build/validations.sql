@@ -3,7 +3,7 @@
  * ---------------
  * Table to track validation runs.
  * Each validation run ends up as a record in this table.
- * A validation run always correponds to a specific backend connection.
+ * A validation run always corresponds to a specific backend connection.
  * When running the validations in a fresh connection, a new validation-run_id should be used.
  * This is automatically done by the validation logger function (perform_and_report_validation).
  */
@@ -36,7 +36,7 @@ CREATE TABLE system.validation_results (
 /*
  * validation_logs
  * ---------------
- * Table for saving the validaton logs.
+ * Table for saving the validation logs.
  * Each test executed within a validation ends up as a record in this table, along with the result.
  */
 CREATE TABLE system.validation_logs (
@@ -142,7 +142,7 @@ LANGUAGE plpgsql VOLATILE;
 /*
  * perform_and_report_test
  * -----------------------
- * Functon to execute a unittest function, logging the information in the appropriate validation tables.
+ * Function to execute a unittest function, logging the information in the appropriate validation tables.
  */
 CREATE OR REPLACE FUNCTION system.perform_and_report_test(function_name regproc, params text = NULL)
 	 RETURNS void AS
@@ -261,7 +261,7 @@ LANGUAGE plpgsql STABLE;
 /*
  * validate_incorrect_imports
  * --------------------------
- * Function to validat if there are tables that contain '\N' in a text(like) column.
+ * Function to validate if there are tables that contain '\N' in a text(like) column.
  * This is an indication that something failed on import.
  */
 CREATE OR REPLACE FUNCTION system.validate_incorrect_imports()
