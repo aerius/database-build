@@ -3,7 +3,8 @@
  * ----------
  * Function to copy the data of the supplied file to the supplied table.
  * The file should contain tab-separated text with a header as default, as exported by the functions system.store_query and system.store_table. 
- * The checksum of the loaded data can be stored in the metadata- table, this is controlled by constant 'REGISTER_METADATA' in the system.constants table. If this constant is false or not present, metadata is not registered.
+ * The names of the import-files and the checksum of the loaded data can be stored in the load_table_logs- table, this is controlled by constant 'REGISTER_TABLE_LOGDATA' in the system.constants table. 
+ * If this constant is false or not present, the load_table_logs table is not filled.
  * Optional, also tab-separated text without a header can be imported if the optional parameter is set to false.
  *
  * @param tablename The table to copy to.
@@ -20,7 +21,7 @@ DECLARE
 	delimiter_to_use text = E'\t';
 	sql text;
 	v_checksum_before bigint;
-	v_register_metadata boolean;
+	v_register_table_logdata boolean;
 BEGIN
 	-- set encoding
 	EXECUTE 'SHOW client_encoding' INTO current_encoding;
@@ -29,9 +30,9 @@ BEGIN
 	filename := replace(filespec, '{tablename}', tablename::text);
 	filename := replace(filename, '{datesuffix}', to_char(current_timestamp, 'YYYYMMDD'));
 
-	v_register_metadata := system.should_register_metadata();
+	v_register_table_logdata := system.should_register_table_logdata();
 
-	IF v_register_metadata IS TRUE THEN
+	IF v_register_table_logdata IS TRUE THEN
 		v_checksum_before := system.determine_checksum_table(tablename::text);
 	END IF;
 
@@ -49,8 +50,8 @@ BEGIN
 	EXECUTE sql;
 	RAISE NOTICE '% Done @ %', sql, timeofday();
 
-	IF v_register_metadata IS TRUE THEN
-		PERFORM system.register_metadata(tablename::text, filename, v_checksum_before);
+	IF v_register_table_logdata IS TRUE THEN
+		PERFORM system.register_load_table_logs(tablename::text, filename, v_checksum_before);
 	END IF;
 
 	-- reset encoding
