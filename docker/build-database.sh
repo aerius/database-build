@@ -78,9 +78,10 @@ inotifywait -e DELETE --include .s.PGSQL.5432 /var/run/postgresql/
 
 # Wait for the DB to finish starting up (the second time)
 echo 'Waiting for PostgreSQL to start up again..'
-while [[ ! -S /var/run/postgresql/.s.PGSQL.5432 ]]; do
+until pg_isready -q -d "${DATABASE_NAME}" -U "${POSTGRES_USER}" -h "$(hostname -i)"; do
   sleep 0.5s
 done
+echo 'PostgreSQL is up again'
 
 # execute database build
 ruby /aerius-database-build/bin/Build.rb "${DBRUNSCRIPT}" "${DBSETTINGS_BASE_DIRECTORY}/${DBSETTINGS_PATH}" -v "${DATABASE_VERSION}" -n "${DATABASE_NAME}"
