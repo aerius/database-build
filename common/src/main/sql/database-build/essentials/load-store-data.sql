@@ -21,7 +21,7 @@ DECLARE
 	delimiter_to_use text = E'\t';
 	sql text;
 	v_checksum_before bigint;
-	v_register_table_logdata boolean;
+	v_register_load_table boolean;
 BEGIN
 	-- set encoding
 	EXECUTE 'SHOW client_encoding' INTO current_encoding;
@@ -30,9 +30,9 @@ BEGIN
 	filename := replace(filespec, '{tablename}', tablename::text);
 	filename := replace(filename, '{datesuffix}', to_char(current_timestamp, 'YYYYMMDD'));
 
-	v_register_table_logdata := system.should_register_table_logdata();
+	v_register_load_table := system.should_register_table_logdata();
 
-	IF v_register_table_logdata IS TRUE THEN
+	IF v_register_load_table IS TRUE THEN
 		v_checksum_before := system.determine_checksum_table(tablename::text);
 	END IF;
 
@@ -50,8 +50,8 @@ BEGIN
 	EXECUTE sql;
 	RAISE NOTICE '% Done @ %', sql, timeofday();
 
-	IF v_register_table_logdata IS TRUE THEN
-		PERFORM system.register_load_table_logs(tablename::text, filename, v_checksum_before);
+	IF v_register_load_table IS TRUE THEN
+		PERFORM system.register_load_table(tablename::text, filename, v_checksum_before);
 	END IF;
 
 	-- reset encoding

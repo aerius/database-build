@@ -39,15 +39,15 @@ LANGUAGE plpgsql IMMUTABLE;
 
 
 /*
- * register_load_table_logs
- * ------------------------
+ * register_load_table
+ * -------------------
  * Function that writes log-data for the given table in the system.load_table_logs table. 
  * Each import is logged, regardless if the table already exists in this metaload_table_logs table.
  * @param v_tablename The table name for which the checksum is generated.
  * @param filename The filename that is used for the import.
  * @#param checksum_before The checksum of the table before the data is inserted.
  */
-CREATE OR REPLACE FUNCTION system.register_load_table_logs(tablename text, filename text, checksum_before bigint)
+CREATE OR REPLACE FUNCTION system.register_load_table(tablename text, filename text, checksum_before bigint)
 	RETURNS void AS
 $BODY$
 DECLARE
