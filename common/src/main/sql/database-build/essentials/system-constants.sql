@@ -73,3 +73,22 @@ $BODY$
 	END;
 $BODY$
 LANGUAGE SQL STABLE;
+
+
+/*
+ * should_register_table_logdata
+ * -----------------------------
+ * Function that determines if the table logs should be registered, based on the constant "REGISTER_LOAD_TABLE".
+ * Used in the load_table function for registering table log data.
+ */
+CREATE OR REPLACE FUNCTION system.should_register_table_logdata()
+	RETURNS boolean AS
+$BODY$
+	SELECT CASE
+	WHEN EXISTS (SELECT 1 FROM system.constants WHERE key = 'REGISTER_LOAD_TABLE') THEN
+		system.constant('REGISTER_LOAD_TABLE')::boolean
+	ELSE
+		FALSE::boolean
+	END;
+$BODY$
+LANGUAGE SQL STABLE;

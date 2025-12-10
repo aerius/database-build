@@ -3,10 +3,12 @@
  * ----------
  * Function to copy the data of the supplied file to the supplied table.
  * The file should contain tab-separated text with a header as default, as exported by the functions system.store_query and system.store_table. 
+ * The names of the import-files and the checksum of the loaded data can be stored in the load_table_logs- table, this is controlled by constant 'REGISTER_TABLE_LOGDATA' in the system.constants table. 
+ * If this constant is false or not present, the load_table_logs table is not filled.
  * Optional, also tab-separated text without a header can be imported if the optional parameter is set to false.
  *
  * @param tablename The table to copy to.
- * @param filespec The file to copy from
+ * @param filespec The file to copy from.
  * @param use_pretty_csv_format Optional parameter to specify if file contains a header (true) or not (false). Default true.
  */
 CREATE OR REPLACE FUNCTION system.load_table(tablename regclass, filespec text, use_pretty_csv_format boolean = TRUE)
@@ -18,6 +20,8 @@ DECLARE
 	extra_options text = '';
 	delimiter_to_use text = E'\t';
 	sql text;
+	v_checksum_before bigint;
+	v_register_load_table boolean;
 BEGIN
 	-- set encoding
 	EXECUTE 'SHOW client_encoding' INTO current_encoding;
@@ -25,6 +29,12 @@ BEGIN
 
 	filename := replace(filespec, '{tablename}', tablename::text);
 	filename := replace(filename, '{datesuffix}', to_char(current_timestamp, 'YYYYMMDD'));
+
+	v_register_load_table := system.should_register_table_logdata();
+
+	IF v_register_load_table IS TRUE THEN
+		v_checksum_before := system.determine_checksum_table(tablename::text);
+	END IF;
 
 	IF filename LIKE '%{revision}%' THEN
 		filename := replace(filename, '{revision}', system.get_git_revision());
@@ -39,6 +49,10 @@ BEGIN
 	RAISE NOTICE '% Starting @ %', sql, timeofday();
 	EXECUTE sql;
 	RAISE NOTICE '% Done @ %', sql, timeofday();
+
+	IF v_register_load_table IS TRUE THEN
+		PERFORM system.register_load_table(tablename::text, filename, v_checksum_before);
+	END IF;
 
 	-- reset encoding
 	EXECUTE 'SET client_encoding TO ' || current_encoding;
