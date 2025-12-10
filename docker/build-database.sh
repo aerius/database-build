@@ -78,7 +78,7 @@ inotifywait -e DELETE --include .s.PGSQL.5432 /var/run/postgresql/
 
 # Wait for the DB to finish starting up (the second time)
 echo 'Waiting for PostgreSQL to start up again..'
-until pg_isready -q -d "${DATABASE_NAME}" -U "${POSTGRES_USER}" -h "$(hostname -i)"; do
+until pg_isready -q -d "${POSTGRES_DB}" -U "${POSTGRES_USER}" -h "$(hostname -i)"; do
   sleep 0.5s
 done
 echo 'PostgreSQL is up again'
