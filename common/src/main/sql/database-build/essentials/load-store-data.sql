@@ -3,8 +3,7 @@
  * ----------
  * Function to copy the data of the supplied file to the supplied table.
  * The file should contain tab-separated text with a header as default, as exported by the functions system.store_query and system.store_table. 
- * The names of the import-files and the checksum of the loaded data can be stored in the load_table_logs- table, this is controlled by constant 'REGISTER_TABLE_LOGDATA' in the system.constants table. 
- * If this constant is false or not present, the load_table_logs table is not filled.
+ * Depending on the boolean of the constant 'REGISTER_TABLE_LOGDATA' (absent = false), source import-file and the checksum of the imported data is stored in the load_table_logs- table.
  * Optional, also tab-separated text without a header can be imported if the optional parameter is set to false.
  *
  * @param tablename The table to copy to.
@@ -30,7 +29,7 @@ BEGIN
 	filename := replace(filespec, '{tablename}', tablename::text);
 	filename := replace(filename, '{datesuffix}', to_char(current_timestamp, 'YYYYMMDD'));
 
-	v_register_load_table := system.should_register_table_logdata();
+	v_register_load_table := system.should_register_load_table();
 
 	IF v_register_load_table IS TRUE THEN
 		v_checksum_before := system.determine_checksum_table(tablename::text);

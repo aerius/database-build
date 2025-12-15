@@ -1,7 +1,7 @@
 /*
  * load_table_logs
  * ---------------
- * Table that stores the source import-file per imported table and creates a checksum during the import-proces.
+ * Table in which the source import-file per imported table and a checksum of the imported data are stored during the database build import-proces.
  * - @column timestamp The date/time of the import, is filled by the load_table function.
  * - @column filename The filename of the import file imported via the load_table function (which has been extended for this purpose with this functionality).
  * - @column checksum The checksum of the table after import. This is populated by the load_table function. If it's '0', the table contains no data.
