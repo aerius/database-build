@@ -84,11 +84,6 @@ LANGUAGE SQL STABLE;
 CREATE OR REPLACE FUNCTION system.should_register_load_table()
 	RETURNS boolean AS
 $BODY$
-	SELECT CASE
-	WHEN EXISTS (SELECT 1 FROM system.constants WHERE key = 'REGISTER_LOAD_TABLE') THEN
-		system.constant('REGISTER_LOAD_TABLE')::boolean
-	ELSE
-		FALSE::boolean
-	END;
+	SELECT COALESCE((SELECT value FROM system.constants WHERE key = 'REGISTER_LOAD_TABLE'), 'FALSE')::boolean
 $BODY$
 LANGUAGE SQL STABLE;
