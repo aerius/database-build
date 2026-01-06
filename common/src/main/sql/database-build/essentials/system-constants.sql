@@ -78,12 +78,12 @@ LANGUAGE SQL STABLE;
 /*
  * should_register_load_table
  * --------------------------
- * Function that determines if the table logs should be registered, based on the constant 'REGISTER_LOAD_TABLE'.
+ * Function that determines if the table logs should be registered, based on the constant 'SKIP_REGISTER_LOAD_TABLE'.
  * Used in the load_table function for registering table log data.
  */
 CREATE OR REPLACE FUNCTION system.should_register_load_table()
 	RETURNS boolean AS
 $BODY$
-	SELECT COALESCE((SELECT value FROM system.constants WHERE key = 'REGISTER_LOAD_TABLE'), 'FALSE')::boolean
+	SELECT COALESCE((SELECT value FROM system.constants WHERE key = 'SKIP_REGISTER_LOAD_TABLE'), 'TRUE')::boolean
 $BODY$
 LANGUAGE SQL STABLE;

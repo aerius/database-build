@@ -3,7 +3,7 @@
  * ----------
  * Function to copy the data of the supplied file to the supplied table.
  * The file should contain tab-separated text with a header as default, as exported by the functions system.store_query and system.store_table. 
- * Depending on the boolean of the constant 'REGISTER_TABLE_LOGDATA' (absent = false), source import-file and the checksum of the imported data is stored in the load_table_logs- table.
+ * Depending on the boolean of the constant 'SKIP_REGISTER_TABLE_LOGDATA' (absent = true), source import-file and the checksum of the imported data is stored in the load_table_logs- table.
  * Optional, also tab-separated text without a header can be imported if the optional parameter is set to false.
  *
  * @param tablename The table to copy to.
