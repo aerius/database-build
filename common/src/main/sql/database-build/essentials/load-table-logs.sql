@@ -1,14 +1,14 @@
 /*
  * load_table_logs
  * ---------------
- * Table in which the source import-file per imported table and a checksum of the imported data are stored during the database build import-proces.
+ * Table which stores metadata from a load_table action for verifying the loading of the table and the loaded data.
  * - @column timestamp The date/time of the import, is filled by the load_table function.
  * - @column filename The filename of the import file imported via the load_table function (which has been extended for this purpose with this functionality).
- * - @column checksum The checksum of the table after import. This is populated by the load_table function. If it's '0', the table contains no data.
- * - @column checksum_before The checksum of the table before import. This is populated by the load_table function. If it's '0', the table contains no data.
+ * - @column checksum The checksum of the table after import, is filled by the load_table function. If it's '0', the table contains no data.
+ * - @column checksum_before The checksum of the table before import, is filled by the load_table function. If it's '0', the table contains no data.
   */
 CREATE TABLE system.load_table_logs (
-	tablename text NOT NULL,
+	tablename regclass NOT NULL,
 	timestamp timestamp NOT NULL,
 	filename text NOT NULL,
 	checksum bigint NOT NULL,
@@ -42,7 +42,7 @@ LANGUAGE plpgsql IMMUTABLE;
  * register_load_table
  * -------------------
  * Function that writes log-data for the given table in the system.load_table_logs table. 
- * Each import is logged, regardless if the table already exists in this metaload_table_logs table.
+ * Each import is logged, regardless if the table already exists.
  * @param v_tablename The table name for which the checksum is generated.
  * @param filename The filename that is used for the import.
  * @#param checksum_before The checksum of the table before the data is inserted.
@@ -55,11 +55,11 @@ DECLARE
 BEGIN
 	RAISE NOTICE '% Insert imported file in load_table_logs table @ %', tablename, timeofday();
 
-	v_checksum := system.determine_checksum_table(tablename::text);
+	v_checksum := system.determine_checksum_table(tablename);
 	
 	INSERT INTO system.load_table_logs (tablename, filename, checksum_before, checksum, timestamp) 
 		VALUES (
-			tablename,
+			tablename::regclass,
 			SPLIT_PART(filename, '/', -1),
 			checksum_before,
 			v_checksum,
