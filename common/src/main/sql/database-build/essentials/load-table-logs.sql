@@ -41,29 +41,29 @@ LANGUAGE plpgsql IMMUTABLE;
 /*
  * register_load_table
  * -------------------
- * Function that writes log-data for the given table in the system.load_table_logs table. 
+ * Function that registers the load_table action and stores metadata in the system.load_table_logs.
  * Each import is logged, regardless if the table already exists.
  * @param v_tablename The table name for which the checksum is generated.
- * @param filename The filename that is used for the import.
- * @#param checksum_before The checksum of the table before the data is inserted.
+ * @param v_filename The filename that is used for the import.
+ * @param v_checksum_before The checksum of the table before the data is inserted.
  */
-CREATE OR REPLACE FUNCTION system.register_load_table(tablename text, filename text, checksum_before bigint)
+CREATE OR REPLACE FUNCTION system.register_load_table(v_tablename text, v_filename text, v_checksum_before bigint)
 	RETURNS void AS
 $BODY$
 DECLARE
 	v_checksum bigint;
 BEGIN
-	RAISE NOTICE '% Insert imported file in load_table_logs table @ %', tablename, timeofday();
+	RAISE NOTICE '% Insert imported file in load_table_logs table @ %', v_tablename, timeofday();
 
-	v_checksum := system.determine_checksum_table(tablename);
+	v_checksum := system.determine_checksum_table(v_tablename);
 	
-	INSERT INTO system.load_table_logs (tablename, filename, checksum_before, checksum, timestamp) 
+	INSERT INTO system.load_table_logs (tablename, timestamp, filename, checksum, checksum_before) 
 		VALUES (
-			tablename::regclass,
-			SPLIT_PART(filename, '/', -1),
-			checksum_before,
+			v_tablename::regclass,
+			clock_timestamp()::timestamp,
+			SPLIT_PART(v_filename, '/', -1),
 			v_checksum,
-			clock_timestamp()::timestamp
+			v_checksum_before
 	); 
 	
 END;
@@ -72,12 +72,58 @@ LANGUAGE plpgsql VOLATILE;
 
 
 /*
+ * prevailing_load_table_logs_view
+ * -------------------------------
+ * Returns the table log information of all imported import-files from the latest import-batch per table.
+ * 
+ */
+CREATE OR REPLACE VIEW system.prevailing_load_table_logs_view AS
+WITH last_zero AS (
+	SELECT 
+		tablename, 
+		MAX(timestamp) AS last_zero_at
+	
+	FROM system.load_table_logs 
+	
+	WHERE checksum_before = 0
+	
+	GROUP BY tablename
+)
+SELECT 
+	tablename,
+	timestamp,
+	filename,
+	checksum,
+	checksum_before
+
+	FROM system.load_table_logs 
+		INNER JOIN last_zero USING (tablename)
+
+	WHERE timestamp >= last_zero.last_zero_at
+
+	ORDER BY tablename 
+;
+
+
+/*
  * last_load_table_logs_view
  * -------------------------
  * Returns the table log information of the last imported import-files per table from the load_table_logs table.
+ * 
  */
 CREATE OR REPLACE VIEW system.last_load_table_logs_view AS
-WITH numbered_files AS (
+WITH last_zero AS (
+	SELECT 
+		tablename, 
+		MAX(timestamp) AS last_zero_at
+	
+	FROM system.load_table_logs 
+	
+	WHERE checksum_before = 0
+	
+	GROUP BY tablename
+),
+numbered_files AS (
 	SELECT 
 		tablename,
 		timestamp,
@@ -87,6 +133,9 @@ WITH numbered_files AS (
 		ROW_NUMBER() OVER (PARTITION BY tablename ORDER BY tablename, timestamp DESC) AS row_no
 		
 		FROM system.load_table_logs 
+			INNER JOIN last_zero USING (tablename)
+
+		WHERE timestamp >= last_zero.last_zero_at
 )
 SELECT 
 	tablename,
