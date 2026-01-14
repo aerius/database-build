@@ -78,10 +78,10 @@ LANGUAGE plpgsql VOLATILE;
  * 
  */
 CREATE OR REPLACE VIEW system.prevailing_load_table_logs_view AS
-WITH last_zero AS (
+WITH empty_checksum AS (
 	SELECT 
 		tablename, 
-		MAX(timestamp) AS last_zero_at
+		MAX(timestamp) AS latest_empty_checksum
 	
 	FROM system.load_table_logs 
 	
@@ -97,56 +97,46 @@ SELECT
 	checksum_before
 
 	FROM system.load_table_logs 
-		INNER JOIN last_zero USING (tablename)
+		INNER JOIN empty_checksum USING (tablename)
 
-	WHERE timestamp >= last_zero.last_zero_at
+	WHERE timestamp >= empty_checksum.latest_empty_checksum
 
 	ORDER BY tablename 
 ;
 
 
 /*
- * last_load_table_logs_view
- * -------------------------
- * Returns the table log information of the last imported import-files per table from the load_table_logs table.
+ * current_load_table_data_checksums_view
+ * --------------------------------------
+ * Returns the table log information of the last imported import-file per table from the load_table_logs table.
  * 
  */
-CREATE OR REPLACE VIEW system.last_load_table_logs_view AS
-WITH last_zero AS (
-	SELECT 
-		tablename, 
-		MAX(timestamp) AS last_zero_at
+CREATE OR REPLACE VIEW system.current_load_table_data_checksums_view AS
+SELECT
+	tablename,
+	MAX(timestamp) AS timestamp,
+	checksum
 	
-	FROM system.load_table_logs 
-	
-	WHERE checksum_before = 0
-	
-	GROUP BY tablename
-),
-numbered_files AS (
-	SELECT 
-		tablename,
-		timestamp,
-		filename,
-		checksum,
-		checksum_before,
-		ROW_NUMBER() OVER (PARTITION BY tablename ORDER BY tablename, timestamp DESC) AS row_no
-		
-		FROM system.load_table_logs 
-			INNER JOIN last_zero USING (tablename)
+	FROM system.prevailing_load_table_logs_view
 
-		WHERE timestamp >= last_zero.last_zero_at
-)
+	GROUP BY tablename, checksum
+;
+
+
+/*
+ * validate_load_table_data_checksums_view
+ * ---------------------------------------
+ * Returns the table log information of the last imported import-files per table from the load_table_logs table, supplemented with the real-time determined checksum.
+ * Can be used to determine if the data per table is changed since the lastest load_table action.
+ * 
+ */
+CREATE OR REPLACE VIEW system.validate_load_table_data_checksums_view AS
 SELECT 
 	tablename,
 	timestamp,
-	filename,
-	checksum,
-	checksum_before
+	checksum AS stored_checksum,
+	system.determine_checksum_table(tablename::text) AS determined_checksum,
+	checksum = system.determine_checksum_table(tablename::text) AS checksum_valid
 
-	FROM numbered_files 
-
-	WHERE row_no = 1 
-
-	ORDER BY tablename 
+	FROM system.current_load_table_data_checksums_view
 ;
