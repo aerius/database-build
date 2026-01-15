@@ -75,10 +75,9 @@ LANGUAGE plpgsql VOLATILE;
  * prevailing_load_table_logs_view
  * -------------------------------
  * Returns the table log information of all imported import-files from the latest import-batch per table.
- * 
  */
 CREATE OR REPLACE VIEW system.prevailing_load_table_logs_view AS
-WITH empty_checksum AS (
+WITH empty_checksums AS (
 	SELECT 
 		tablename, 
 		MAX(timestamp) AS latest_empty_checksum
@@ -97,11 +96,11 @@ SELECT
 	checksum_before
 
 	FROM system.load_table_logs 
-		INNER JOIN empty_checksum USING (tablename)
+		INNER JOIN empty_checksums USING (tablename)
 
-	WHERE timestamp >= empty_checksum.latest_empty_checksum
+	WHERE timestamp >= empty_checksums.latest_empty_checksum
 
-	ORDER BY tablename 
+	ORDER BY tablename
 ;
 
 
@@ -112,14 +111,22 @@ SELECT
  * 
  */
 CREATE OR REPLACE VIEW system.current_load_table_data_checksums_view AS
+WITH latest_timestamp AS (
 SELECT
 	tablename,
-	MAX(timestamp) AS timestamp,
-	checksum
+	MAX(timestamp) AS timestamp
 	
 	FROM system.prevailing_load_table_logs_view
 
-	GROUP BY tablename, checksum
+	GROUP BY tablename
+)
+SELECT 
+	tablename,
+	timestamp,
+	checksum
+
+	FROM latest_timestamp
+		INNER JOIN system.load_table_logs USING (tablename, timestamp)
 ;
 
 

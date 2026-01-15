@@ -76,14 +76,14 @@ LANGUAGE SQL STABLE;
 
 
 /*
- * skip_register_load_table
- * ------------------------
- * Function that determines if registering of the table logs should be skipped (TRUE = skip), based on the constant 'SKIP_REGISTER_LOAD_TABLE'.
+ * should_skip_register_load_table
+ * -------------------------------
+ * Function that determines if registering of the table logs should be skipped (TRUE = skip), based on the constant 'skip_register_load_table'.
  * Used in the load_table function for registering table log data.
  */
-CREATE OR REPLACE FUNCTION system.skip_register_load_table()
+CREATE OR REPLACE FUNCTION system.should_skip_register_load_table()
 	RETURNS boolean AS
 $BODY$
-	SELECT COALESCE((SELECT value FROM system.constants WHERE key = 'SKIP_REGISTER_LOAD_TABLE'), 'FALSE')::boolean
+	SELECT COALESCE((SELECT value FROM system.constants WHERE key = 'skip_register_load_table'), 'FALSE')::boolean
 $BODY$
 LANGUAGE SQL STABLE;
