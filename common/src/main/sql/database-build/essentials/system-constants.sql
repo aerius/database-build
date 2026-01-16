@@ -75,6 +75,12 @@ $BODY$
 LANGUAGE SQL STABLE;
 
 
+/**
+ * Insert the constant for loggin the load_table actions, default = don't skip.
+ */
+INSERT INTO system.constants (key, value) VALUES ('SKIP_REGISTER_LOAD_TABLE', 'FALSE');
+
+
 /*
  * should_skip_register_load_table
  * -------------------------------
