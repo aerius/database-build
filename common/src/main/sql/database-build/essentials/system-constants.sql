@@ -73,3 +73,24 @@ $BODY$
 	END;
 $BODY$
 LANGUAGE SQL STABLE;
+
+
+/**
+ * Insert the constant for loggin the load_table actions, default = don't skip.
+ */
+INSERT INTO system.constants (key, value) VALUES ('SKIP_REGISTER_LOAD_TABLE', 'FALSE');
+
+
+/*
+ * should_skip_register_load_table
+ * -------------------------------
+ * Function that determines if registering of the table logs should be skipped (TRUE = skip), based on the constant 'SKIP_REGISTER_LOAD_TABLE'.
+ * If the constant is not present in the database, the table logs are still registered (skip default = FALSE).
+ * Used in the load_table function for registering table log data.
+ */
+CREATE OR REPLACE FUNCTION system.should_skip_register_load_table()
+	RETURNS boolean AS
+$BODY$
+	SELECT COALESCE((SELECT value FROM system.constants WHERE key = 'SKIP_REGISTER_LOAD_TABLE'), 'FALSE')::boolean
+$BODY$
+LANGUAGE SQL STABLE;
