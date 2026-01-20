@@ -82,11 +82,11 @@ WITH empty_checksums AS (
 		tablename, 
 		MAX(timestamp) AS latest_empty_checksum
 	
-	FROM system.load_table_logs 
-	
-	WHERE checksum_before = 0
-	
-	GROUP BY tablename
+		FROM system.load_table_logs 
+		
+		WHERE checksum_before = 0
+		
+		GROUP BY tablename
 )
 SELECT 
 	tablename,
@@ -100,7 +100,7 @@ SELECT
 
 	WHERE timestamp >= empty_checksums.latest_empty_checksum
 
-	ORDER BY tablename
+	ORDER BY tablename, timestamp
 ;
 
 
@@ -127,6 +127,8 @@ SELECT
 
 	FROM latest_timestamp
 		INNER JOIN system.load_table_logs USING (tablename, timestamp)
+
+	ORDER BY tablename
 ;
 
 
@@ -146,4 +148,6 @@ SELECT
 	checksum = system.determine_checksum_table(tablename::text) AS checksum_valid
 
 	FROM system.current_load_table_data_checksums_view
+
+	ORDER BY tablename, timestamp
 ;
