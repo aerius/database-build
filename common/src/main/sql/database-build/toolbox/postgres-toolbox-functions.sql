@@ -1,14 +1,16 @@
 /*
  * protect_table
  * -------------
- * Simple trigger function to make a table read-only.
- * Useful for 'abstract base tables'.
+ * Generic trigger function that protects a table from operations.
+ * Protects from whatever operations the trigger is defined for (INSERT, UPDATE, DELETE, or any combination).
+ * When attached via a BEFORE trigger, raises an exception for any matching operation attempt.
+ * Useful for abstract base tables or any table where direct operations should be prevented..
  */
 CREATE OR REPLACE FUNCTION system.protect_table()
 	RETURNS trigger AS
 $BODY$
 BEGIN
-	RAISE EXCEPTION '%.% is a protected/read-only table!', TG_TABLE_SCHEMA, TG_TABLE_NAME;
+	RAISE EXCEPTION '%.% is a protected table where % statements are not allowed!', TG_TABLE_SCHEMA, TG_TABLE_NAME, TG_OP;
 END;
 $BODY$
 LANGUAGE plpgsql;
