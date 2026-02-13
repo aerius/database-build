@@ -4,7 +4,7 @@
  * Generic trigger function that protects a table from operations.
  * Protects from whatever operations the trigger is defined for (INSERT, UPDATE, DELETE, or any combination).
  * When attached via a BEFORE trigger, raises an exception for any matching operation attempt.
- * Useful for abstract base tables or any table where direct operations should be prevented..
+ * Useful for abstract base tables or any table where direct operations should be prevented.
  */
 CREATE OR REPLACE FUNCTION system.protect_table()
 	RETURNS trigger AS
