@@ -440,6 +440,8 @@ class ScriptCommands
     add_constant 'CURRENT_DATABASE_VERSION', get_version(), schema unless $version.nil?
     add_constant 'CURRENT_DATABASE_PRODUCT', $product.to_s, schema unless $product.nil?
     add_constant 'CURRENT_GIT_REVISION', Utility.get_git_hash, schema if !$vcs.nil? && $vcs == :git
+    add_constant 'DATABASE_MODULES_GIT_REVISION', Utility.get_git_hash_modules, schema if !$vcs.nil? && $vcs == :git
+    add_constant 'DATABASE_BUILD_GIT_REVISION', Utility.get_git_hash_build, schema if !$vcs.nil? && $vcs == :git
     add_constant 'CURRENT_SVN_REVISION', Utility.get_svn_head_revision, schema if !$vcs.nil? && $vcs == :svn
     add_constant 'CURRENT_DATABASE_BUILD_DATE', Time.now.strftime('%d-%m-%Y %H:%M:%S'), schema
     add_constant 'CURRENT_DATABASE_BUILD_USER', Etc.getlogin, schema rescue nil

@@ -101,6 +101,51 @@ class Utility
     raise "Could not read GIT hash with command: #{cmd}"
   end
 
+
+ def self.get_git_hash_modules
+    raise 'Git bin path not set ($git_bin_path)' if $git_bin_path.nil?
+    raise "Git bin path not found ($git_bin_path = \"#{$git_bin_path}\")" unless ((File.exist?($git_bin_path) && File.directory?($git_bin_path)) || ($git_bin_path.empty?))
+
+    curr_dir = Dir.pwd
+    Dir.chdir($database_modules_sql_path)
+    cmd = "\"#{$git_bin_path}git\" log -1 --pretty=format:%h"
+    socket = IO.popen(cmd)
+    begin
+      if line = socket.gets then
+        line = line.strip
+        raise "Illegal git hash found: #{line}" if line.length > 10
+        return line
+      end
+    ensure
+      socket.close
+      Dir.chdir(curr_dir)
+    end
+    raise "Could not read GIT hash with command: #{cmd}"
+  end
+
+
+ def self.get_git_hash_build
+    raise 'Git bin path not set ($git_bin_path)' if $git_bin_path.nil?
+    raise "Git bin path not found ($git_bin_path = \"#{$git_bin_path}\")" unless ((File.exist?($git_bin_path) && File.directory?($git_bin_path)) || ($git_bin_path.empty?))
+
+    curr_dir = Dir.pwd
+    Dir.chdir($database_build_sql_path)
+    cmd = "\"#{$git_bin_path}git\" log -1 --pretty=format:%h"
+    socket = IO.popen(cmd)
+    begin
+      if line = socket.gets then
+        line = line.strip
+        raise "Illegal git hash found: #{line}" if line.length > 10
+        return line
+      end
+    ensure
+      socket.close
+      Dir.chdir(curr_dir)
+    end
+    raise "Could not read GIT hash with command: #{cmd}"
+  end
+
+
   def self.get_svn_head_revision
     raise 'SVN bin path not set ($svn_bin_path)' if $svn_bin_path.nil?
     raise "SVN bin path not found ($svn_bin_path = \"#{$svn_bin_path}\")" unless ((File.exist?($svn_bin_path) && File.directory?($svn_bin_path)) || ($svn_bin_path.empty?))
