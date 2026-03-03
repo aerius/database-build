@@ -80,7 +80,6 @@ class Utility
     return lines.last(lastnum).join("")
   end
 
-
   def self.get_git_status(gitpath)
     raise 'Git bin path not set ($git_bin_path)' if $git_bin_path.nil?
     raise "Git bin path not found ($git_bin_path = \"#{$git_bin_path}\")" unless ((File.exist?($git_bin_path) && File.directory?($git_bin_path)) || ($git_bin_path.empty?))

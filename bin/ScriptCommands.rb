@@ -120,6 +120,11 @@ class ScriptCommands
     end
   end
 
+  def check_uncommited_code(repo)
+    $logger.writeln "Checking for uncommitted code in repo #{repo}..."
+    Utility.get_git_status(repo)
+  end  
+
   def clear_log
     $logger.clear
   end
@@ -447,7 +452,6 @@ class ScriptCommands
     add_constant 'CURRENT_DATABASE_BUILD_USER', Etc.getlogin, schema rescue nil
     add_constant 'CURRENT_DATABASE_BUILD_NODE', Etc.uname[:nodename], schema rescue nil
     add_constant 'CURRENT_DATABASE_BUILD_VERSION', get_database_build_version(), schema
-    add_constant 'TEST', Utility.get_git_status($database_build_sql_path), schema if !$vcs.nil? && $vcs == :git
   end
 
   def cluster_tables
