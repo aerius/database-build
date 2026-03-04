@@ -94,3 +94,33 @@ $BODY$
 	SELECT COALESCE((SELECT value FROM system.constants WHERE key = 'SKIP_REGISTER_LOAD_TABLE'), 'FALSE')::boolean
 $BODY$
 LANGUAGE SQL STABLE;
+
+
+/*
+ * current_build_common_modules_repo_hashes_view
+ * ---------------------------------------------
+ * View that flattens the CURRENT_BUILD_COMMON_MODULES_REPO_HASHES JSON constant.
+ */
+CREATE OR REPLACE VIEW system.current_build_common_modules_repo_hashes_view AS
+	WITH common_modules AS (
+		SELECT
+			jsonb_array_elements((value::jsonb)->'common_modules') AS element
+		
+			FROM system.constants
+			
+			WHERE
+				key = 'CURRENT_BUILD_COMMON_MODULES_REPO_HASHES'
+				AND value IS NOT NULL
+				AND value != ''
+	)
+	SELECT
+		(element->>'repo_url')::text AS repo_url,
+		(element->>'hash')::text AS hash,
+		(element->>'sql_path')::text AS sql_path,
+		(element->>'data_path')::text AS data_path,
+		(element->>'had_uncommitted_changes')::boolean AS had_uncommitted_changes
+
+		FROM common_modules
+
+		ORDER BY repo_url, sql_path, data_path;
+;
