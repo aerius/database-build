@@ -10,7 +10,7 @@ When using Build.rb directly, a database is not 100% reproducible (uncommitted c
 
 When your runscript calls `add_build_constants`, the build stores:
 
-- **CURRENT_BUILD_REPO_HASHES** — A JSON string with one entry per common module (from `$common_sql_paths` / `$common_data_paths`). Each entry has `repo_url`, `hash`, `sql_path`, `data_path`, and `had_uncommitted_changes`.
+- **CURRENT_BUILD_COMMON_MODULES_REPO_HASHES** — A JSON string with one entry per common module (from `$common_sql_paths` / `$common_data_paths`). Each entry has `repo_url`, `hash`, `sql_path`, `data_path`, and `had_uncommitted_changes`.
 
   **Pairing:** SQL and data paths are paired by index: entry *i* uses `$common_sql_paths[i]` and `$common_data_paths[i]`. If that pair has different git hashes (different repos), two entries are stored (one sql-only, one data-only). We keep it this simple because common sql/data paths should be defined as pairs.
 
@@ -18,7 +18,7 @@ When your runscript calls `add_build_constants`, the build stores:
 
 - **CURRENT_BUILD_SCRIPT_HAD_UNCOMMITTED_CHANGES** — `'true'` if the product sql path repo, product data path repo, or any common module repo had uncommitted or untracked changes; `'false'` otherwise.
 
-Example JSON stored in CURRENT_BUILD_REPO_HASHES:
+Example JSON stored in CURRENT_BUILD_COMMON_MODULES_REPO_HASHES:
 
 ```json
 {
