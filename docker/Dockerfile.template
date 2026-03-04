@@ -4,7 +4,9 @@ ENV POSTGRES_DB='postgres' \
     POSTGRES_USER='aerius' \
     POSTGRES_PASSWORD='aerius' \
     # Points to our own PGDATA. We are unfortunately doing this because we want the data to persist but the default PGDATA directory is marked as a volume, which cannot be undone.
-    PGDATA='/postgresdata'
+    PGDATA='/postgresdata' \
+    # Points to the directory that can contain any additional config files that should be included
+    PGCONF_INCLUDE_DIR='/postgresconf.d'
 
 RUN apk update && apk upgrade \
     # add ruby dependencies + curl + inotify-tools
@@ -24,7 +26,11 @@ RUN apk update && apk upgrade \
     \
     # create necessary common folders (required by aerius-database-build - but not used by us yet)
     && mkdir -p aerius-database-common/src/data/sql \
-    && mkdir -p aerius-database-common/src/main/sql
+    && mkdir -p aerius-database-common/src/main/sql \
+    # Create config include directory
+    && mkdir -p "${PGCONF_INCLUDE_DIR}" \
+    && chown -R postgres:postgres "${PGCONF_INCLUDE_DIR}" \
+    && chmod 700 "${PGCONF_INCLUDE_DIR}"
 
 # Copy build-database.sh to the image - Dockerfiles that extend on this image
 #  can use it to build a database easily. See script for the requirements.
@@ -32,6 +38,10 @@ COPY docker/build-database.sh /
 
 # Copy over start-database.sh which can do some extra steps before/after starting the database.
 COPY docker/start-database.sh /
+
+# Copy helper script to append the include_dir directive
+COPY docker/initdb-include-dir.sh /docker-entrypoint-initdb.d/
+RUN chmod +x /docker-entrypoint-initdb.d/initdb-include-dir.sh
 
 # Copy source code of the build script to the image
 COPY bin/ /aerius-database-build/bin
