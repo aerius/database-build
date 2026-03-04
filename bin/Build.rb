@@ -67,6 +67,7 @@ $logger.open($product_log_path)
 
 # Scriptrunner will be the class encapsulating the user script
 require 'ScriptRunner.rb'
+require 'CommonModulesUtility.rb'
 $script_runner = ScriptRunner.new
 
 # ------------------------------------
@@ -106,6 +107,18 @@ begin
   $logger.writeln ''
   $logger.writeln "Build started at #{Time.now.strftime('%d-%m-%Y %H:%M:%S')}"
   $logger.writeln ''
+
+  if CommonModulesUtility.any_had_uncommitted_changes?($product_sql_path, $product_data_path, $common_sql_paths, $common_data_paths) then
+    $logger.warn 'Uncommitted or untracked changes detected in product or common module repos!'
+    if $prompt_on_uncommitted_changes != false then
+      $stdout.print 'Are you sure you want to proceed? (y/n): '
+      response = $stdin.gets.to_s.strip.downcase
+      unless response == 'y' || response == 'yes' then
+        $logger.writeln 'Build aborted.'
+        exit 1
+      end
+    end
+  end
 
   # Clean up/prepare folders
   if File.exist?($product_temp_path) && File.directory?($product_temp_path) then # possible previous run
