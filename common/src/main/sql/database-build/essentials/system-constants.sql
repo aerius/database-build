@@ -97,30 +97,46 @@ LANGUAGE SQL STABLE;
 
 
 /*
- * current_build_common_modules_repo_hashes_view
- * ---------------------------------------------
- * View that flattens the CURRENT_BUILD_COMMON_MODULES_REPO_HASHES JSON constant.
+ * current_build_common_module_repos_view
+ * --------------------------------------
+ * View that flattens the CURRENT_BUILD_COMMON_MODULE_REPO_HASHES JSON constant
+ * into one row per path (sql or data).
  */
-CREATE OR REPLACE VIEW system.current_build_common_modules_repo_hashes_view AS
-	WITH common_modules AS (
+CREATE OR REPLACE VIEW system.current_build_common_module_repos_view AS
+	WITH common_module_repos AS (
 		SELECT
-			jsonb_array_elements((value::jsonb)->'common_modules') AS element
-		
+			jsonb_array_elements((value::jsonb)->'common_module_repos') AS element
+
 			FROM system.constants
-			
+
 			WHERE
-				key = 'CURRENT_BUILD_COMMON_MODULES_REPO_HASHES'
+				key = 'CURRENT_BUILD_COMMON_MODULE_REPO_HASHES'
 				AND value IS NOT NULL
 				AND value != ''
 	)
 	SELECT
 		(element->>'repo_url')::text AS repo_url,
 		(element->>'hash')::text AS hash,
-		(element->>'sql_path')::text AS sql_path,
-		(element->>'data_path')::text AS data_path,
-		(element->>'had_uncommitted_changes')::boolean AS had_uncommitted_changes
+		'sql' AS path_type,
+		(element->>'sql_path')::text AS path,
+		(element->>'had_uncommitted_changes')::boolean AS repo_had_uncommitted_changes
 
-		FROM common_modules
+		FROM common_module_repos
+		
+		WHERE element->>'sql_path' IS NOT NULL
 
-		ORDER BY repo_url, sql_path, data_path;
+	UNION ALL
+
+	SELECT
+		(element->>'repo_url')::text AS repo_url,
+		(element->>'hash')::text AS hash,
+		'data' AS path_type,
+		(element->>'data_path')::text AS path,
+		(element->>'had_uncommitted_changes')::boolean AS repo_had_uncommitted_changes
+
+		FROM common_module_repos
+		
+		WHERE element->>'data_path' IS NOT NULL
+
+	ORDER BY repo_url, path_type, path
 ;
