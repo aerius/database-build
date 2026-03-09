@@ -22,7 +22,7 @@ class ScriptCommands
   def set_database_name(database_name)
     database_name = database_name.to_s
     database_name = database_name.gsub('#', Utility.get_svn_head_revision) if database_name.include?('#') && $vcs == :svn
-    database_name = database_name.gsub('#', GitUtility.get_git_hash) if database_name.include?('#') && $vcs == :git
+    database_name = database_name.gsub('#', GitUtility.get_git_short_hash_for_path($product_sql_path)) if database_name.include?('#') && $vcs == :git
     $database_name = database_name
     $logger.writeln "Database name = #{$database_name}"
   end
@@ -43,7 +43,7 @@ class ScriptCommands
   def set_version(version)
     version = version.to_s
     version = version.gsub('#', Utility.get_svn_head_revision) if version.include?('#') && $vcs == :svn
-    version = version.gsub('#', GitUtility.get_git_hash) if version.include?('#') && $vcs == :git
+    version = version.gsub('#', GitUtility.get_git_short_hash_for_path($product_sql_path)) if version.include?('#') && $vcs == :git
     $version = version
     $logger.writeln "Version = #{$version}"
     set_database_name($database_name_prefix + '-' + $product.to_s + '-' + $version) if $database_name.nil?
@@ -442,7 +442,7 @@ class ScriptCommands
     add_constant 'CURRENT_DATABASE_NAME', get_database_name(), schema
     add_constant 'CURRENT_DATABASE_VERSION', get_version(), schema unless $version.nil?
     add_constant 'CURRENT_DATABASE_PRODUCT', $product.to_s, schema unless $product.nil?
-    add_constant 'CURRENT_GIT_REVISION', GitUtility.get_git_hash, schema if !$vcs.nil? && $vcs == :git
+    add_constant 'CURRENT_GIT_REVISION', GitUtility.get_git_short_hash_for_path($product_sql_path), schema if !$vcs.nil? && $vcs == :git
     add_constant 'CURRENT_SVN_REVISION', Utility.get_svn_head_revision, schema if !$vcs.nil? && $vcs == :svn
     add_constant 'CURRENT_DATABASE_BUILD_DATE', Time.now.strftime('%d-%m-%Y %H:%M:%S'), schema
     add_constant 'CURRENT_DATABASE_BUILD_USER', Etc.getlogin, schema rescue nil
