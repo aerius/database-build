@@ -81,8 +81,8 @@ $ftp_data_password = 'REDACTED' # Override in ..\UserSettings.rb
 # Maximum number of simultaneous connections in multithread blocks
 $max_threads = 10
 
-# When true, prompt y/n on uncommitted changes; when false, only show a warning.
-$prompt_on_uncommitted_changes = true
+# Behaviour when uncommitted/untracked changes are detected: :warn, :prompt, or :abort
+$on_uncommitted_changes = :warn
 
 # Show all hints by default
 HINT_LEVEL_OFF = 0
