@@ -3,11 +3,12 @@
 #
 class GitUtility
 
-  # Returns short git hash (first 7 chars) for the repo containing path, or nil.
+  # Returns Git's abbreviated hash for the repo containing path, or nil. Raises if abbreviation is longer than 10 chars.
   def self.get_git_short_hash_for_path(path)
-    full_hash = get_git_hash_for_path(path)
-    return nil if full_hash.nil?
-    return full_hash[0, 7]
+    short = run_git(path, 'log -1 --pretty=format:%h')
+    return nil if short.nil?
+    raise "Illegal git hash found: #{short}" if short.length > 10
+    return short
   end
 
   # Returns git repo root for path, or nil.
