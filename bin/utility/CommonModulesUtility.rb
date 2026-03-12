@@ -8,7 +8,7 @@ require 'GitUtility.rb'
 #
 class CommonModulesUtility
 
-  # Build JSON { "common_module_repos": [ { repo_url, hash, sql_paths, data_paths, had_uncommitted_changes }, ... ] } from common_sql_paths and common_data_paths. One entry per repo; paths are in sql_paths and data_paths arrays.
+  # Build JSON { "common_module_repos": [ { repo_url, commit_hash, sql_paths, data_paths, had_uncommitted_changes }, ... ] } from common_sql_paths and common_data_paths. One entry per repo; paths are in sql_paths and data_paths arrays.
   # Returns json_string.
   def self.build_repo_hashes(common_sql_paths, common_data_paths)
     return JSON.generate({ 'common_module_repos' => build_common_module_repos(common_sql_paths, common_data_paths) })
@@ -21,13 +21,13 @@ class CommonModulesUtility
     return false
   end
 
-  # Returns array of entry hashes (repo_url, hash, sql_paths, data_paths, had_uncommitted_changes), one per unique repo. Paths not in a git repo are skipped. Order: by repo_url, then hash.
+  # Returns array of entry hashes (repo_url, commit_hash, sql_paths, data_paths, had_uncommitted_changes), one per unique repo. Paths not in a git repo are skipped. Order: by repo_url, then commit_hash.
   def self.build_common_module_repos(common_sql_paths, common_data_paths)
     groups = {}
     add_paths_to_groups(groups, common_sql_paths, :sql)
     add_paths_to_groups(groups, common_data_paths, :data)
     entries = groups.each_value.map { |g| entry(g[:repo_url], g[:hash], g[:sql_paths], g[:data_paths], g[:dirty]) }
-    return entries.sort_by { |e| [e['repo_url'], e['hash']] }
+    return entries.sort_by { |e| [e['repo_url'], e['commit_hash']] }
   end
 
   # Adds path repo infos to groups keyed by [repo_url, hash]. Appends rel to sql_paths or data_paths and merges dirty.
@@ -57,11 +57,11 @@ class CommonModulesUtility
     return { repo_url: repo_url, hash: (hash || '').to_s, rel: rel_path, full: path, dirty: dirty }
   end
 
-  # Builds one common_module_repos entry hash for the JSON. Normalizes nil repo_url/hash to ''.
+  # Builds one common_module_repos entry hash for the JSON. Normalizes nil repo_url/commit_hash to ''.
   def self.entry(repo_url, hash, sql_paths, data_paths, had_uncommitted_changes)
     return {
       'repo_url' => (repo_url || '').to_s,
-      'hash' => (hash || '').to_s,
+      'commit_hash' => (hash || '').to_s,
       'sql_paths' => sql_paths,
       'data_paths' => data_paths,
       'had_uncommitted_changes' => had_uncommitted_changes

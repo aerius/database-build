@@ -116,7 +116,7 @@ CREATE OR REPLACE VIEW system.current_build_common_module_repos_view AS
 	)
 	SELECT
 		(element->>'repo_url')::text AS repo_url,
-		(element->>'hash')::text AS hash,
+		(element->>'commit_hash')::text AS commit_hash,
 		'sql' AS path_type,
 		path_elem::text AS path,
 		(element->>'had_uncommitted_changes')::boolean AS repo_had_uncommitted_changes
@@ -128,7 +128,7 @@ CREATE OR REPLACE VIEW system.current_build_common_module_repos_view AS
 
 	SELECT
 		(element->>'repo_url')::text AS repo_url,
-		(element->>'hash')::text AS hash,
+		(element->>'commit_hash')::text AS commit_hash,
 		'data' AS path_type,
 		path_elem::text AS path,
 		(element->>'had_uncommitted_changes')::boolean AS repo_had_uncommitted_changes
@@ -136,5 +136,5 @@ CREATE OR REPLACE VIEW system.current_build_common_module_repos_view AS
 		FROM common_module_repos,
 			jsonb_array_elements_text(COALESCE(element->'data_paths', '[]'::jsonb)) AS path_elem
 
-	ORDER BY repo_url, hash, path_type DESC, path
+	ORDER BY repo_url, commit_hash, path_type DESC, path
 ;
