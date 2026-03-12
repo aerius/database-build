@@ -100,7 +100,7 @@ LANGUAGE SQL STABLE;
  * current_build_common_module_repos_view
  * --------------------------------------
  * View that flattens the CURRENT_BUILD_COMMON_MODULE_REPO_HASHES JSON constant
- * into one row per path (sql or data).
+ * into one row per path (expands sql_paths and data_paths arrays).
  */
 CREATE OR REPLACE VIEW system.current_build_common_module_repos_view AS
 	WITH common_module_repos AS (
@@ -118,12 +118,11 @@ CREATE OR REPLACE VIEW system.current_build_common_module_repos_view AS
 		(element->>'repo_url')::text AS repo_url,
 		(element->>'hash')::text AS hash,
 		'sql' AS path_type,
-		(element->>'sql_path')::text AS path,
+		path_elem::text AS path,
 		(element->>'had_uncommitted_changes')::boolean AS repo_had_uncommitted_changes
 
-		FROM common_module_repos
-		
-		WHERE element->>'sql_path' IS NOT NULL
+		FROM common_module_repos,
+			jsonb_array_elements_text(COALESCE(element->'sql_paths', '[]'::jsonb)) AS path_elem
 
 	UNION ALL
 
@@ -131,12 +130,11 @@ CREATE OR REPLACE VIEW system.current_build_common_module_repos_view AS
 		(element->>'repo_url')::text AS repo_url,
 		(element->>'hash')::text AS hash,
 		'data' AS path_type,
-		(element->>'data_path')::text AS path,
+		path_elem::text AS path,
 		(element->>'had_uncommitted_changes')::boolean AS repo_had_uncommitted_changes
 
-		FROM common_module_repos
-		
-		WHERE element->>'data_path' IS NOT NULL
+		FROM common_module_repos,
+			jsonb_array_elements_text(COALESCE(element->'data_paths', '[]'::jsonb)) AS path_elem
 
-	ORDER BY repo_url, path_type, path
+	ORDER BY repo_url, hash, path_type DESC, path
 ;
