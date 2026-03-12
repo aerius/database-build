@@ -80,12 +80,34 @@ class Utility
     return lines.last(lastnum).join("")
   end
 
-  def self.get_git_hash
+  def self.get_git_status(gitpath)
     raise 'Git bin path not set ($git_bin_path)' if $git_bin_path.nil?
     raise "Git bin path not found ($git_bin_path = \"#{$git_bin_path}\")" unless ((File.exist?($git_bin_path) && File.directory?($git_bin_path)) || ($git_bin_path.empty?))
 
     curr_dir = Dir.pwd
-    Dir.chdir($product_sql_path)
+    Dir.chdir(gitpath)
+    cmd = "\"#{$git_bin_path}git\" status -s"
+    socket = IO.popen(cmd)
+    begin
+      line = socket.gets
+      if line != nil
+        raise "Uncommitted code detected!: #{line}"
+        return line
+      else return
+      end
+    ensure
+      socket.close
+      Dir.chdir(curr_dir)
+    end
+    raise "Could not read GIT status with command: #{cmd}"
+  end
+
+  def self.get_git_hash(gitpath)
+    raise 'Git bin path not set ($git_bin_path)' if $git_bin_path.nil?
+    raise "Git bin path not found ($git_bin_path = \"#{$git_bin_path}\")" unless ((File.exist?($git_bin_path) && File.directory?($git_bin_path)) || ($git_bin_path.empty?))
+
+    curr_dir = Dir.pwd
+    Dir.chdir(gitpath)
     cmd = "\"#{$git_bin_path}git\" log -1 --pretty=format:%h"
     socket = IO.popen(cmd)
     begin
