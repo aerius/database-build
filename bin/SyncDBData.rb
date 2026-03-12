@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 this_path = File.expand_path(File.dirname(__FILE__)) # This makes sure we can 'require' from current folder in all Ruby versions.
+$LOAD_PATH.unshift(File.join(this_path, 'utility')) unless $LOAD_PATH.include?(File.join(this_path, 'utility'))
 $LOAD_PATH << this_path unless $LOAD_PATH.include?(this_path)
 $LOAD_PATH.delete('.') if $LOAD_PATH.include?('.')
 

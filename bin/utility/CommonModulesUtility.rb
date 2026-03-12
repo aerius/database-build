@@ -21,7 +21,7 @@ class CommonModulesUtility
     return false
   end
 
-  # Returns array of common-module-repo entry hashes (repo_url, hash, sql_path, data_path, had_uncommitted_changes), one per unique repo (repo_url + hash). Paths not in a git repo are skipped.
+  # Returns array of common-module-repo entry hashes (repo_url, hash, sql_path, data_path, had_uncommitted_changes), one per unique repo (repo_url + hash). Paths not in a git repo are skipped. Order: by repo_url, then hash.
   def self.build_common_module_repos(common_sql_paths, common_data_paths)
     groups = {}
     add_paths_to_groups(groups, common_sql_paths, :sql)
