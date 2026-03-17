@@ -32,5 +32,5 @@ Example JSON stored in CURRENT_BUILD_COMMON_MODULE_REPO_HASHES:
 
 ## Common database modules
 
- [README.md](./common/README.md)
+[README.md](./common/README.md)
 

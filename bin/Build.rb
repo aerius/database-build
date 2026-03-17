@@ -111,10 +111,10 @@ begin
   if CommonModulesUtility.any_had_uncommitted_changes?($product_sql_path, $product_data_path, $common_sql_paths, $common_data_paths) then
     case $on_uncommitted_changes
     when :abort
-      $logger.warn 'Uncommitted or untracked changes detected in product or common module repos. Aborting build.'
+      $logger.warn 'Uncommitted or untracked changes detected in product or common module repository. Aborting build.'
       exit 1
     when :prompt
-      $logger.warn 'Uncommitted or untracked changes detected in product or common module repos!'
+      $logger.warn 'Uncommitted or untracked changes detected in product or common module repository!'
       require 'io/console'
       $stdout.print 'Are you sure you want to proceed? (y/n): '
       response = $stdin.getch.downcase
@@ -124,7 +124,7 @@ begin
         exit 1
       end
     when :warn
-      $logger.warn 'Uncommitted or untracked changes detected in product or common module repos!'
+      $logger.warn 'Uncommitted or untracked changes detected in product or common module repository!'
     end
   end
 
