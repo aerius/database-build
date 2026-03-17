@@ -94,3 +94,47 @@ $BODY$
 	SELECT COALESCE((SELECT value FROM system.constants WHERE key = 'SKIP_REGISTER_LOAD_TABLE'), 'FALSE')::boolean
 $BODY$
 LANGUAGE SQL STABLE;
+
+
+/*
+ * current_build_common_module_repos_view
+ * --------------------------------------
+ * View that flattens the CURRENT_BUILD_COMMON_MODULE_REPO_HASHES JSON constant
+ * into one row per path (expands sql_paths and data_paths arrays).
+ */
+CREATE OR REPLACE VIEW system.current_build_common_module_repos_view AS
+	WITH common_module_repos AS (
+		SELECT
+			jsonb_array_elements((value::jsonb)->'common_module_repos') AS element
+
+			FROM system.constants
+
+			WHERE
+				key = 'CURRENT_BUILD_COMMON_MODULE_REPO_HASHES'
+				AND value IS NOT NULL
+				AND value != ''
+	)
+	SELECT
+		(element->>'repo_url')::text AS repo_url,
+		(element->>'commit_hash')::text AS commit_hash,
+		'sql' AS path_type,
+		path_elem::text AS path,
+		(element->>'had_uncommitted_changes')::boolean AS repo_had_uncommitted_changes
+
+		FROM common_module_repos,
+			jsonb_array_elements_text(COALESCE(element->'sql_paths', '[]'::jsonb)) AS path_elem
+
+	UNION ALL
+
+	SELECT
+		(element->>'repo_url')::text AS repo_url,
+		(element->>'commit_hash')::text AS commit_hash,
+		'data' AS path_type,
+		path_elem::text AS path,
+		(element->>'had_uncommitted_changes')::boolean AS repo_had_uncommitted_changes
+
+		FROM common_module_repos,
+			jsonb_array_elements_text(COALESCE(element->'data_paths', '[]'::jsonb)) AS path_elem
+
+	ORDER BY repo_url, commit_hash, path_type DESC, path
+;
