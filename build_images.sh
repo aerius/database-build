@@ -6,6 +6,8 @@ SCRIPT_PATH=$(readlink -f "${0}")
 SCRIPT_DIR=$(dirname "${SCRIPT_PATH}")
 cd "${SCRIPT_DIR}"
 
+: "${DOCKER_BUILD_PLATFORMS:=}"
+
 # If DOCKER_REGISTRY_URL is supplied we should prepend it to the image name
 if [[ -z "${DOCKER_REGISTRY_URL:-}" ]]; then
   IMAGE_NAME='aerius-database-build'
@@ -13,20 +15,23 @@ else
   IMAGE_NAME="${DOCKER_REGISTRY_URL}/database-build"
 fi
 
-# Loop through all generated Docker directories
-IMAGES_TO_PUSH=()
+BUILDX_BUILD_EXTRA_ARGS=()
+[[ -n "${DOCKER_BUILD_PLATFORMS}" ]] && BUILDX_BUILD_EXTRA_ARGS+=("--platform=${DOCKER_BUILD_PLATFORMS}")
+[[ -z "${DOCKER_BUILD_PLATFORMS}" ]] && BUILDX_BUILD_EXTRA_ARGS+=("--load")
+
+# Loop through all generated Docker directories to build then
 while read DIRECTORY; do
   IMAGE_TAG=$(basename "${DIRECTORY}")
   echo '# Building: '"${IMAGE_TAG}"
-  docker build --pull -t "${IMAGE_NAME}":"${IMAGE_TAG}" -f "${DIRECTORY}/Dockerfile" .
-
-  if [[ "${PUSH_IMAGES:-}" == 'true' ]]; then
-    IMAGES_TO_PUSH+=("${IMAGE_NAME}":"${IMAGE_TAG}")
-  fi
+  docker buildx build ${BUILDX_BUILD_EXTRA_ARGS[@]} -t "${IMAGE_NAME}":"${IMAGE_TAG}" -f "${DIRECTORY}/Dockerfile" .
 done < <(find docker/ -maxdepth 1 -type d -name '*-*-*')
 
-# If there are images to push, do so
-for IMAGE_TO_PUSH in "${IMAGES_TO_PUSH[@]}"; do
-  echo '# Pushing image: '"${IMAGE_TO_PUSH}"
-  docker push "${IMAGE_TO_PUSH}"
-done
+# Loop through all generated Docker directories to push them if requested
+# We do this separately so if any image fails to build, we won't have pushed anything
+if [[ "${PUSH_IMAGES:-}" == 'true' ]]; then
+  while read DIRECTORY; do
+    IMAGE_TAG=$(basename "${DIRECTORY}")
+    echo '# Pushing: '"${IMAGE_TAG}"
+    docker buildx build --push ${BUILDX_BUILD_EXTRA_ARGS[@]} -t "${IMAGE_NAME}":"${IMAGE_TAG}" -f "${DIRECTORY}/Dockerfile" .
+  done < <(find docker/ -maxdepth 1 -type d -name '*-*-*')
+fi
