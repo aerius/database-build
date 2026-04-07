@@ -31,6 +31,11 @@ class GitUtility
     return run_git(path, 'status --porcelain') != nil
   end
 
+  # Shell stderr redirect for discarding git noise: cmd.exe has no /dev/null (use 2>nul); Unix uses 2>/dev/null.
+  def self.git_stderr_null
+    return (RUBY_PLATFORM =~ /mswin|mingw|cygwin/) ? '2>nul' : '2>/dev/null'
+  end
+  
   # Runs a git command from the directory of path.
   # Returns trimmed output as string, or nil on empty output / error.
   def self.run_git(path, args)
@@ -38,7 +43,7 @@ class GitUtility
     dir = File.directory?(path) ? path : File.dirname(path)
     curr_dir = Dir.pwd
     Dir.chdir(dir)
-    cmd = ($git_bin_path.to_s.empty? ? 'git' : "\"#{$git_bin_path}git\"") + ' ' + args + ' 2>/dev/null'
+    cmd = ($git_bin_path.to_s.empty? ? 'git' : "\"#{$git_bin_path}git\"") + ' ' + args + ' ' + git_stderr_null
     socket = IO.popen(cmd)
     begin
       out = socket.gets(nil).to_s.strip
@@ -52,5 +57,5 @@ class GitUtility
     return nil
   end
 
-  private_class_method :run_git
+  private_class_method :git_stderr_null, :run_git
 end
