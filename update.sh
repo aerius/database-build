@@ -8,8 +8,8 @@ cd "${SCRIPT_DIR}"
 
 # Key is the PostgreSQL version and values are the PostGIS versions images are available for that PostgreSQL version.
 declare -A IMAGE_VERSIONS=(
-  [17]="3.5"
-  [15]="3.4"
+  [18]="3.6"
+  [17]="3.6"
 )
 
 # Read in current version of the script
