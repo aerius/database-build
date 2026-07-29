@@ -34,7 +34,7 @@ def display_help
   puts "  -v --version        Target version for the new database"
   puts "  -f --dump-filename  Filename (no path) for the database dump. If"
   puts "                      omitted, database name is used"
-  puts "  -l --flags          Comma separated list of build flags"
+  puts "  -l --flags          Comma separated list of build flags (e.g. clean)"
   puts "     --hints [level]  Specify hint level, 0 = off, 1 = only major, 2 = all"
   puts "  -h --help           This help"
   exit
@@ -57,7 +57,8 @@ display_help if opts.has_key?('--help')
 
 # Settings
 require 'Globals.rb'
-Globals.load_settings(ARGV.size > 1 ? ARGV[1] : nil)
+Globals.add_build_flags(opts['--flags']) if opts.has_key?('--flags')
+Globals.prepare!(ARGV.size > 1 ? ARGV[1] : nil)
 Globals.determine_runscript_file(ARGV.size > 0 ? ARGV[0] : nil)
 
 # Logger
@@ -81,7 +82,7 @@ opts.each do |option, argument|
     when '--database-name'; override_database_name = argument
     when '--version'; override_version = argument
     when '--dump-filename'; $dump_filetitle = argument
-    when '--flags'; argument.split(',').each{ |flag| $build_flags << flag.strip.downcase.to_sym }
+    when '--flags'
     when '--hints'; $hint_level = argument.to_i
     when '--help'; display_help
   end

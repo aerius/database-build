@@ -14,6 +14,9 @@ set -e
 : ${DBSETTINGS_PATH:=settings.rb}
 : ${DBDATA_CLEANUP:=true} # A reason not to clean it up would be to cache the files using buildkit
 
+# Docker builds always pass --flags clean so external common modules are cloned at pinned gitref.
+# Optional GIT_USERNAME + GIT_TOKEN are also used by GitUtility for private HTTPS external clones.
+
 # If the source code isn't made available by the extending Dockerfile we need to use git to check it out
 USE_GIT=! [[ -d "${DBSOURCE_PATH}" ]]
 
@@ -37,8 +40,8 @@ else
    : ${DATABASE_VERSION?'DATABASE_VERSION must be set if source code is present locally..'}
 fi
 
-# add git dependencies if needed
-[[ ${USE_GIT} ]] && apk --no-cache add --virtual .git-deps git openssh
+# git is needed to clone the product repo (when USE_GIT) and always for clean external-module clones
+apk --no-cache add --virtual .git-deps git openssh
 
 # Make our own PGDATA.
 # We are unfortunately doing this because we want the data to persist but the default PGDATA directory is marked as a volume, which cannot be undone.
@@ -61,10 +64,16 @@ mkdir -p "${DBDATA_PATH}"
 # Set git support off in the build script
 ! [[ ${USE_GIT} ]] && echo "\$vcs = :none" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
 
+# Docker always uses clean build for external common modules (clone at pinned gitref).
+BUILD_FLAG_ARGS=(--flags clean)
+
 # sync db-data files we need
 echo 'Syncing database data files..'
 cd "${DBSOURCE_PATH}/"
-ruby /aerius-database-build/bin/SyncDBData.rb "${DBSETTINGS_BASE_DIRECTORY}/${DBSETTINGS_PATH}" --to-local
+ruby /aerius-database-build/bin/SyncDBData.rb \
+  "${DBSETTINGS_BASE_DIRECTORY}/${DBSETTINGS_PATH}" \
+  --to-local \
+  "${BUILD_FLAG_ARGS[@]}"
 
 # initialize database
 # (this is a wrapper provided by the postgres image, which will initialize the db if it isn't already and is executed when starting the image for the first time.
@@ -84,7 +93,12 @@ done
 echo 'PostgreSQL is up again'
 
 # execute database build
-ruby /aerius-database-build/bin/Build.rb "${DBRUNSCRIPT}" "${DBSETTINGS_BASE_DIRECTORY}/${DBSETTINGS_PATH}" -v "${DATABASE_VERSION}" -n "${DATABASE_NAME}"
+ruby /aerius-database-build/bin/Build.rb \
+  "${DBRUNSCRIPT}" \
+  "${DBSETTINGS_BASE_DIRECTORY}/${DBSETTINGS_PATH}" \
+  -v "${DATABASE_VERSION}" \
+  -n "${DATABASE_NAME}" \
+  "${BUILD_FLAG_ARGS[@]}"
 
 # make the image smaller by doing a VACUUM FULL ANALYZE
 psql -U "${POSTGRES_USER}" -d "${DATABASE_NAME}" -c 'VACUUM FULL ANALYZE'
@@ -107,7 +121,7 @@ if [[ "${DBDATA_CLEANUP}" == 'true' ]]; then
   rm -rf "${DBDATA_PATH}"
 fi
 [[ ${USE_GIT} ]] && rm -rf "${GIT_REPOSITORY}"
-[[ ${USE_GIT} ]] && apk del .git-deps
+apk del .git-deps
 
 # Exit with 0 if this stage is reached, otherwise the return code from
 #  the last if statement might be used, which might let Docker think the build failed

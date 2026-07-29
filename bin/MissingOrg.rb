@@ -15,7 +15,7 @@ require 'DataSourceCollector.rb'
 
 # Settings
 require 'Globals.rb'
-Globals.load_settings(ARGV.size > 0 ? ARGV[0] : nil)
+Globals.prepare!(ARGV.size > 0 ? ARGV[0] : nil)
 
 # Logger
 require 'BuildLogger.rb'

@@ -29,6 +29,7 @@ def display_help
   puts "     --from-sftp      Sync from $sftp_data SFTP. Supply SFTP path if different from default"
   puts "     --from-https     Sync from $https_data HTTPS. Supply HTTPS url if different from default"
   puts "  -l --to-local       Sync to local db-data folder. Supply path if different from default"
+  puts "     --flags          Comma separated list of build flags (e.g. clean; use same flags as Build.rb)"
   puts "  -c --continue       Continue on file not found errors"
   puts "  -i --info           Displays defaults path (does not run)"
   puts "  -h --help           This help"
@@ -44,6 +45,7 @@ GetoptLong.new(
     ['--from-https', GetoptLong::OPTIONAL_ARGUMENT],
     ['--from-local', '-f', GetoptLong::OPTIONAL_ARGUMENT],
     ['--to-local', '-l', GetoptLong::OPTIONAL_ARGUMENT],
+    ['--flags', GetoptLong::REQUIRED_ARGUMENT],
     ['--continue', '-c', GetoptLong::NO_ARGUMENT],
     ['--info', '-i', GetoptLong::NO_ARGUMENT],
     ['--help', '-h', GetoptLong::NO_ARGUMENT]
@@ -55,7 +57,8 @@ display_help if $opts.has_key?('--help')
 
 # Settings
 require 'Globals.rb'
-Globals.load_settings(ARGV.size > 0 ? ARGV[0] : nil)
+Globals.add_build_flags($opts['--flags']) if $opts.has_key?('--flags')
+Globals.prepare!(ARGV.size > 0 ? ARGV[0] : nil)
 
 # Logger
 require 'BuildLogger.rb'

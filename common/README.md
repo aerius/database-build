@@ -1,5 +1,5 @@
-# Common database modules
-Below you will find a brief description of the general database modules. More information about the actual implementation can be found in the SQL-files.
+# Core database modules
+Shared SQL modules that ship with the build tooling (`common/`). More information about the actual implementation can be found in the SQL-files.
 
 ## essentials
 The bare essential functionality for building the database.
