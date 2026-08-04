@@ -55,7 +55,15 @@ ruby bin/Build.rb default path/to/settings.rb --flags clean --version '#'
 
 ### Docker
 
-`build-database.sh` always uses `--flags clean` (clone at pinned `git_reference`). Sibling checkouts are not required in the image.
+Always `--flags clean` for externals.
+
+#### Sources already in the image
+
+Provide `${DBSOURCE_PATH}` (e.g. `COPY`) and set `DATABASE_VERSION`.
+
+#### Sources checked out in the image
+
+Set `GIT_HOSTNAME`, `GIT_ORG`, `GIT_REPOSITORY`, `GIT_USERNAME`, `GIT_TOKEN`. Optional: `DATABASE_VERSION` (defaults to `#` → short git hash).
 
 ## Background
 
