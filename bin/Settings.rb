@@ -40,8 +40,6 @@ $dbdata_dir = 'dbdata/'
 $db_essentials_function_prefix = 'system.'
 $db_unittest_prefix = 'unittest_'
 
-# VCS
-$vcs = nil  # :git or :svn
 # Git
 unless ENV['GIT_BIN'].nil? then
   $git_bin_path = ENV['GIT_BIN']
@@ -54,13 +52,6 @@ else
     $git_bin_path = ''  # assume it's in the shell path
   end
 end
-# SVN
-unless ENV['SVN_BIN'].nil? then
-  $svn_bin_path = ENV['SVN_BIN']
-else
-  $svn_bin_path = ''  # assume it's in the shell path
-end
-#$svn_root_url = 'https://repository...' # Override in ..\AppSettings.rb
 
 # HTTPS for syncing data files
 $https_data_path = 'https://a.b.c/xyz' # Override in ..\AppSettings.rb

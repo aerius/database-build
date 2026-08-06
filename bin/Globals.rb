@@ -113,9 +113,6 @@ class Globals
     raise 'Override PostgreSQL password ($pg_password) in user project settings' if $pg_password == 'REDACTED'
     $pg_bin_path = $pg_bin_path.fix_pathname unless $pg_bin_path.empty?
     $git_bin_path = $git_bin_path.fix_pathname unless ($git_bin_path.nil? || $git_bin_path.empty?)
-    $svn_bin_path = $svn_bin_path.fix_pathname unless ($svn_bin_path.nil? || $svn_bin_path.empty?)
-    $vcs = :svn if $vcs.nil? && !($svn_root_url.nil? || $svn_root_url.empty? || $git_bin_path.nil?)
-    $vcs = :git if $vcs.nil? && !$git_bin_path.nil?
   end
 
  private

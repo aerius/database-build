@@ -80,26 +80,6 @@ class Utility
     return lines.last(lastnum).join("")
   end
 
-  def self.get_svn_head_revision
-    raise 'SVN bin path not set ($svn_bin_path)' if $svn_bin_path.nil?
-    raise "SVN bin path not found ($svn_bin_path = \"#{$svn_bin_path}\")" unless ((File.exist?($svn_bin_path) && File.directory?($svn_bin_path)) || ($svn_bin_path.empty?))
-    raise "Cannot determine svn HEAD revision: svn root URL not set ($svn_root_url)" if $svn_root_url.nil?
-
-    cmd = "\"#{$svn_bin_path}svn\" info \"#{$svn_root_url}\""
-    socket = IO.popen(cmd)
-    begin
-      while line = socket.gets
-        if line.index("evision")
-          revision = line.split()[1].strip()
-          return revision.to_i.to_s
-        end
-      end
-    ensure
-      socket.close
-    end
-    raise "Could not read SVN revision number with command: #{cmd}"
-  end
-
   def self.format_duration(seconds)
     str = ''
     if seconds >= (24*60*60) then

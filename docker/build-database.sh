@@ -56,7 +56,7 @@ mkdir -p "${DBDATA_PATH}"
 [[ -n "${HTTPS_DATA_PASSWORD}" ]] && echo "\$https_data_password = '${HTTPS_DATA_PASSWORD}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
 
 # Set git support off in the build script
-! [[ ${USE_GIT} ]] && echo "\$vcs = :none" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
+! [[ ${USE_GIT} ]] && echo "\$git_bin_path = nil" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
 
 # sync db-data files we need
 echo 'Syncing database data files..'
