@@ -4,7 +4,7 @@ require 'uri'
 require 'time'
 
 ##
-# Utility class for several HTTPS actions. Similar to FTPDownloader and SFTPDownloader so easily interchangeable.
+# Utility class for several HTTPS actions.
 #
 class HTTPSDownloader
 

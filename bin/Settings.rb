@@ -36,7 +36,6 @@ $database_collation = '' # Can override in ..\AppSettings.rb in case you need to
 
 # Datasource files .. common relative paths compared to base paths like https_data_path
 $dbdata_dir = 'dbdata/'
-$org_dir = 'org/'
 
 $db_essentials_function_prefix = 'system.'
 $db_unittest_prefix = 'unittest_'
@@ -67,16 +66,6 @@ end
 $https_data_path = 'https://a.b.c/xyz' # Override in ..\AppSettings.rb
 $https_data_username = 'REDACTED' # Override in ..\UserSettings.rb
 $https_data_password = 'REDACTED' # Override in ..\UserSettings.rb
-# or SFTP
-$sftp_data_path = 'sftp://a.b.c/xyz' # Override in ..\AppSettings.rb
-$sftp_data_readonly_username = 'REDACTED' # Override in ..\UserSettings.rb
-$sftp_data_readonly_password = 'REDACTED' # Override in ..\UserSettings.rb
-$sftp_data_username = 'REDACTED' # Override in ..\UserSettings.rb
-$sftp_data_password = 'REDACTED' # Override in ..\UserSettings.rb
-# or FTP
-$ftp_data_path = 'ftp://a.b.c/xyz/' # Override in ..\AppSettings.rb
-$ftp_data_username = 'REDACTED' # Override in ..\UserSettings.rb
-$ftp_data_password = 'REDACTED' # Override in ..\UserSettings.rb
 
 # Maximum number of simultaneous connections in multithread blocks
 $max_threads = 10

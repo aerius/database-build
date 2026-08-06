@@ -141,8 +141,6 @@ RUN apk update && apk upgrade \
     && echo 'gem: --no-document' > /etc/gemrc \
     \
     # install needed (ruby)gems
-    && gem install net-ssh \
-    && gem install net-sftp \
     && gem install getoptlong \
     && gem install clbustos-rtf \
     && ruby --version \

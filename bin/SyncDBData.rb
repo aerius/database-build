@@ -25,8 +25,6 @@ def display_help
   puts "                      database/src/build/scripts/sql). Supply if different from"
   puts "                      default"
   puts "  -f --from-local     Sync from local db-data folder. Supply db-data path if different from default"
-  puts "     --from-ftp       Sync from $ftp_data FTP. Supply FTP path if different from default"
-  puts "     --from-sftp      Sync from $sftp_data SFTP. Supply SFTP path if different from default"
   puts "     --from-https     Sync from $https_data HTTPS. Supply HTTPS url if different from default"
   puts "  -l --to-local       Sync to local db-data folder. Supply path if different from default"
   puts "  -c --continue       Continue on file not found errors"
@@ -39,8 +37,6 @@ end
 $opts = {}
 GetoptLong.new(
     ['--path', '-p', GetoptLong::REQUIRED_ARGUMENT],
-    ['--from-ftp', GetoptLong::OPTIONAL_ARGUMENT],
-    ['--from-sftp', GetoptLong::OPTIONAL_ARGUMENT],
     ['--from-https', GetoptLong::OPTIONAL_ARGUMENT],
     ['--from-local', '-f', GetoptLong::OPTIONAL_ARGUMENT],
     ['--to-local', '-l', GetoptLong::OPTIONAL_ARGUMENT],
@@ -67,10 +63,6 @@ $logger.open($product_log_path, 'sync_dbdata')
 
 $from_local = $dbdata_path
 $to_local = $from_local   # deprecated: NAS path = $oti_nas_path.fix_pathname + $dbdata_dir.fix_pathname
-$from_ftp = $ftp_data_path.fix_pathname + $dbdata_dir.fix_pathname unless $ftp_data_path.nil?
-$to_ftp = $from_ftp
-$from_sftp = $sftp_data_path.fix_pathname + $dbdata_dir.fix_pathname unless $sftp_data_path.nil?
-$to_sftp = $from_sftp
 $from_https = $https_data_path.fix_pathname + $dbdata_dir.fix_pathname unless $https_data_path.nil?
 
 # ---------
@@ -88,11 +80,8 @@ $target_overwritten = false
 def display_info
   puts "Default parsing path:", '  ' + $product_data_path
   puts "Default local db-data source:", '  ' + $from_local
-  puts "Default FTP source:", '  ' + $from_ftp
-  puts "Default SFTP source:", '  ' + $from_sftp
+  puts "Default HTTPS source:", '  ' + $from_https
   puts "Default local db-data target:", '  ' + $to_local
-  puts "Default FTP target:", '  ' + $to_ftp
-  puts "Default SFTP target:", '  ' + $to_sftp
   exit
 end
 
@@ -100,16 +89,6 @@ def parse_commandline
   $opts.each do |option, argument|
     case option.downcase
       when '--path'; $product_data_path = File.expand_path(argument.to_s).fix_pathname
-      when '--from-ftp'
-        raise 'Can only have one source' if $source_overwritten
-        $source = :ftp
-        $source_overwritten = true
-        $from_ftp = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
-      when '--from-sftp'
-        raise 'Can only have one source' if $source_overwritten
-        $source = :sftp
-        $source_overwritten = true
-        $from_sftp = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
       when '--from-https'
         raise 'Can only have one source' if $source_overwritten
         $source = :https
@@ -132,11 +111,7 @@ def parse_commandline
 
   display_info if $opts.has_key?('--info')
 
-  if $source == :ftp then
-    $logger.writeln "Syncing from FTP (#{$from_ftp})"
-  elsif $source == :sftp then
-    $logger.writeln "Syncing from SFTP (#{$from_sftp})"
-  elsif $source == :https then
+  if $source == :https then
     $logger.writeln "Syncing from HTTPS (#{$from_https})"
   elsif $source == :local then
     $logger.writeln "Syncing from local (#{$from_local})"
@@ -145,44 +120,16 @@ def parse_commandline
   $logger.writeln "Syncing to local (#{$to_local}):"
 
   if ($target != :local) then
-    $logger.error "Sorry, syncing to (S)FTP or HTTPS is not supported (anymore)."
+    $logger.error "Sorry, syncing to HTTPS is not supported (anymore)."
   end
 
-  require 'FTPDownloader.rb' if $source == :ftp
-  require 'SFTPDownloader.rb' if $source == :sftp
   require 'HTTPSDownloader.rb' if $source == :https
 
   connect
 end
 
 def connect
-  if $source == :ftp then
-    if /^(ftp\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($from_ftp) then
-      ftp_host = $2
-      ftp_port = ($4 || 21).to_i
-      ftp_remote_path = $5 || ''
-      $logger.error 'Specify $ftp_data_username and $ftp_data_password in the project user settings' if $ftp_data_username == 'REDACTED' || $ftp_data_password == 'REDACTED'
-    else
-      $logger.error "Not a valid FTP location: #{$from_ftp}"
-    end
-    $src_fs = FTPDownloader.new($logger)
-    $src_fs.connect ftp_host, ftp_port, $ftp_data_username, $ftp_data_password, ftp_remote_path
-    $source_path = ftp_remote_path
-
-  elsif $source == :sftp then
-    if /^(sftp\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($from_sftp) then
-      sftp_data_host = $2
-      sftp_data_port = ($4 || 22).to_i
-      sftp_data_remote_path = $5 || ''
-      $logger.error 'Specify $sftp_data_readonly_username and $sftp_data_readonly_password in the project user settings' if $sftp_data_readonly_username == 'REDACTED' || $sftp_data_readonly_password == 'REDACTED'
-    else
-      $logger.error "Not a valid SFTP location: #{$from_sftp}"
-    end
-    $src_fs = SFTPDownloader.new($logger)
-    $src_fs.connect sftp_data_host, sftp_data_port, $sftp_data_readonly_username, $sftp_data_readonly_password, sftp_data_remote_path
-    $source_path = sftp_data_remote_path
-
-  elsif $source == :https then
+  if $source == :https then
     if /^(https\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($from_https) then
       https_base_url = $from_https
       $https_data_username = nil if $https_data_username == 'REDACTED'
@@ -202,7 +149,7 @@ def connect
     $source_path = $from_local
 
   else
-    $logger.error "No source found! Specify either --from-ftp, --from-sftp, --from-https or --from-local."
+    $logger.error "No source found! Specify either --from-https or --from-local."
   end
 
   $logger.error "Target path empty or not given." if $to_local.to_s.strip.empty?
