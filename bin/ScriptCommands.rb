@@ -21,7 +21,7 @@ class ScriptCommands
 
   def set_database_name(database_name)
     database_name = database_name.to_s
-    database_name = database_name.gsub('#', GitUtility.get_git_short_hash_for_path($product_sql_path)) if database_name.include?('#') && !$git_bin_path.nil?
+    database_name = database_name.gsub('#', get_git_revision) if database_name.include?('#')
     $database_name = database_name
     $logger.writeln "Database name = #{$database_name}"
   end
@@ -41,7 +41,7 @@ class ScriptCommands
 
   def set_version(version)
     version = version.to_s
-    version = version.gsub('#', GitUtility.get_git_short_hash_for_path($product_sql_path)) if version.include?('#') && !$git_bin_path.nil?
+    version = version.gsub('#', get_git_revision) if version.include?('#')
     $version = version
     $logger.writeln "Version = #{$version}"
     set_database_name($database_name_prefix + '-' + $product.to_s + '-' + $version) if $database_name.nil?
@@ -64,12 +64,16 @@ class ScriptCommands
 
   def get_database_build_version()
     version_file = File.join(File.dirname($0), "/../VERSION").fix_filename;
-    
+
     if !File.exist?(version_file) then
       raise "Could not find database-build VERSION."
     end
-    
+
     return File.read(version_file).strip
+  end
+
+  def get_git_revision
+    $git_bin_path.nil? ? 'unknown' : GitUtility.get_git_short_hash_for_path($product_sql_path)
   end
 
   def set_dbdata_path(dbdata_path)
@@ -440,7 +444,7 @@ class ScriptCommands
     add_constant 'CURRENT_DATABASE_NAME', get_database_name(), schema
     add_constant 'CURRENT_DATABASE_VERSION', get_version(), schema unless $version.nil?
     add_constant 'CURRENT_DATABASE_PRODUCT', $product.to_s, schema unless $product.nil?
-    add_constant 'CURRENT_GIT_REVISION', GitUtility.get_git_short_hash_for_path($product_sql_path), schema unless $git_bin_path.nil?
+    add_constant 'CURRENT_GIT_REVISION', get_git_revision, schema
     add_constant 'CURRENT_DATABASE_BUILD_DATE', Time.now.strftime('%d-%m-%Y %H:%M:%S'), schema
     add_constant 'CURRENT_DATABASE_BUILD_USER', Etc.getlogin, schema rescue nil
     add_constant 'CURRENT_DATABASE_BUILD_NODE', Etc.uname[:nodename], schema rescue nil
@@ -475,6 +479,6 @@ class ScriptCommands
     $logger.writeln "Stopped SQL recording."
   end
 
-  private :ensure_database_name, :ensure_version, :ensure_comments_collected, :ensure_datasourcesinfo_collected
+  private :ensure_database_name, :ensure_version, :ensure_comments_collected, :ensure_datasourcesinfo_collected, :get_git_revision, :get_database_build_version
 
 end
