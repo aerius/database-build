@@ -25,6 +25,7 @@ build-config/
 ```
 
 All settings are stored on `$build_config` (`BuildConfig`) in groups. Settings files assign into `$build_config` (no separate settings `$globals`).
+Optional: set `layout.product_sql_path` / `layout.product_data_path` before finalize to override the `<product>` subfolder convention (paths relative to `source_path`).
 
 | Group | Contents |
 |---|---|

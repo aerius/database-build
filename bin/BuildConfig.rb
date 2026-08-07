@@ -1,13 +1,21 @@
-##
-# Build settings and derived layout paths ($build_config), grouped for clarity.
-# Settings files assign into $build_config; call finalize! after all settings are loaded.
-#
-
 HINT_LEVEL_OFF = 0
 HINT_LEVEL_MAJOR = 1
 HINT_LEVEL_ALL = 2
 
+##
+# Build settings and derived layout paths ($build_config), grouped for clarity.
+#
+# Call order (see Globals.load_settings / Build.rb):
+#   1. BuildConfig.new_empty
+#   2. apply_defaults!                         — fill defaults on the empty config
+#   3. require product settings                — assign product / layout.* (overrides)
+#   4. finalize!(product_settings_dir:)        — load App/UserSettings, derive & validate paths
+#   5. log!(logger)                            — optional; dump resolved config (Build.rb)
+#
+# Settings files assign into $build_config; overrides in steps 3–4 replace defaults from step 2.
+#
 class BuildConfig
+
   Layout = Struct.new(
     :source_path, :build_config_path,
     :product_sql_path, :product_data_path,
@@ -60,43 +68,41 @@ class BuildConfig
     )
   end
 
-  # Default values for a new build config (mutates self).
+  # Default values for a new (empty) build config (mutates self).
   def apply_defaults!
-    output.target_path = File.expand_path('./target/') if output.target_path.nil?
-    output.log_path = File.expand_path(output.target_path + '/log/').fix_pathname if output.log_path.nil?
-    output.output_path = File.expand_path(output.target_path + '/build/').fix_pathname if output.output_path.nil?
-    output.temp_path = File.expand_path(output.target_path + '/temp/').fix_pathname if output.temp_path.nil?
+    output.target_path = File.expand_path('./target/')
+    output.log_path = File.expand_path(output.target_path + '/log/').fix_pathname
+    output.output_path = File.expand_path(output.target_path + '/build/').fix_pathname
+    output.temp_path = File.expand_path(output.target_path + '/temp/').fix_pathname
 
-    postgres.username = 'aerius' if postgres.username.nil?
-    postgres.password = 'aerius' if postgres.password.nil?
+    postgres.username = 'aerius'
+    postgres.password = 'aerius'
 
-    if postgres.bin_path.nil? then
-      if !ENV['POSTGRESQL_BIN'].nil? then
-        postgres.bin_path = ENV['POSTGRESQL_BIN']
-      elsif ON_WINDOWS then
-        if !ENV['CommonProgramW6432'].nil? then
-          postgres.bin_path = Utility.find_best_postgresql_path(File.expand_path(ENV['CommonProgramW6432'] + '/../'))
-        elsif !ENV['ProgramFiles(x86)'].nil? then
-          postgres.bin_path = Utility.find_best_postgresql_path(ENV['ProgramFiles(x86)'])
-        elsif !ENV['ProgramFiles'].nil? then
-          postgres.bin_path = Utility.find_best_postgresql_path(ENV['ProgramFiles'])
-        end
-      else
-        postgres.bin_path = ''
+    if !ENV['POSTGRESQL_BIN'].nil? then
+      postgres.bin_path = ENV['POSTGRESQL_BIN']
+    elsif ON_WINDOWS then
+      if !ENV['CommonProgramW6432'].nil? then
+        postgres.bin_path = Utility.find_best_postgresql_path(File.expand_path(ENV['CommonProgramW6432'] + '/../'))
+      elsif !ENV['ProgramFiles(x86)'].nil? then
+        postgres.bin_path = Utility.find_best_postgresql_path(ENV['ProgramFiles(x86)'])
+      elsif !ENV['ProgramFiles'].nil? then
+        postgres.bin_path = Utility.find_best_postgresql_path(ENV['ProgramFiles'])
       end
+    else
+      postgres.bin_path = ''
     end
 
-    postgres.template = 'template0' if postgres.template.nil?
-    postgres.tablespace = '' if postgres.tablespace.nil?
-    postgres.collation = '' if postgres.collation.nil?
-    postgres.name_prefix = PathConventions::DEFAULT_DATABASE_NAME_PREFIX if postgres.name_prefix.nil?
-    postgres.essentials_function_prefix = 'system.' if postgres.essentials_function_prefix.nil?
-    postgres.unittest_prefix = 'unittest_' if postgres.unittest_prefix.nil?
+    postgres.template = 'template0'
+    postgres.tablespace = ''
+    postgres.collation = ''
+    postgres.name_prefix = PathConventions::DEFAULT_DATABASE_NAME_PREFIX
+    postgres.essentials_function_prefix = 'system.'
+    postgres.unittest_prefix = 'unittest_'
 
-    tools.git_bin_path = GitUtility.default_bin_path if tools.git_bin_path.nil?
-    tools.max_threads = 10 if tools.max_threads.nil?
-    tools.on_uncommitted_changes = :warn if tools.on_uncommitted_changes.nil?
-    tools.hint_level = HINT_LEVEL_ALL if tools.hint_level.nil?
+    tools.git_bin_path = GitUtility.default_bin_path
+    tools.max_threads = 10
+    tools.on_uncommitted_changes = :warn
+    tools.hint_level = HINT_LEVEL_ALL
 
     self
   end
@@ -127,14 +133,20 @@ class BuildConfig
 
     layout.source_path = Globals.ensure_dir!(layout.source_path, 'source_path')
 
-    layout.product_sql_path = Globals.ensure_dir!(
-      PathConventions.join(layout.source_path, PathConventions::SQL_REL, product.to_s),
-      'product_sql_path'
-    )
-    layout.product_data_path = Globals.ensure_dir!(
-      PathConventions.join(layout.source_path, PathConventions::DATA_REL, product.to_s),
-      'product_data_path'
-    )
+    # Convention: source/src/{main,data}/sql/<product>/; optional override when already set.
+    layout.product_sql_path = if layout.product_sql_path.nil?
+      PathConventions.join(layout.source_path, PathConventions::SQL_REL, product.to_s)
+    else
+      PathConventions.expand_from(layout.source_path, layout.product_sql_path)
+    end
+    layout.product_sql_path = Globals.ensure_dir!(layout.product_sql_path, 'product_sql_path')
+
+    layout.product_data_path = if layout.product_data_path.nil?
+      PathConventions.join(layout.source_path, PathConventions::DATA_REL, product.to_s)
+    else
+      PathConventions.expand_from(layout.source_path, layout.product_data_path)
+    end
+    layout.product_data_path = Globals.ensure_dir!(layout.product_data_path, 'product_data_path')
 
     layout.common_sql_paths = [
       PathConventions.internal_modules_sql(layout.source_path),
@@ -179,5 +191,31 @@ class BuildConfig
     tools.git_bin_path = tools.git_bin_path.fix_pathname unless (tools.git_bin_path.nil? || tools.git_bin_path.empty?)
 
     self
+  end
+
+  # Fixed banner of resolved $build_config values (masks secrets).
+  def log!(logger)
+    logger.writeln "product: #{product}"
+    log_struct!(logger, 'layout', layout)
+    log_struct!(logger, 'output', output)
+    log_struct!(logger, 'postgres', postgres, mask: [:password])
+    log_struct!(logger, 'tools', tools, mask: [:https_data_password])
+    log_struct!(logger, 'session', session)
+  end
+
+  private
+
+  def log_struct!(logger, name, struct, mask: [])
+    struct.members.each do |member|
+      value = struct[member]
+      value = '<set>' if mask.include?(member) && !value.nil? && !value.to_s.empty?
+      value = '<none>' if value.nil? || (value.respond_to?(:empty?) && value.empty?)
+      if value.is_a?(Array)
+        logger.writeln "#{name}.#{member}:"
+        value.each_with_index { |item, idx| logger.writeln "  [#{idx}] #{item}" }
+      else
+        logger.writeln "#{name}.#{member}: #{value}"
+      end
+    end
   end
 end

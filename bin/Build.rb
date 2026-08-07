@@ -93,14 +93,7 @@ $logger.major_hint "You are running a very old depecrated Ruby version (#{RUBY_V
 
 # ------------------------------------
 
-$logger.writeln "Building product: #{$build_config.product.to_s}"
-$logger.writeln 'Build flags: ' + ($build_config.session.build_flags.empty? ? '<none>' : $build_config.session.build_flags.sort.join(', '))
-$logger.writeln "Runscript: #{$build_config.session.runscript_file}"
-$logger.writeln "Product settings file: #{$build_config.session.product_settings_file}"
-$logger.writeln "Build config path: #{$build_config.layout.build_config_path}"
-$logger.writeln "AppSettings file: #{$build_config.layout.app_settings_file}"
-$logger.writeln "UserSettings file: #{$build_config.layout.user_settings_file}" unless $build_config.layout.user_settings_file.nil?
-$logger.writeln "Output path: #{$build_config.output.output_path}"
+$build_config.log!($logger)
 
 # Let's go!
 begin

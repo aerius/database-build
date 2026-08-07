@@ -58,7 +58,7 @@ module PathConventions
   end
 
   def self.is_absolute?(path)
-    path.start_with?('/') || path.match?(/^[A-Za-z]:[\\\/]/
+    path.start_with?('/') || path.match?(%r{^[A-Za-z]:[\\/]})
   end
   private_class_method :is_absolute?
 end
