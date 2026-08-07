@@ -3,7 +3,7 @@
 #
 class GitUtility
 
-  # Default $git_bin_path: GIT_BIN env, else Windows Program Files Git/cmd/, else '' (use PATH).
+  # Default git bin path: GIT_BIN env, else Windows Program Files Git/cmd/, else '' (use PATH).
   def self.default_bin_path
     return ENV['GIT_BIN'] unless ENV['GIT_BIN'].nil?
 
@@ -45,9 +45,9 @@ class GitUtility
     return run_git(path, 'status --porcelain') != nil
   end
 
-  # Git executable for shell invocation: PATH name or quoted path when $git_bin_path is set.
+  # Git executable for shell invocation: PATH name or quoted path when git bin path is set.
   def self.git_exe
-    return $git_bin_path.to_s.empty? ? 'git' : "\"#{$git_bin_path}git\""
+    return $build_config.tools.git_bin_path.to_s.empty? ? 'git' : "\"#{$build_config.tools.git_bin_path}git\""
   end
 
   # Shell stderr redirect for discarding git noise: cmd.exe has no /dev/null (use 2>nul); Unix uses 2>/dev/null.

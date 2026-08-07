@@ -19,8 +19,8 @@ class ScriptRunner
   end
 
   def execute
-    #script_stacktrace_filename = Pathname.new($runscript_file).relative_path_from(Pathname.new(File.expand_path(File.dirname(__FILE__))))
-    eval(IO.readlines($runscript_file).join, nil, $runscript_file)#script_stacktrace_filename.to_s)
+    #script_stacktrace_filename = Pathname.new($build_config.session.runscript_file).relative_path_from(Pathname.new(File.expand_path(File.dirname(__FILE__))))
+    eval(IO.readlines($build_config.session.runscript_file).join, nil, $build_config.session.runscript_file)#script_stacktrace_filename.to_s)
   end
 
 end

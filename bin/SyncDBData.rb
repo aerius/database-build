@@ -56,14 +56,14 @@ Globals.load_settings(ARGV.size > 0 ? ARGV[0] : nil)
 # Logger
 require 'BuildLogger.rb'
 $logger = BuildLogger.new
-$logger.open($log_path, 'sync_dbdata')
+$logger.open($build_config.output.log_path, 'sync_dbdata')
 
 # Parses the load-SQL files to see which files in the db-data folder are used.
 # Copies these files to your local db-data folder.
 
-$from_local = $dbdata_path
+$from_local = $build_config.layout.dbdata_path
 $to_local = $from_local
-$from_https = $https_data_path.fix_pathname unless $https_data_path.nil?
+$from_https = $build_config.tools.https_data_path.fix_pathname unless $build_config.tools.https_data_path.nil?
 
 # ---------
 
@@ -78,7 +78,7 @@ $target_overwritten = false
 # ---------
 
 def display_info
-  puts "Default parsing path:", '  ' + $product_data_path
+  puts "Default parsing path:", '  ' + $build_config.layout.product_data_path
   puts "Default local db-data source:", '  ' + $from_local
   puts "Default HTTPS source:", '  ' + ($from_https || '(unset)')
   puts "Default local db-data target:", '  ' + $to_local
@@ -88,7 +88,8 @@ end
 def parse_commandline
   $opts.each do |option, argument|
     case option.downcase
-      when '--path'; $product_data_path = File.expand_path(argument.to_s).fix_pathname
+      when '--path'
+        $build_config.layout.product_data_path = File.expand_path(argument.to_s).fix_pathname
       when '--from-https'
         raise 'Can only have one source' if $source_overwritten
         $source = :https
@@ -132,12 +133,12 @@ def connect
   if $source == :https then
     if /^(https\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($from_https) then
       https_base_url = $from_https
-      $logger.warn 'Username and/or password not specified. If needed, specify $https_data_username and $https_data_password in the project user settings' if $https_data_username.nil? || $https_data_password.nil?
+      $logger.warn 'Username and/or password not specified. If needed, specify $https_data_username and $https_data_password in the project user settings' if $build_config.tools.https_data_username.nil? || $build_config.tools.https_data_password.nil?
     else
       $logger.error "Not a valid HTTPS location: #{$from_https}"
     end
     $src_fs = HTTPSDownloader.new($logger)
-    $src_fs.connect https_base_url, $https_data_username, $https_data_password
+    $src_fs.connect https_base_url, $build_config.tools.https_data_username, $build_config.tools.https_data_password
     $source_path = ''
 
   elsif $source == :local then
@@ -323,6 +324,6 @@ end
 
 parse_commandline
 
-$datasources = DataSourceCollector.collect($logger, $product_data_path, $common_data_paths, nil).keys
+$datasources = DataSourceCollector.collect($logger, $build_config.layout.product_data_path, $build_config.layout.common_data_paths, nil).keys
 
 sync
