@@ -4,11 +4,12 @@
 module PathConventions
   SQL_REL = 'src/main/sql'
   DATA_REL = 'src/data/sql'
-  COMMON_DIR = 'common'
+  MODULES_DIR = 'modules'
   DBDATA_DIR = 'dbdata'
   CONFIG_DIR = 'config'
   SCRIPTS_DIR = 'scripts'
   MODULES_REPO = 'database-modules'
+  # Sibling modules repo: <workspace>/database-modules/source/modules/src/{main,data}/sql
   MODULES_SQL_REL = 'source/modules/src/main/sql'
   MODULES_DATA_REL = 'source/modules/src/data/sql'
   BUILTIN_COMMON_SQL_REL = 'common/src/main/sql'
@@ -33,6 +34,15 @@ module PathConventions
   def self.dir_if_exists(*parts)
     path = join(*parts)
     (File.exist?(path) && File.directory?(path)) ? path.fix_pathname : nil
+  end
+
+  # Internal modules sit beside $source_path: <parent>/modules/src/{main,data}/sql
+  def self.internal_modules_sql(source_path)
+    dir_if_exists(File.dirname(source_path), MODULES_DIR, SQL_REL)
+  end
+
+  def self.internal_modules_data(source_path)
+    dir_if_exists(File.dirname(source_path), MODULES_DIR, DATA_REL)
   end
 
   # Expand path to an absolute filename.

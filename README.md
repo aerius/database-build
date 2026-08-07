@@ -30,8 +30,8 @@ Other layout paths are **fixed** from constants in `bin/PathConventions.rb`:
 |---|---|
 | `$product_sql_path` | `$source_path/src/main/sql/<product>/` |
 | `$product_data_path` | `$source_path/src/data/sql/<product>/` |
-| `$common_sql_paths` | existing among in-repo `…/sql/common/`, sibling `database-modules/source/modules/src/main/sql`, and `database-build/common/src/main/sql` |
-| `$common_data_paths` | existing among in-repo `…/data/sql/common/` and sibling `database-modules/…/src/data/sql` |
+| `$common_sql_paths` | existing among sibling `modules/src/main/sql` (next to `$source_path`), sibling `database-modules/source/modules/src/main/sql`, and `database-build/common/src/main/sql` |
+| `$common_data_paths` | existing among sibling `modules/src/data/sql` (next to `$source_path`) and sibling `database-modules/…/src/data/sql` |
 | `$runscripts_path` | `$build_config_path/scripts/` |
 
 The workspace root is the parent directory of the `database-build` checkout (sibling repos such as `database-modules` and `dbdata` live there).

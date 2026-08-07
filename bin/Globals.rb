@@ -84,7 +84,7 @@ class Globals
     $product_data_path = ensure_dir!(PathConventions.join($source_path, PathConventions::DATA_REL, $product.to_s), '$product_data_path')
 
     $common_sql_paths = [
-      PathConventions.dir_if_exists($source_path, PathConventions::SQL_REL, PathConventions::COMMON_DIR),
+      PathConventions.internal_modules_sql($source_path),
       PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_SQL_REL),
       PathConventions.join(PathConventions.database_build_root, PathConventions::BUILTIN_COMMON_SQL_REL).fix_pathname
     ].compact
@@ -93,7 +93,7 @@ class Globals
     }
 
     $common_data_paths = [
-      PathConventions.dir_if_exists($source_path, PathConventions::DATA_REL, PathConventions::COMMON_DIR),
+      PathConventions.internal_modules_data($source_path),
       PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_DATA_REL)
     ].compact
     $common_data_paths.map!.with_index { |common_data_path, idx|
