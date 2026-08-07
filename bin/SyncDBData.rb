@@ -62,8 +62,8 @@ $logger.open($log_path, 'sync_dbdata')
 # Copies these files to your local db-data folder.
 
 $from_local = $dbdata_path
-$to_local = $from_local   # deprecated: NAS path = $oti_nas_path.fix_pathname + $dbdata_dir.fix_pathname
-$from_https = $https_data_path.fix_pathname + $dbdata_dir.fix_pathname unless $https_data_path.nil?
+$to_local = $from_local
+$from_https = $https_data_path.fix_pathname unless $https_data_path.nil?
 
 # ---------
 
@@ -80,7 +80,7 @@ $target_overwritten = false
 def display_info
   puts "Default parsing path:", '  ' + $product_data_path
   puts "Default local db-data source:", '  ' + $from_local
-  puts "Default HTTPS source:", '  ' + $from_https
+  puts "Default HTTPS source:", '  ' + ($from_https || '(unset)')
   puts "Default local db-data target:", '  ' + $to_local
   exit
 end
@@ -132,8 +132,6 @@ def connect
   if $source == :https then
     if /^(https\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($from_https) then
       https_base_url = $from_https
-      $https_data_username = nil if $https_data_username == 'REDACTED'
-      $https_data_password = nil if $https_data_password == 'REDACTED'
       $logger.warn 'Username and/or password not specified. If needed, specify $https_data_username and $https_data_password in the project user settings' if $https_data_username.nil? || $https_data_password.nil?
     else
       $logger.error "Not a valid HTTPS location: #{$from_https}"

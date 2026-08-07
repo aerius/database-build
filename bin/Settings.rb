@@ -34,10 +34,6 @@ $database_collation = '' # Can override in ..\AppSettings.rb in case you need to
 
 $database_name_prefix = PathConventions::DEFAULT_DATABASE_NAME_PREFIX if $database_name_prefix.nil?
 
-
-# Datasource files .. common relative paths compared to base paths like https_data_path
-$dbdata_dir = PathConventions::DBDATA_DIR.fix_pathname
-
 $db_essentials_function_prefix = 'system.'
 $db_unittest_prefix = 'unittest_'
 
@@ -54,10 +50,8 @@ else
   end
 end
 
-# HTTPS for syncing data files
-$https_data_path = 'https://a.b.c/xyz' # Override in ..\AppSettings.rb
-$https_data_username = 'REDACTED' # Override in ..\UserSettings.rb
-$https_data_password = 'REDACTED' # Override in ..\UserSettings.rb
+# HTTPS for syncing data files — set $https_data_path (full remote dbdata URL) in AppSettings.rb;
+# set $https_data_username / $https_data_password in UserSettings.rb when needed.
 
 # Maximum number of simultaneous connections in multithread blocks
 $max_threads = 10

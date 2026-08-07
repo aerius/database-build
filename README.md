@@ -40,14 +40,16 @@ The workspace root is the parent directory of the `database-build` checkout (sib
 
 Only these layout-related settings may be overridden (defaults still apply when unset):
 
-- `$dbdata_dir` — default `dbdata/`
-- `$dbdata_path` — default `<workspace>/dbdata/`
+- `$dbdata_path` — local datasource folder; default `<workspace>/dbdata/`. Use an absolute path when the data lives elsewhere, e.g. `/data/aerius/dbdata/`.
 - `$database_name_prefix` — default `AERIUS`
 
 Typical `AppSettings.rb` / `UserSettings.rb` overrides otherwise:
 
 - `$pg_username` / `$pg_password` (default `aerius`)
-- `$https_data_path` / `$https_data_username` / `$https_data_password`
+- `$https_data_path` — **full** HTTPS base URL of the remote dbdata folder (no separate dir segment is appended); set in `AppSettings.rb`
+- `$https_data_username` / `$https_data_password` — set in `UserSettings.rb` when required
+
+`SyncDBData.rb --from-https` downloads into `$dbdata_path` from `$https_data_path` (or from `--from-https` / `--to-local` when given).
 
 ### Docker
 

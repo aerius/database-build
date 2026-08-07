@@ -91,8 +91,7 @@ class Globals
     raise "Runscripts path not found ($runscripts_path = \"#{$runscripts_path}\")" unless (File.exist?($runscripts_path) && File.directory?($runscripts_path))
 
     # Overridable defaults
-    $dbdata_dir = PathConventions::DBDATA_DIR.fix_pathname if $dbdata_dir.nil? || $dbdata_dir.to_s.empty?
-    $dbdata_path = PathConventions.join(PathConventions.workspace_root, $dbdata_dir).fix_pathname if $dbdata_path.nil?
+    $dbdata_path = PathConventions.join(PathConventions.workspace_root, PathConventions::DBDATA_DIR).fix_pathname if $dbdata_path.nil?
     $dbdata_path = $dbdata_path.fix_pathname
     raise "Datasource path not found ($dbdata_path = \"#{$dbdata_path}\")" unless (File.exist?($dbdata_path) && File.directory?($dbdata_path))
 
