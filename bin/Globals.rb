@@ -107,10 +107,8 @@ class Globals
     raise 'Database name prefix not set ($database_name_prefix)' if $database_name_prefix.nil?
     raise 'PostgreSQL bin path not set ($pg_bin_path)' if $pg_bin_path.nil?
     raise "PostgreSQL bin path not found ($pg_bin_path = \"#{$pg_bin_path}\")" unless ((File.exist?($pg_bin_path) && File.directory?($pg_bin_path)) || (!ON_WINDOWS && $pg_bin_path.empty?))
-    raise "PostgreSQL username not set ($pg_username)" if $pg_username.nil?
-    raise 'Override PostgreSQL username ($pg_username) in UserSettings.rb' if $pg_username == 'REDACTED'
-    raise 'PostgreSQL password not set ($pg_password)' if $pg_password.nil?
-    raise 'Override PostgreSQL password ($pg_password) in UserSettings.rb' if $pg_password == 'REDACTED'
+    raise "PostgreSQL username not set ($pg_username)" if $pg_username.nil? || $pg_username.to_s.empty?
+    raise "PostgreSQL password not set ($pg_password)" if $pg_password.nil? || $pg_password.to_s.empty?
     $pg_bin_path = $pg_bin_path.fix_pathname unless $pg_bin_path.empty?
     $git_bin_path = $git_bin_path.fix_pathname unless ($git_bin_path.nil? || $git_bin_path.empty?)
   end

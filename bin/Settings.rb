@@ -9,8 +9,8 @@ $output_path = File.expand_path($target_path + '/build/').fix_pathname     # /<t
 $temp_path = File.expand_path($target_path + '/temp/').fix_pathname        # /<target_path>/temp/
 
 # PostgreSQL
-$pg_username = 'REDACTED' # Override in ..\UserSettings.rb
-$pg_password = 'REDACTED' # Override in ..\UserSettings.rb
+$pg_username = 'aerius' # Override in UserSettings.rb if needed
+$pg_password = 'aerius' # Override in UserSettings.rb if needed
 
 unless ENV['POSTGRESQL_BIN'].nil? then
   $pg_bin_path = ENV['POSTGRESQL_BIN']

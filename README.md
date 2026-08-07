@@ -46,7 +46,7 @@ Only these layout-related settings may be overridden (defaults still apply when 
 
 Typical `AppSettings.rb` / `UserSettings.rb` overrides otherwise:
 
-- `$pg_username` / `$pg_password`
+- `$pg_username` / `$pg_password` (default `aerius`)
 - `$https_data_path` / `$https_data_username` / `$https_data_password`
 
 ### Docker
