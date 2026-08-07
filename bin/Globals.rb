@@ -15,6 +15,20 @@ $dump_filetitle = nil
 #
 class Globals
 
+  # Normalize path and raise unless it exists as a directory.
+  def self.ensure_dir!(path, label)
+    path = path.fix_pathname
+    raise "#{label} not found (#{label} = \"#{path}\")" unless File.exist?(path) && File.directory?(path)
+    path
+  end
+
+  # Normalize path and raise unless it exists as a file.
+  def self.ensure_file!(path, label)
+    path = path.fix_filename
+    raise "#{label} not found (#{label} = \"#{path}\")" unless File.exist?(path) && !File.directory?(path)
+    path
+  end
+
   # Determine full runscript filename. First absolute path or relative to CWD. Otherwise see if $runscripts_path is set and use that.
   def self.determine_runscript_file(runscript_file_argument)
     if runscript_file_argument.nil? then
@@ -29,15 +43,8 @@ class Globals
         $runscript_file += '.rb' if !File.exist?($runscript_file) && File.exist?($runscript_file + '.rb')
       end
 
-      raise "Runscript '#{$runscript_file}' not found." unless (File.exist?($runscript_file) && !File.directory?($runscript_file))
+      $runscript_file = ensure_file!($runscript_file, '$runscript_file')
     end
-  end
-
-  # Normalize path and raise unless it exists as a directory.
-  def self.ensure_dir!(path, label)
-    path = path.fix_pathname
-    raise "#{label} not found (#{label} = \"#{path}\")" unless File.exist?(path) && File.directory?(path)
-    path
   end
 
   # Load buildsystem, product, project and user settings
@@ -60,8 +67,10 @@ class Globals
     $build_config_path = ensure_dir!(PathConventions.expand_from(product_settings_dir, $build_config_path), '$build_config_path')
 
     # Load AppSettings / UserSettings from build-config/config/
-    $app_settings_file = PathConventions.join($build_config_path, PathConventions::CONFIG_DIR, PathConventions::APP_SETTINGS_FILE).fix_filename
-    raise "AppSettings file '#{$app_settings_file}' not found" unless (File.exist?($app_settings_file) && !File.directory?($app_settings_file))
+    $app_settings_file = ensure_file!(
+      PathConventions.join($build_config_path, PathConventions::CONFIG_DIR, PathConventions::APP_SETTINGS_FILE),
+      '$app_settings_file'
+    )
     require $app_settings_file
 
     $user_settings_file = PathConventions.join($build_config_path, PathConventions::CONFIG_DIR, PathConventions::USER_SETTINGS_FILE).fix_filename
@@ -124,7 +133,7 @@ class Globals
       $product_settings_file = File.expand_path(product_settings_file_argument).fix_filename
       $product_settings_file += '.rb' if !File.exist?($product_settings_file) && File.exist?($product_settings_file + '.rb')
       $product_settings_file += 'Settings.rb' if !File.exist?($product_settings_file) && File.exist?($product_settings_file + 'Settings.rb')
-      raise "Product settings file '#{$product_settings_file}' not found" unless (File.exist?($product_settings_file) && !File.directory?($product_settings_file))
+      $product_settings_file = ensure_file!($product_settings_file, '$product_settings_file')
     end
   end
 
