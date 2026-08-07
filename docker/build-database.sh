@@ -52,14 +52,14 @@ mkdir -p "${PGDATA}" && chown -R postgres:postgres "${PGDATA}" && chmod 777 "${P
 mkdir -p "${DBDATA_PATH}"
 
 # Point the build at the Docker dbdata path (overrides workspace convention default)
-echo "\$dbdata_path = '${DBDATA_PATH}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
+echo "\$dbdata_path = '${DBDATA_PATH}'" >> "${DBCONFIG_PATH}/UserSettings.rb"
 
 # configure repo with the HTTPS credentials given if set
-[[ -n "${HTTPS_DATA_USERNAME}" ]] && echo "\$https_data_username = '${HTTPS_DATA_USERNAME}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
-[[ -n "${HTTPS_DATA_PASSWORD}" ]] && echo "\$https_data_password = '${HTTPS_DATA_PASSWORD}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
+[[ -n "${HTTPS_DATA_USERNAME}" ]] && echo "\$https_data_username = '${HTTPS_DATA_USERNAME}'" >> "${DBCONFIG_PATH}/UserSettings.rb"
+[[ -n "${HTTPS_DATA_PASSWORD}" ]] && echo "\$https_data_password = '${HTTPS_DATA_PASSWORD}'" >> "${DBCONFIG_PATH}/UserSettings.rb"
 
 # Set git support off in the build script
-! [[ ${USE_GIT} ]] && echo "\$git_bin_path = nil" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
+! [[ ${USE_GIT} ]] && echo "\$git_bin_path = nil" >> "${DBCONFIG_PATH}/UserSettings.rb"
 
 # sync db-data files we need
 echo 'Syncing database data files..'

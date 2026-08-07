@@ -258,7 +258,7 @@ class ScriptCommands
   def ensure_comments_collected
     if !$comments_collected then
       $logger.writeln "Scanning for comments in '#{$product_sql_path}'..."
-      root_path = File.expand_path(File.dirname($project_settings_file_path) + '/../../').fix_pathname
+      root_path = File.expand_path('..', $build_config_path).fix_pathname
       $comments = CommentCollector.collect($logger, $product_sql_path, $common_sql_paths, root_path)
       $comments_collected = true
     end

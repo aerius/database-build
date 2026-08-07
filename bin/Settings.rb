@@ -1,5 +1,5 @@
 #
-# Default settings. Can optionally override in ..\AppSettings.rb and ..\UserSettings.rb
+# Default settings. Override in product settings, AppSettings.rb, or UserSettings.rb
 #
 
 # Set up default paths from root

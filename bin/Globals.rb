@@ -41,26 +41,25 @@ class Globals
     # Load product override settings (mandatory)
     determine_product_settings_file(product_settings_file_argument)
     require $product_settings_file
-    $user_product_settings_file = File.dirname($product_settings_file).fix_pathname + File.basename($product_settings_file, '.rb') + '.User.rb'
-    $user_product_settings_file = nil unless File.exist?($user_product_settings_file)
-    require $user_product_settings_file unless $user_product_settings_file.nil?
 
     raise "Product not set ($product)" if $product.nil?
     raise "Source path not set ($source_path)" if $source_path.nil?
-    raise "Project settings file path not set ($project_settings_file_path)" if $project_settings_file_path.nil?
+    raise "Build config path not set ($build_config_path)" if $build_config_path.nil?
 
     # Resolve relative paths against the product settings directory
     product_settings_dir = File.dirname($product_settings_file)
     $source_path = PathConventions.expand_from(product_settings_dir, $source_path)
-    $project_settings_file_path = PathConventions.expand_from(product_settings_dir, $project_settings_file_path)
+    $build_config_path = PathConventions.expand_from(product_settings_dir, $build_config_path).fix_pathname
+    raise "Build config path not found ($build_config_path = \"#{$build_config_path}\")" unless (File.exist?($build_config_path) && File.directory?($build_config_path))
 
-    # Load project override settings
-    $project_settings_file_path += '.rb' if !File.exist?($project_settings_file_path) && File.exist?($project_settings_file_path + '.rb')
-    raise "Project settings file '#{$project_settings_file_path}' not found" unless (File.exist?($project_settings_file_path) && !File.directory?($project_settings_file_path))
-    require $project_settings_file_path
-    $user_project_settings_file = File.dirname($project_settings_file_path).fix_pathname + File.basename($project_settings_file_path, '.rb') + '.User.rb'
-    $user_project_settings_file = nil unless File.exist?($user_project_settings_file)
-    require $user_project_settings_file unless $user_project_settings_file.nil?
+    # Load AppSettings / UserSettings from build-config/config/
+    $app_settings_file = PathConventions.join($build_config_path, PathConventions::CONFIG_DIR, PathConventions::APP_SETTINGS_FILE).fix_filename
+    raise "AppSettings file '#{$app_settings_file}' not found" unless (File.exist?($app_settings_file) && !File.directory?($app_settings_file))
+    require $app_settings_file
+
+    $user_settings_file = PathConventions.join($build_config_path, PathConventions::CONFIG_DIR, PathConventions::USER_SETTINGS_FILE).fix_filename
+    $user_settings_file = nil unless File.exist?($user_settings_file)
+    require $user_settings_file unless $user_settings_file.nil?
 
     # Fixed paths from convention
     $source_path = $source_path.fix_pathname
@@ -88,7 +87,7 @@ class Globals
       raise "Common data path not found ($common_data_paths[#{idx}] = \"#{common_data_path}\")" unless (File.exist?(common_data_path) && File.directory?(common_data_path))
     }
 
-    $runscripts_path = PathConventions.join(File.dirname($project_settings_file_path), PathConventions::RUNSCRIPTS_REL).fix_pathname
+    $runscripts_path = PathConventions.join($build_config_path, PathConventions::SCRIPTS_DIR).fix_pathname
     raise "Runscripts path not found ($runscripts_path = \"#{$runscripts_path}\")" unless (File.exist?($runscripts_path) && File.directory?($runscripts_path))
 
     # Overridable defaults
@@ -112,9 +111,9 @@ class Globals
     raise 'PostgreSQL bin path not set ($pg_bin_path)' if $pg_bin_path.nil?
     raise "PostgreSQL bin path not found ($pg_bin_path = \"#{$pg_bin_path}\")" unless ((File.exist?($pg_bin_path) && File.directory?($pg_bin_path)) || (!ON_WINDOWS && $pg_bin_path.empty?))
     raise "PostgreSQL username not set ($pg_username)" if $pg_username.nil?
-    raise 'Override PostgreSQL username ($pg_username) in user project settings' if $pg_username == 'REDACTED'
+    raise 'Override PostgreSQL username ($pg_username) in UserSettings.rb' if $pg_username == 'REDACTED'
     raise 'PostgreSQL password not set ($pg_password)' if $pg_password.nil?
-    raise 'Override PostgreSQL password ($pg_password) in user project settings' if $pg_password == 'REDACTED'
+    raise 'Override PostgreSQL password ($pg_password) in UserSettings.rb' if $pg_password == 'REDACTED'
     $pg_bin_path = $pg_bin_path.fix_pathname unless $pg_bin_path.empty?
     $git_bin_path = $git_bin_path.fix_pathname unless ($git_bin_path.nil? || $git_bin_path.empty?)
   end

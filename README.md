@@ -9,12 +9,22 @@ Product settings only need:
 ```ruby
 $product = :calculator_nl
 $source_path = '.'
-$project_settings_file_path = 'src/build/config/AeriusSettings.rb'
+$build_config_path = 'src/build'
 ```
 
 Paths may be relative to the product `settings.rb` directory.
 
-Layout paths are **fixed** from constants in `bin/PathConventions.rb`:
+`$build_config_path` has a fixed layout:
+
+```text
+$build_config_path/
+  config/
+    AppSettings.rb
+    UserSettings.rb   # optional
+  scripts/            # runscripts
+```
+
+Other layout paths are **fixed** from constants in `bin/PathConventions.rb`:
 
 | Variable | Convention |
 |---|---|
@@ -22,7 +32,7 @@ Layout paths are **fixed** from constants in `bin/PathConventions.rb`:
 | `$product_data_path` | `$source_path/src/data/sql/<product>/` |
 | `$common_sql_paths` | existing among in-repo `…/sql/common/`, sibling `database-modules/source/modules/src/main/sql`, and `database-build/common/src/main/sql` |
 | `$common_data_paths` | existing among in-repo `…/data/sql/common/` and sibling `database-modules/…/src/data/sql` |
-| `$runscripts_path` | `../scripts` next to `AeriusSettings.rb` |
+| `$runscripts_path` | `$build_config_path/scripts/` |
 
 The workspace root is the parent directory of the `database-build` checkout (sibling repos such as `database-modules` and `dbdata` live there).
 
@@ -34,14 +44,14 @@ Only these layout-related settings may be overridden (defaults still apply when 
 - `$dbdata_path` — default `<workspace>/dbdata/`
 - `$database_name_prefix` — default `AERIUS`
 
-Typical `AeriusSettings.rb` / `.User.rb` overrides otherwise:
+Typical `AppSettings.rb` / `UserSettings.rb` overrides otherwise:
 
 - `$pg_username` / `$pg_password`
 - `$https_data_path` / `$https_data_username` / `$https_data_password`
 
 ### Docker
 
-`docker/build-database.sh` always writes `$dbdata_path` from `DBDATA_PATH` into `AeriusSettings.User.rb`, so the image does not depend on the workspace `dbdata/` convention.
+`docker/build-database.sh` always writes `$dbdata_path` from `DBDATA_PATH` into `UserSettings.rb` under `DBCONFIG_PATH` (the `config/` directory), so the image does not depend on the workspace `dbdata/` convention.
 
 ## Build script
 

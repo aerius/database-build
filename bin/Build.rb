@@ -25,8 +25,8 @@ def display_help
   puts "                      be absolute, relative to CWD, or in $run_scripts_path."
   puts "  product-settings-file"
   puts "                      Path and filename of product settings of product to"
-  puts "                      build. Contains $product and references to paths of"
-  puts "                      project, product data and sql, and common data and sql."
+  puts "                      build. Contains $product, $source_path, and"
+  puts "                      $build_config_path."
   puts "\nParameters:"
   puts "  -d --dbdata-path    Path where the table dump files are located (for"
   puts "                      load scripts)"
@@ -96,9 +96,9 @@ $logger.writeln "Building product: #{$product.to_s}"
 $logger.writeln 'Build flags: ' + ($build_flags.empty? ? '<none>' : $build_flags.sort.join(', '))
 $logger.writeln "Runscript: #{$runscript_file}"
 $logger.writeln "Product settings file: #{$product_settings_file}"
-$logger.writeln "User product settings file: #{$user_product_settings_file}" unless $user_product_settings_file.nil?
-$logger.writeln "Project settings file: #{$project_settings_file_path}"
-$logger.writeln "User project settings file: #{$user_project_settings_file}" unless $user_project_settings_file.nil?
+$logger.writeln "Build config path: #{$build_config_path}"
+$logger.writeln "AppSettings file: #{$app_settings_file}"
+$logger.writeln "UserSettings file: #{$user_settings_file}" unless $user_settings_file.nil?
 $logger.writeln "Output path: #{$product_output_path}"
 
 # Let's go!

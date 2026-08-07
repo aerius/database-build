@@ -6,11 +6,14 @@ module PathConventions
   DATA_REL = 'src/data/sql'
   COMMON_DIR = 'common'
   DBDATA_DIR = 'dbdata'
-  RUNSCRIPTS_REL = '../scripts'
+  CONFIG_DIR = 'config'
+  SCRIPTS_DIR = 'scripts'
   MODULES_REPO = 'database-modules'
   MODULES_SQL_REL = 'source/modules/src/main/sql'
   MODULES_DATA_REL = 'source/modules/src/data/sql'
   BUILTIN_COMMON_SQL_REL = 'common/src/main/sql'
+  APP_SETTINGS_FILE = 'AppSettings.rb'
+  USER_SETTINGS_FILE = 'UserSettings.rb'
   DEFAULT_DATABASE_NAME_PREFIX = 'AERIUS'
 
   # database-build checkout root (parent of bin/)
