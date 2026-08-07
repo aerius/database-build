@@ -32,6 +32,13 @@ class Globals
     end
   end
 
+  # Normalize path and raise unless it exists as a directory.
+  def self.ensure_dir!(path, label)
+    path = path.fix_pathname
+    raise "#{label} not found (#{label} = \"#{path}\")" unless File.exist?(path) && File.directory?(path)
+    path
+  end
+
   # Load buildsystem, product, project and user settings
   def self.load_settings(product_settings_file_argument)
 
@@ -49,8 +56,7 @@ class Globals
     # Resolve relative paths against the product settings directory
     product_settings_dir = File.dirname($product_settings_file)
     $source_path = PathConventions.expand_from(product_settings_dir, $source_path)
-    $build_config_path = PathConventions.expand_from(product_settings_dir, $build_config_path).fix_pathname
-    raise "Build config path not found ($build_config_path = \"#{$build_config_path}\")" unless (File.exist?($build_config_path) && File.directory?($build_config_path))
+    $build_config_path = ensure_dir!(PathConventions.expand_from(product_settings_dir, $build_config_path), '$build_config_path')
 
     # Load AppSettings / UserSettings from build-config/config/
     $app_settings_file = PathConventions.join($build_config_path, PathConventions::CONFIG_DIR, PathConventions::APP_SETTINGS_FILE).fix_filename
@@ -62,38 +68,33 @@ class Globals
     require $user_settings_file unless $user_settings_file.nil?
 
     # Fixed paths from convention
-    $source_path = $source_path.fix_pathname
-    raise "Source path not found ($source_path = \"#{$source_path}\")" unless (File.exist?($source_path) && File.directory?($source_path))
+    $source_path = ensure_dir!($source_path, '$source_path')
 
-    $product_sql_path = PathConventions.join($source_path, PathConventions::SQL_REL, $product.to_s).fix_pathname
-    $product_data_path = PathConventions.join($source_path, PathConventions::DATA_REL, $product.to_s).fix_pathname
-    raise "Product SQL path not found ($product_sql_path = \"#{$product_sql_path}\")" unless (File.exist?($product_sql_path) && File.directory?($product_sql_path))
-    raise "Product data path not found ($product_data_path = \"#{$product_data_path}\")" unless (File.exist?($product_data_path) && File.directory?($product_data_path))
+    $product_sql_path = ensure_dir!(PathConventions.join($source_path, PathConventions::SQL_REL, $product.to_s), '$product_sql_path')
+    $product_data_path = ensure_dir!(PathConventions.join($source_path, PathConventions::DATA_REL, $product.to_s), '$product_data_path')
 
     $common_sql_paths = [
       PathConventions.dir_if_exists($source_path, PathConventions::SQL_REL, PathConventions::COMMON_DIR),
       PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_SQL_REL),
       PathConventions.join(PathConventions.database_build_root, PathConventions::BUILTIN_COMMON_SQL_REL).fix_pathname
     ].compact
-    $common_sql_paths.each_with_index { |common_sql_path, idx|
-      raise "Common SQL path not found ($common_sql_paths[#{idx}] = \"#{common_sql_path}\")" unless (File.exist?(common_sql_path) && File.directory?(common_sql_path))
+    $common_sql_paths.map!.with_index { |common_sql_path, idx|
+      ensure_dir!(common_sql_path, "$common_sql_paths[#{idx}]")
     }
 
     $common_data_paths = [
       PathConventions.dir_if_exists($source_path, PathConventions::DATA_REL, PathConventions::COMMON_DIR),
       PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_DATA_REL)
     ].compact
-    $common_data_paths.each_with_index { |common_data_path, idx|
-      raise "Common data path not found ($common_data_paths[#{idx}] = \"#{common_data_path}\")" unless (File.exist?(common_data_path) && File.directory?(common_data_path))
+    $common_data_paths.map!.with_index { |common_data_path, idx|
+      ensure_dir!(common_data_path, "$common_data_paths[#{idx}]")
     }
 
-    $runscripts_path = PathConventions.join($build_config_path, PathConventions::SCRIPTS_DIR).fix_pathname
-    raise "Runscripts path not found ($runscripts_path = \"#{$runscripts_path}\")" unless (File.exist?($runscripts_path) && File.directory?($runscripts_path))
+    $runscripts_path = ensure_dir!(PathConventions.join($build_config_path, PathConventions::SCRIPTS_DIR), '$runscripts_path')
 
     # Overridable defaults
-    $dbdata_path = PathConventions.join(PathConventions.workspace_root, PathConventions::DBDATA_DIR).fix_pathname if $dbdata_path.nil?
-    $dbdata_path = $dbdata_path.fix_pathname
-    raise "Datasource path not found ($dbdata_path = \"#{$dbdata_path}\")" unless (File.exist?($dbdata_path) && File.directory?($dbdata_path))
+    $dbdata_path = PathConventions.join(PathConventions.workspace_root, PathConventions::DBDATA_DIR) if $dbdata_path.nil?
+    $dbdata_path = ensure_dir!($dbdata_path, '$dbdata_path')
 
     raise "Temp path not set ($temp_path)" if $temp_path.nil?
     raise "Output path not set ($output_path)" if $output_path.nil?
