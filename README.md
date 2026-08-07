@@ -24,27 +24,29 @@ build-config/
   scripts/            # runscripts
 ```
 
-All settings are stored on `$build_config` (`BuildConfig`) in groups. Settings files assign into `$build_config` (no separate settings `$globals`).
+All settings are stored on `$build_config` (`BuildConfig.rb`) in groups. Settings files should assign into `$build_config` (no separate settings `$globals`).
 Optional: set `layout.product_sql_path` / `layout.product_data_path` before finalize to override the `<product>` subfolder convention (paths relative to `source_path`).
 
-| Group | Contents |
+| Group | Description |
 |---|---|
-| `product` | product symbol |
-| `layout` | `source_path`, `build_config_path`, `product_sql_path`, `product_data_path`, `common_sql_paths`, `common_data_paths`, `runscripts_path`, `dbdata_path`, settings file paths |
-| `output` | `target_path`, `log_path`, `output_path`, `temp_path` |
-| `postgres` | credentials, `bin_path`, template/tablespace/collation, `name_prefix`, function prefixes |
-| `tools` | `git_bin_path`, HTTPS sync settings, `max_threads`, `on_uncommitted_changes`, `hint_level` |
-| `session` | `product_settings_file`, `runscript_file`, `build_flags`, `dump_filetitle` |
+| `product` | Product identity |
+| `layout` | Where source, modules, data, and scripts live |
+| `output` | Where build artifacts and logs are written |
+| `postgres` | How to talk to PostgreSQL |
+| `tools` | Ancillary tooling and build behaviour |
+| `session` | Per-run invocation state |
 
-Layout path conventions (under `layout`):
+Field names and defaults: see [`bin/BuildConfig.rb`](bin/BuildConfig.rb).
+
+Layout path defaults (specified under `layout` in the `BuildConfig.rb`):
 
 | Field | Convention |
 |---|---|
-| `product_sql_path` | `layout.source_path/src/main/sql/<product>/` |
-| `product_data_path` | `layout.source_path/src/data/sql/<product>/` |
-| `common_sql_paths` | existing among sibling `modules/src/main/sql` (next to `source_path`), sibling `database-modules/source/modules/src/main/sql`, and `database-build/common/src/main/sql` |
-| `common_data_paths` | existing among sibling `modules/src/data/sql` (next to `source_path`) and sibling `database-modules/…/src/data/sql` |
-| `runscripts_path` | `layout.build_config_path/scripts/` |
+| `product_sql_path` | `<source_path>/src/main/sql/<product>/` |
+| `product_data_path` | `<source_path>/src/data/sql/<product>/` |
+| `common_sql_paths` | existing among `<source_path>/../modules/src/main/sql`, `<workspace>/database-modules/source/modules/src/main/sql`, and `database-build/common/src/main/sql` |
+| `common_data_paths` | existing among `<source_path>/../modules/src/data/sql` and `<workspace>/database-modules/source/modules/src/data/sql` |
+| `runscripts_path` | `<build_config_path>/scripts/` |
 
 The workspace root is the parent directory of the `database-build` checkout (sibling repos such as `database-modules` and `dbdata` live there).
 
