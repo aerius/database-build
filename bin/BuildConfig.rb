@@ -15,6 +15,11 @@ HINT_LEVEL_ALL = 2
 # Settings files assign into $build_config; overrides in steps 3–4 replace defaults from step 2.
 #
 class BuildConfig
+  CONFIG_DIR = 'config'
+  SCRIPTS_DIR = 'scripts'
+  APP_SETTINGS_FILE = 'AppSettings.rb'
+  USER_SETTINGS_FILE = 'UserSettings.rb'
+  DEFAULT_DATABASE_NAME_PREFIX = 'AERIUS'
 
   Layout = Struct.new(
     :source_path, :build_config_path,
@@ -95,7 +100,7 @@ class BuildConfig
     postgres.template = 'template0'
     postgres.tablespace = ''
     postgres.collation = ''
-    postgres.name_prefix = PathConventions::DEFAULT_DATABASE_NAME_PREFIX
+    postgres.name_prefix = DEFAULT_DATABASE_NAME_PREFIX
     postgres.essentials_function_prefix = 'system.'
     postgres.unittest_prefix = 'unittest_'
 
@@ -120,13 +125,13 @@ class BuildConfig
     )
 
     layout.app_settings_file = Globals.ensure_file!(
-      PathConventions.join(layout.build_config_path, PathConventions::CONFIG_DIR, PathConventions::APP_SETTINGS_FILE),
+      PathConventions.join(layout.build_config_path, CONFIG_DIR, APP_SETTINGS_FILE),
       'app_settings_file'
     )
     require layout.app_settings_file
 
     layout.user_settings_file = PathConventions.join(
-      layout.build_config_path, PathConventions::CONFIG_DIR, PathConventions::USER_SETTINGS_FILE
+      layout.build_config_path, CONFIG_DIR, USER_SETTINGS_FILE
     ).fix_filename
     layout.user_settings_file = nil unless File.exist?(layout.user_settings_file)
     require layout.user_settings_file unless layout.user_settings_file.nil?
@@ -166,7 +171,7 @@ class BuildConfig
     }
 
     layout.runscripts_path = Globals.ensure_dir!(
-      PathConventions.join(layout.build_config_path, PathConventions::SCRIPTS_DIR),
+      PathConventions.join(layout.build_config_path, SCRIPTS_DIR),
       'runscripts_path'
     )
 
