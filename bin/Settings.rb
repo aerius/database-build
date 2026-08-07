@@ -36,13 +36,10 @@ $database_collation = '' # Can override in ..\AppSettings.rb in case you need to
 
 # Datasource files .. common relative paths compared to base paths like https_data_path
 $dbdata_dir = 'dbdata/'
-$org_dir = 'org/'
 
 $db_essentials_function_prefix = 'system.'
 $db_unittest_prefix = 'unittest_'
 
-# VCS
-$vcs = nil  # :git or :svn
 # Git
 unless ENV['GIT_BIN'].nil? then
   $git_bin_path = ENV['GIT_BIN']
@@ -55,28 +52,11 @@ else
     $git_bin_path = ''  # assume it's in the shell path
   end
 end
-# SVN
-unless ENV['SVN_BIN'].nil? then
-  $svn_bin_path = ENV['SVN_BIN']
-else
-  $svn_bin_path = ''  # assume it's in the shell path
-end
-#$svn_root_url = 'https://repository...' # Override in ..\AppSettings.rb
 
 # HTTPS for syncing data files
 $https_data_path = 'https://a.b.c/xyz' # Override in ..\AppSettings.rb
 $https_data_username = 'REDACTED' # Override in ..\UserSettings.rb
 $https_data_password = 'REDACTED' # Override in ..\UserSettings.rb
-# or SFTP
-$sftp_data_path = 'sftp://a.b.c/xyz' # Override in ..\AppSettings.rb
-$sftp_data_readonly_username = 'REDACTED' # Override in ..\UserSettings.rb
-$sftp_data_readonly_password = 'REDACTED' # Override in ..\UserSettings.rb
-$sftp_data_username = 'REDACTED' # Override in ..\UserSettings.rb
-$sftp_data_password = 'REDACTED' # Override in ..\UserSettings.rb
-# or FTP
-$ftp_data_path = 'ftp://a.b.c/xyz/' # Override in ..\AppSettings.rb
-$ftp_data_username = 'REDACTED' # Override in ..\UserSettings.rb
-$ftp_data_password = 'REDACTED' # Override in ..\UserSettings.rb
 
 # Maximum number of simultaneous connections in multithread blocks
 $max_threads = 10
