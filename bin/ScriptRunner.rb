@@ -1,7 +1,5 @@
 require 'ScriptCommands.rb'
 
-require 'pathname'
-
 ##
 # Basically wraps around ScriptCommands to ensure only its public methods can be called from within the execute() call.
 #
@@ -19,8 +17,7 @@ class ScriptRunner
   end
 
   def execute
-    #script_stacktrace_filename = Pathname.new($build_config.session.runscript_file).relative_path_from(Pathname.new(File.expand_path(File.dirname(__FILE__))))
-    eval(IO.readlines($build_config.session.runscript_file).join, nil, $build_config.session.runscript_file)#script_stacktrace_filename.to_s)
+    eval(IO.readlines($build_config.session.runscript_file).join, nil, $build_config.session.runscript_file)
   end
 
 end
