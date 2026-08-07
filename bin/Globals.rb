@@ -1,5 +1,6 @@
 require 'Utility.rb'
 require 'PathConventions.rb'
+require 'GitUtility.rb'
 
 # Initialize all globals
 

@@ -38,17 +38,7 @@ $db_essentials_function_prefix = 'system.'
 $db_unittest_prefix = 'unittest_'
 
 # Git
-unless ENV['GIT_BIN'].nil? then
-  $git_bin_path = ENV['GIT_BIN']
-else
-  if ON_WINDOWS then
-    $git_bin_path = ENV['ProgramFiles(x86)'].fix_pathname + 'Git/cmd/' unless ENV['ProgramFiles(x86)'].nil?
-    $git_bin_path = ENV['ProgramFiles'].fix_pathname + 'Git/cmd/' if $git_bin_path.nil? && !ENV['ProgramFiles'].nil?
-    $git_bin_path = '' if $git_bin_path.nil?  # assume it's in the shell path
-  else # Linux
-    $git_bin_path = ''  # assume it's in the shell path
-  end
-end
+$git_bin_path = GitUtility.default_bin_path
 
 # HTTPS for syncing data files — set $https_data_path (full remote dbdata URL) in AppSettings.rb;
 # set $https_data_username / $https_data_password in UserSettings.rb when needed.

@@ -3,6 +3,20 @@
 #
 class GitUtility
 
+  # Default $git_bin_path: GIT_BIN env, else Windows Program Files Git/cmd/, else '' (use PATH).
+  def self.default_bin_path
+    return ENV['GIT_BIN'] unless ENV['GIT_BIN'].nil?
+
+    if ON_WINDOWS then
+      path = nil
+      path = ENV['ProgramFiles(x86)'].fix_pathname + 'Git/cmd/' unless ENV['ProgramFiles(x86)'].nil?
+      path = ENV['ProgramFiles'].fix_pathname + 'Git/cmd/' if path.nil? && !ENV['ProgramFiles'].nil?
+      return path.nil? ? '' : path  # empty: assume git is on PATH
+    else # Linux / other
+      return ''  # assume git is on PATH
+    end
+  end
+
   # Returns Git's abbreviated hash for the repo containing path, or nil. Raises if abbreviation is longer than 10 chars.
   def self.get_git_short_hash_for_path(path)
     short = run_git(path, 'log -1 --pretty=format:%h')
