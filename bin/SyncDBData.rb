@@ -56,7 +56,7 @@ Globals.load_settings(ARGV.size > 0 ? ARGV[0] : nil)
 # Logger
 require 'BuildLogger.rb'
 $logger = BuildLogger.new
-$logger.open($product_log_path, 'sync_dbdata')
+$logger.open($log_path, 'sync_dbdata')
 
 # Parses the load-SQL files to see which files in the db-data folder are used.
 # Copies these files to your local db-data folder.

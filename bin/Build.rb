@@ -63,7 +63,7 @@ Globals.determine_runscript_file(ARGV.size > 0 ? ARGV[0] : nil)
 # Logger
 require 'BuildLogger.rb'
 $logger = BuildLogger.new
-$logger.open($product_log_path)
+$logger.open($log_path)
 
 # Scriptrunner will be the class encapsulating the user script
 require 'ScriptRunner.rb'
@@ -99,7 +99,7 @@ $logger.writeln "Product settings file: #{$product_settings_file}"
 $logger.writeln "Build config path: #{$build_config_path}"
 $logger.writeln "AppSettings file: #{$app_settings_file}"
 $logger.writeln "UserSettings file: #{$user_settings_file}" unless $user_settings_file.nil?
-$logger.writeln "Output path: #{$product_output_path}"
+$logger.writeln "Output path: #{$output_path}"
 
 # Let's go!
 begin
@@ -129,14 +129,14 @@ begin
   end
 
   # Clean up/prepare folders
-  if File.exist?($product_temp_path) && File.directory?($product_temp_path) then # possible previous run
-    $logger.writeln "Deleting '#{$product_temp_path}'..."
-    FileUtils.rm_r($product_temp_path)
-    $logger.error "Deleting '#{$product_temp_path}' FAILED!" if File.exist?($product_temp_path)
+  if File.exist?($temp_path) && File.directory?($temp_path) then # possible previous run
+    $logger.writeln "Deleting '#{$temp_path}'..."
+    FileUtils.rm_r($temp_path)
+    $logger.error "Deleting '#{$temp_path}' FAILED!" if File.exist?($temp_path)
   end
-  FileUtils.mkdir_p($product_temp_path)
+  FileUtils.mkdir_p($temp_path)
 
-  FileUtils.mkdir_p($product_output_path) unless File.exist?($product_output_path)
+  FileUtils.mkdir_p($output_path) unless File.exist?($output_path)
 
   # Initialize per product
   $comments_collected = false
@@ -148,10 +148,10 @@ begin
   $script_runner.execute  # This runs the user script
 
   # Cleaning up
-  if File.exist?($product_temp_path) then
-    $logger.writeln "Deleting #{$product_temp_path}..."
-    FileUtils.rm_r($product_temp_path)
-    $logger.writeln "(Deleting '#{$product_temp_path}' FAILED!)" if File.exist?($product_temp_path)
+  if File.exist?($temp_path) then
+    $logger.writeln "Deleting #{$temp_path}..."
+    FileUtils.rm_r($temp_path)
+    $logger.writeln "(Deleting '#{$temp_path}' FAILED!)" if File.exist?($temp_path)
   end
 
   $logger.writeln ''

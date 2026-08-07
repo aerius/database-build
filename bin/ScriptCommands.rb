@@ -293,8 +293,8 @@ class ScriptCommands
     ensure_datasourcesinfo_collected
     $logger.minor_hint 'generation of RTF documentation is no longer maintained in favor of the superior HTML documentation'
     filename = "#{$database_name} SQL Comments.rtf" if filename.empty?
-    filename = File.expand_path($product_output_path + filename).fix_filename
-    $logger.writeln "Generating RTF documentation in '#{$product_output_path}'..."
+    filename = File.expand_path($output_path + filename).fix_filename
+    $logger.writeln "Generating RTF documentation in '#{$output_path}'..."
     RTFWriter.create_rtf(filename, $comments, $datasources)
   end
 
@@ -311,8 +311,8 @@ class ScriptCommands
     end
 
     filename = "#{$database_name}_sqldocgen.html" if filename.empty?
-    filename = File.expand_path($product_output_path + filename).fix_filename
-    $logger.writeln "Generating HTML documentation in '#{$product_output_path}'..."
+    filename = File.expand_path($output_path + filename).fix_filename
+    $logger.writeln "Generating HTML documentation in '#{$output_path}'..."
     HTMLWriter.create_html(filename, $database_name, comments, $datasources, !params.include?(:no_dependencies))
   end
 
@@ -321,8 +321,8 @@ class ScriptCommands
     ensure_database_name
     ensure_datasourcesinfo_collected
     filename = "#{$database_name}_datasources.json" if filename.empty?
-    filename = File.expand_path($product_output_path + filename).fix_filename
-    $logger.writeln "Generating datasources-JSON in '#{$product_output_path}'..."
+    filename = File.expand_path($output_path + filename).fix_filename
+    $logger.writeln "Generating datasources-JSON in '#{$output_path}'..."
     datasources = $datasources.reduce({}) { |accum, (filename, tablename)| (accum[tablename] ||= []) << File.basename(filename); accum }
     File.write(filename, JSON.pretty_generate(datasources))
   end
@@ -379,8 +379,8 @@ class ScriptCommands
 
   def create_summary
     ensure_database_name
-    filename = File.expand_path($product_output_path + '{title}_{datesuffix}.csv').fix_filename
-    $logger.writeln_with_timing("Creating database summary in '#{$product_output_path}'...") {
+    filename = File.expand_path($output_path + '{title}_{datesuffix}.csv').fix_filename
+    $logger.writeln_with_timing("Creating database summary in '#{$output_path}'...") {
       PostgresTools.execute_sql_command("SELECT #{$db_essentials_function_prefix}output_summary_table('#{filename}')");
     }
   end
@@ -404,7 +404,7 @@ class ScriptCommands
       end
     }
 
-    filepath = $product_output_path if filepath.nil?
+    filepath = $output_path if filepath.nil?
     filepath = filepath.fix_pathname
     if $dump_filetitle.nil? then
       $dump_filename = File.expand_path(filepath + $database_name + '.backup').fix_filename
@@ -470,7 +470,7 @@ class ScriptCommands
     ensure_database_name
     filename = "#{$database_name}.sql" if filename.empty?
     $logger.writeln "Starting SQL recording into file '#{filename}'..."
-    filename = File.expand_path($product_output_path + filename).fix_filename
+    filename = File.expand_path($output_path + filename).fix_filename
     PostgresTools.start_recording(filename)
   end
 

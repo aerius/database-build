@@ -23,7 +23,7 @@ class PostgresTools
 
   # Execute PostgreSQL command(s) outside of a database.
   def self.execute_external_sql_command(command)
-    filename = $product_temp_path + 'execute_external_sql_command.tmp'
+    filename = $temp_path + 'execute_external_sql_command.tmp'
     write_unix_newline_file(filename, command)
     execute_postgres_command "#{get_psql()} --dbname \"postgres\" --file \"#{filename}\" --echo-all", "Error executing SQL external command: #{command}"
     # External commands aren't executed from inside a database; however it seems that if you do not specify a dbname, PostgreSQL will make something up.
@@ -32,7 +32,7 @@ class PostgresTools
 
   # Execute PostgreSQL command(s) on the current database.
   def self.execute_sql_command(command, original_filename = '')
-    filename = $product_temp_path + 'execute_sql_command.tmp'
+    filename = $temp_path + 'execute_sql_command.tmp'
     write_unix_newline_file(filename, command)
     execute_postgres_command "#{get_psql()} --dbname \"#{$database_name}\" --file \"#{filename}\" --echo-all",  "Error executing SQL command: #{command}", original_filename
     record(command)
@@ -62,8 +62,8 @@ class PostgresTools
               end
               variation_logger = BuildLogger.new
               variation_logger.hint_level = $hint_level
-              variation_logger.open($product_log_path, '', variation_tag)
-              filename = $product_temp_path + "execute_sql_command_multithread_#{variation_tag}.tmp"
+              variation_logger.open($log_path, '', variation_tag)
+              filename = $temp_path + "execute_sql_command_multithread_#{variation_tag}.tmp"
               write_unix_newline_file(filename, command_variation)
               psql_cmd = "#{get_psql(variation_logger)} --dbname \"#{$database_name}\" --file \"#{filename}\" --echo-all"
               execute_postgres_command psql_cmd,  "Error executing SQL command: #{command_variation}", original_filename, variation_logger
@@ -83,7 +83,7 @@ class PostgresTools
 
   # Execute a PostgreSQL command on the current database and returns the resultset as an array of hashes { columname string => value string }.
   def self.fetch_sql_command(command, original_filename = '', logger = $logger)
-    filename = $product_temp_path + 'execute_sql_command.tmp'
+    filename = $temp_path + 'execute_sql_command.tmp'
     write_unix_newline_file(filename, command)
     str = fetch_postgres_command("#{get_psql()} --dbname \"#{$database_name}\" --file \"#{filename}\" --tuples-only --expanded",  "Error executing SQL command: #{command}", original_filename, logger)
     # String to array with hashes...

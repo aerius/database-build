@@ -103,9 +103,6 @@ class Globals
     $temp_path = $temp_path.fix_pathname
     $output_path = $output_path.fix_pathname
     $log_path = $log_path.fix_pathname
-    $product_temp_path = $temp_path if $product_temp_path.nil?
-    $product_output_path = $output_path if $product_output_path.nil?
-    $product_log_path = $log_path if $product_log_path.nil?
 
     raise 'Database name prefix not set ($database_name_prefix)' if $database_name_prefix.nil?
     raise 'PostgreSQL bin path not set ($pg_bin_path)' if $pg_bin_path.nil?
