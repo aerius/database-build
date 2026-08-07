@@ -32,10 +32,11 @@ $database_template = 'template0'
 $database_tablespace = ''
 $database_collation = '' # Can override in ..\AppSettings.rb in case you need to force it, otherwise it is taken from the template
 
-#$database_name_prefix = '...' # Override in ..\AppSettings.rb
+$database_name_prefix = PathConventions::DEFAULT_DATABASE_NAME_PREFIX if $database_name_prefix.nil?
+
 
 # Datasource files .. common relative paths compared to base paths like https_data_path
-$dbdata_dir = 'dbdata/'
+$dbdata_dir = PathConventions::DBDATA_DIR.fix_pathname
 
 $db_essentials_function_prefix = 'system.'
 $db_unittest_prefix = 'unittest_'

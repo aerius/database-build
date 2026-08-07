@@ -97,7 +97,7 @@ $logger.writeln 'Build flags: ' + ($build_flags.empty? ? '<none>' : $build_flags
 $logger.writeln "Runscript: #{$runscript_file}"
 $logger.writeln "Product settings file: #{$product_settings_file}"
 $logger.writeln "User product settings file: #{$user_product_settings_file}" unless $user_product_settings_file.nil?
-$logger.writeln "Project settings file: #{$project_settings_file}"
+$logger.writeln "Project settings file: #{$project_settings_file_path}"
 $logger.writeln "User project settings file: #{$user_project_settings_file}" unless $user_project_settings_file.nil?
 $logger.writeln "Output path: #{$product_output_path}"
 

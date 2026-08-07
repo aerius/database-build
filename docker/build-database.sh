@@ -51,6 +51,9 @@ mkdir -p "${PGDATA}" && chown -R postgres:postgres "${PGDATA}" && chmod 777 "${P
 # create db-data folder for the repo
 mkdir -p "${DBDATA_PATH}"
 
+# Point the build at the Docker dbdata path (overrides workspace convention default)
+echo "\$dbdata_path = '${DBDATA_PATH}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
+
 # configure repo with the HTTPS credentials given if set
 [[ -n "${HTTPS_DATA_USERNAME}" ]] && echo "\$https_data_username = '${HTTPS_DATA_USERNAME}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"
 [[ -n "${HTTPS_DATA_PASSWORD}" ]] && echo "\$https_data_password = '${HTTPS_DATA_PASSWORD}'" >> "${DBCONFIG_PATH}/AeriusSettings.User.rb"

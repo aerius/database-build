@@ -1,4 +1,5 @@
 require 'Utility.rb'
+require 'PathConventions.rb'
 
 # Initialize all globals
 
@@ -39,71 +40,74 @@ class Globals
 
     # Load product override settings (mandatory)
     determine_product_settings_file(product_settings_file_argument)
-    #raise 'Product settings file unknown.' if $product_settings_file.nil?  # Code forgot to call Globals.determine_product_settings_file first.
     require $product_settings_file
     $user_product_settings_file = File.dirname($product_settings_file).fix_pathname + File.basename($product_settings_file, '.rb') + '.User.rb'
     $user_product_settings_file = nil unless File.exist?($user_product_settings_file)
     require $user_product_settings_file unless $user_product_settings_file.nil?
 
-    # Load project override settings (if specified)
-    if $project_settings_file.nil? then
-      puts 'WARNING: project settings file not set ($project_settings_file)'
-    else
-      $project_settings_file = File.expand_path($project_settings_file).fix_filename
-      $project_settings_file += '.rb' if !File.exist?($project_settings_file) && File.exist?($project_settings_file + '.rb')
-      raise "Project settings file '#{$project_settings_file}' not found" unless (File.exist?($project_settings_file) && !File.directory?($project_settings_file))
-      require $project_settings_file
-      $user_project_settings_file = File.dirname($project_settings_file).fix_pathname + File.basename($project_settings_file, '.rb') + '.User.rb'
-      $user_project_settings_file = nil unless File.exist?($user_project_settings_file)
-      require $user_project_settings_file unless $user_project_settings_file.nil?
-    end
-
-    # Process/validate everything
     raise "Product not set ($product)" if $product.nil?
-    raise "Product SQL path not set ($product_sql_path)" if $product_sql_path.nil?
-    raise "Product SQL path not found ($product_sql_path = \"#{$product_sql_path}\")" unless (File.exist?($product_sql_path) && File.directory?($product_sql_path))
-    raise "Product data path not set ($product_data_path)" if $product_data_path.nil?
-    raise "Product data path not found ($product_data_path = \"#{$product_data_path}\")" unless (File.exist?($product_data_path) && File.directory?($product_data_path))
-    raise "Temp path not set ($temp_path)" if $temp_path.nil?
-    raise "Output path not set ($output_path)" if $output_path.nil?
-    raise "Log path not set ($log_path)" if $log_path.nil?
-    raise "Datasource path not set ($dbdata_path)" if $dbdata_path.nil?
-    raise "Datasource path not found ($dbdata_path = \"#{$dbdata_path}\")" unless (File.exist?($dbdata_path) && File.directory?($dbdata_path))
-    raise "Runscripts path not found ($runscripts_path = \"#{$runscripts_path}\")" unless $runscripts_path.nil? || (File.exist?($runscripts_path) && File.directory?($runscripts_path))
+    raise "Source path not set ($source_path)" if $source_path.nil?
+    raise "Project settings file path not set ($project_settings_file_path)" if $project_settings_file_path.nil?
 
-    raise "Use either $common_sql_path or $common_sql_paths, not both" if !$common_sql_path.nil? && !$common_sql_paths.nil?
-    $common_sql_paths = [] if $common_sql_paths.nil? || !$common_sql_paths.is_a?(Array)
-    $common_sql_paths = [$common_sql_path] if $common_sql_paths.empty? && !$common_sql_path.nil?
-    # Add database-build common sql path
-    $common_sql_paths << File.expand_path("../common/src/main/sql", File.dirname($0)).fix_pathname
-    raise "Common SQL path(s) not set ($common_sql_path or $common_sql_paths)" if $common_sql_paths.empty?
+    # Resolve relative paths against the product settings directory
+    product_settings_dir = File.dirname($product_settings_file)
+    $source_path = PathConventions.expand_from(product_settings_dir, $source_path)
+    $project_settings_file_path = PathConventions.expand_from(product_settings_dir, $project_settings_file_path)
+
+    # Load project override settings
+    $project_settings_file_path += '.rb' if !File.exist?($project_settings_file_path) && File.exist?($project_settings_file_path + '.rb')
+    raise "Project settings file '#{$project_settings_file_path}' not found" unless (File.exist?($project_settings_file_path) && !File.directory?($project_settings_file_path))
+    require $project_settings_file_path
+    $user_project_settings_file = File.dirname($project_settings_file_path).fix_pathname + File.basename($project_settings_file_path, '.rb') + '.User.rb'
+    $user_project_settings_file = nil unless File.exist?($user_project_settings_file)
+    require $user_project_settings_file unless $user_project_settings_file.nil?
+
+    # Fixed paths from convention
+    $source_path = $source_path.fix_pathname
+    raise "Source path not found ($source_path = \"#{$source_path}\")" unless (File.exist?($source_path) && File.directory?($source_path))
+
+    $product_sql_path = PathConventions.join($source_path, PathConventions::SQL_REL, $product.to_s).fix_pathname
+    $product_data_path = PathConventions.join($source_path, PathConventions::DATA_REL, $product.to_s).fix_pathname
+    raise "Product SQL path not found ($product_sql_path = \"#{$product_sql_path}\")" unless (File.exist?($product_sql_path) && File.directory?($product_sql_path))
+    raise "Product data path not found ($product_data_path = \"#{$product_data_path}\")" unless (File.exist?($product_data_path) && File.directory?($product_data_path))
+
+    $common_sql_paths = [
+      PathConventions.dir_if_exists($source_path, PathConventions::SQL_REL, PathConventions::COMMON_DIR),
+      PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_SQL_REL),
+      PathConventions.join(PathConventions.database_build_root, PathConventions::BUILTIN_COMMON_SQL_REL).fix_pathname
+    ].compact
     $common_sql_paths.each_with_index { |common_sql_path, idx|
       raise "Common SQL path not found ($common_sql_paths[#{idx}] = \"#{common_sql_path}\")" unless (File.exist?(common_sql_path) && File.directory?(common_sql_path))
     }
 
-    raise "Use either $common_data_path or $common_data_paths, not both" if !$common_data_path.nil? && !$common_data_paths.nil?
-    $common_data_paths = [] if $common_data_paths.nil? || !$common_data_paths.is_a?(Array)
-    $common_data_paths = [$common_data_path] if $common_data_paths.empty? && !$common_data_path.nil?
+    $common_data_paths = [
+      PathConventions.dir_if_exists($source_path, PathConventions::DATA_REL, PathConventions::COMMON_DIR),
+      PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_DATA_REL)
+    ].compact
     $common_data_paths.each_with_index { |common_data_path, idx|
-      raise "Common SQL path not found ($common_data_paths[#{idx}] = \"#{common_data_path}\")" unless (File.exist?(common_data_path) && File.directory?(common_data_path))
+      raise "Common data path not found ($common_data_paths[#{idx}] = \"#{common_data_path}\")" unless (File.exist?(common_data_path) && File.directory?(common_data_path))
     }
 
-    $product_sql_path = $product_sql_path.fix_pathname
-    $product_data_path = $product_data_path.fix_pathname
-    $dbdata_path = $dbdata_path.fix_pathname
-    $runscripts_path = $runscripts_path.fix_pathname unless $runscripts_path.nil?
+    $runscripts_path = PathConventions.join(File.dirname($project_settings_file_path), PathConventions::RUNSCRIPTS_REL).fix_pathname
+    raise "Runscripts path not found ($runscripts_path = \"#{$runscripts_path}\")" unless (File.exist?($runscripts_path) && File.directory?($runscripts_path))
 
-    $common_sql_paths.map! { |common_sql_path| common_sql_path.fix_pathname }
-    $common_data_paths.map! { |common_data_path| common_data_path.fix_pathname }
+    # Overridable defaults
+    $dbdata_dir = PathConventions::DBDATA_DIR.fix_pathname if $dbdata_dir.nil? || $dbdata_dir.to_s.empty?
+    $dbdata_path = PathConventions.join(PathConventions.workspace_root, $dbdata_dir).fix_pathname if $dbdata_path.nil?
+    $dbdata_path = $dbdata_path.fix_pathname
+    raise "Datasource path not found ($dbdata_path = \"#{$dbdata_path}\")" unless (File.exist?($dbdata_path) && File.directory?($dbdata_path))
+
+    raise "Temp path not set ($temp_path)" if $temp_path.nil?
+    raise "Output path not set ($output_path)" if $output_path.nil?
+    raise "Log path not set ($log_path)" if $log_path.nil?
 
     $temp_path = $temp_path.fix_pathname
     $output_path = $output_path.fix_pathname
     $log_path = $log_path.fix_pathname
-    $product_temp_path = $temp_path if $product_temp_path.nil?       # /database/target/
-    $product_output_path = $output_path if $product_output_path.nil? # /database/target/build/
-    $product_log_path = $log_path if $product_log_path.nil?          # /database/target/log/
+    $product_temp_path = $temp_path if $product_temp_path.nil?
+    $product_output_path = $output_path if $product_output_path.nil?
+    $product_log_path = $log_path if $product_log_path.nil?
 
-    # Standalone paths and settings
     raise 'Database name prefix not set ($database_name_prefix)' if $database_name_prefix.nil?
     raise 'PostgreSQL bin path not set ($pg_bin_path)' if $pg_bin_path.nil?
     raise "PostgreSQL bin path not found ($pg_bin_path = \"#{$pg_bin_path}\")" unless ((File.exist?($pg_bin_path) && File.directory?($pg_bin_path)) || (!ON_WINDOWS && $pg_bin_path.empty?))
