@@ -198,7 +198,7 @@ class BuildConfig
     self
   end
 
-  # Fixed banner of resolved $build_config values (masks secrets).
+  # Log the resolved $build_config values (masks secrets), using the supplied logger object.
   def log!(logger)
     logger.writeln "product: #{product}"
     log_struct!(logger, 'layout', layout)
