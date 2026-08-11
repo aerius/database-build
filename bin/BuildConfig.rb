@@ -5,12 +5,13 @@ HINT_LEVEL_ALL = 2
 ##
 # Build settings and derived layout paths ($build_config), grouped for clarity.
 #
-# Call order (see SettingsLoader.load_settings / Build.rb):
+# Call order (see SettingsLoader.load_settings):
 #   1. BuildConfig.new_empty
 #   2. apply_defaults!                         — fill defaults on the empty config
 #   3. require product settings                — assign product / layout.* (overrides)
 #   4. finalize!(product_settings_dir:)        — load App/UserSettings, derive & validate paths
-#   5. log!(logger)                            — optional; dump resolved config (Build.rb)
+#   5. optional runscript resolve              — after finalize (needs layout.runscripts_path)
+#   6. log!(logger)                            — optional; dump resolved config (Build.rb)
 #
 # Settings files assign into $build_config; overrides in steps 3–4 replace defaults from step 2.
 #
@@ -183,16 +184,15 @@ class BuildConfig
     raise 'Log path not set ($build_config.output.log_path)' if output.log_path.nil?
     raise 'Database name prefix not set ($build_config.postgres.name_prefix)' if postgres.name_prefix.nil?
     raise 'PostgreSQL bin path not set ($build_config.postgres.bin_path)' if postgres.bin_path.nil?
-    raise "PostgreSQL bin path not found (\"#{postgres.bin_path}\")" unless (
-      (File.exist?(postgres.bin_path) && File.directory?(postgres.bin_path)) || (!ON_WINDOWS && postgres.bin_path.empty?)
-    )
+    unless !ON_WINDOWS && postgres.bin_path.empty?
+      postgres.bin_path = PathUtils.ensure_dir!(postgres.bin_path, 'postgres.bin_path')
+    end
     raise 'PostgreSQL username not set ($build_config.postgres.username)' if postgres.username.nil? || postgres.username.to_s.empty?
     raise 'PostgreSQL password not set ($build_config.postgres.password)' if postgres.password.nil? || postgres.password.to_s.empty?
 
     output.log_path = output.log_path.fix_pathname
     output.output_path = output.output_path.fix_pathname
     output.temp_path = output.temp_path.fix_pathname
-    postgres.bin_path = postgres.bin_path.fix_pathname unless postgres.bin_path.empty?
     tools.git_bin_path = tools.git_bin_path.fix_pathname unless (tools.git_bin_path.nil? || tools.git_bin_path.empty?)
 
     self

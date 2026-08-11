@@ -8,30 +8,14 @@ require 'BuildConfig.rb'
 $build_config = nil
 
 ##
-# Loads product/App/User settings into $build_config and resolves runscript paths.
+# CLI bootstrap for $build_config: resolve ARGV paths, require product settings, finalize.
+# App/User settings are loaded inside BuildConfig#finalize!.
 #
 class SettingsLoader
 
-  # Determine full runscript filename. First absolute path or relative to CWD. Otherwise use $build_config.layout.runscripts_path.
-  def self.determine_runscript_file(runscript_file_argument)
-    if runscript_file_argument.nil? then
-      puts 'Specify a runscript. See --help for more information.'
-      exit
-    else
-      runscript_file = File.expand_path(runscript_file_argument).fix_filename
-      runscript_file += '.rb' if !File.exist?(runscript_file) && File.exist?(runscript_file + '.rb')
-
-      unless (File.exist?(runscript_file) && !File.directory?(runscript_file)) || $build_config.nil? then
-        runscript_file = ($build_config.layout.runscripts_path + runscript_file_argument).fix_filename
-        runscript_file += '.rb' if !File.exist?(runscript_file) && File.exist?(runscript_file + '.rb')
-      end
-
-      $build_config.session.runscript_file = PathUtils.ensure_file!(runscript_file, 'runscript_file')
-    end
-  end
-
-  # Load buildsystem, product, AppSettings and UserSettings into $build_config
-  def self.load_settings(product_settings_file_argument)
+  # Load product settings into $build_config and finalize. If runscript_file_argument is
+  # given, resolve it after finalize (needs layout.runscripts_path).
+  def self.load_settings(product_settings_file_argument, runscript_file_argument = nil)
     $build_config = BuildConfig.new_empty
     $build_config.apply_defaults!
 
@@ -41,20 +25,50 @@ class SettingsLoader
     require product_settings_file
 
     $build_config.finalize!(product_settings_dir: File.dirname(product_settings_file))
+
+    determine_runscript_file(runscript_file_argument) unless runscript_file_argument.nil?
   end
 
  private
+
+  # Expand path_argument; if not a file, try appending each suffix in order.
+  # Returns the first existing non-directory path, or the expanded path if none match.
+  def self.expand_with_suffixes(path_argument, suffixes)
+    path = File.expand_path(path_argument).form_filename
+    return path if file?(path)
+    suffixes.each do |suffix|
+      candidate = (path + suffix).form_filename
+      return candidate if file?(candidate)
+    end
+    path
+  end
+
+  def self.file?(path)
+    File.exist?(path) && !File.directory?(path)
+  end
 
   def self.determine_product_settings_file(product_settings_file_argument)
     if product_settings_file_argument.nil? || product_settings_file_argument.start_with?('-') then
       puts 'Specify a product-settings file. See --help for more information.'
       exit
     else
-      product_settings_file = File.expand_path(product_settings_file_argument).fix_filename
-      product_settings_file += '.rb' if !File.exist?(product_settings_file) && File.exist?(product_settings_file + '.rb')
-      product_settings_file += 'Settings.rb' if !File.exist?(product_settings_file) && File.exist?(product_settings_file + 'Settings.rb')
+      product_settings_file = expand_with_suffixes(product_settings_file_argument, ['.rb', 'Settings.rb'])
+      # Cannot live in BuildConfig#finalize!: must exist before require and before
       return PathUtils.ensure_file!(product_settings_file, 'product_settings_file')
     end
+  end
+
+  # First absolute path or relative to CWD; otherwise under layout.runscripts_path.
+  def self.determine_runscript_file(runscript_file_argument)
+    runscript_file = expand_with_suffixes(runscript_file_argument, ['.rb'])
+
+    unless file?(runscript_file) || $build_config.nil? then
+      under_scripts = ($build_config.layout.runscripts_path + runscript_file_argument).form_filename
+      runscript_file = expand_with_suffixes(under_scripts, ['.rb'])
+    end
+
+    # Cannot live in Globals#finalize!: ARGV runscript is resolved here after finalize,
+    $build_config.session.runscript_file = PathUtils.ensure_file!(runscript_file, 'runscript_file')
   end
 
 end
