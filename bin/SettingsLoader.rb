@@ -1,5 +1,6 @@
 require 'Utility.rb'
 require 'PathConventions.rb'
+require 'PathUtils.rb'
 require 'GitUtility.rb'
 require 'BuildConfig.rb'
 
@@ -7,23 +8,9 @@ require 'BuildConfig.rb'
 $build_config = nil
 
 ##
-# Class with a load-methods
+# Loads product/App/User settings into $build_config and resolves runscript paths.
 #
-class Globals
-
-  # Normalize path and raise unless it exists as a directory.
-  def self.ensure_dir!(path, label)
-    path = path.fix_pathname
-    raise "#{label} not found (#{label} = \"#{path}\")" unless File.exist?(path) && File.directory?(path)
-    path
-  end
-
-  # Normalize path and raise unless it exists as a file.
-  def self.ensure_file!(path, label)
-    path = path.fix_filename
-    raise "#{label} not found (#{label} = \"#{path}\")" unless File.exist?(path) && !File.directory?(path)
-    path
-  end
+class SettingsLoader
 
   # Determine full runscript filename. First absolute path or relative to CWD. Otherwise use $build_config.layout.runscripts_path.
   def self.determine_runscript_file(runscript_file_argument)
@@ -39,7 +26,7 @@ class Globals
         runscript_file += '.rb' if !File.exist?(runscript_file) && File.exist?(runscript_file + '.rb')
       end
 
-      $build_config.session.runscript_file = ensure_file!(runscript_file, 'runscript_file')
+      $build_config.session.runscript_file = PathUtils.ensure_file!(runscript_file, 'runscript_file')
     end
   end
 
@@ -66,7 +53,7 @@ class Globals
       product_settings_file = File.expand_path(product_settings_file_argument).fix_filename
       product_settings_file += '.rb' if !File.exist?(product_settings_file) && File.exist?(product_settings_file + '.rb')
       product_settings_file += 'Settings.rb' if !File.exist?(product_settings_file) && File.exist?(product_settings_file + 'Settings.rb')
-      return ensure_file!(product_settings_file, 'product_settings_file')
+      return PathUtils.ensure_file!(product_settings_file, 'product_settings_file')
     end
   end
 

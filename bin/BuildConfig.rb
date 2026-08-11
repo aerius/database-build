@@ -5,7 +5,7 @@ HINT_LEVEL_ALL = 2
 ##
 # Build settings and derived layout paths ($build_config), grouped for clarity.
 #
-# Call order (see Globals.load_settings / Build.rb):
+# Call order (see SettingsLoader.load_settings / Build.rb):
 #   1. BuildConfig.new_empty
 #   2. apply_defaults!                         — fill defaults on the empty config
 #   3. require product settings                — assign product / layout.* (overrides)
@@ -119,12 +119,12 @@ class BuildConfig
     raise 'Build config path not set ($build_config.layout.build_config_path)' if layout.build_config_path.nil?
 
     layout.source_path = PathConventions.expand_from(product_settings_dir, layout.source_path)
-    layout.build_config_path = Globals.ensure_dir!(
+    layout.build_config_path = PathUtils.ensure_dir!(
       PathConventions.expand_from(product_settings_dir, layout.build_config_path),
       'build_config_path'
     )
 
-    layout.app_settings_file = Globals.ensure_file!(
+    layout.app_settings_file = PathUtils.ensure_file!(
       PathConventions.join(layout.build_config_path, CONFIG_DIR, APP_SETTINGS_FILE),
       'app_settings_file'
     )
@@ -136,7 +136,7 @@ class BuildConfig
     layout.user_settings_file = nil unless File.exist?(layout.user_settings_file)
     require layout.user_settings_file unless layout.user_settings_file.nil?
 
-    layout.source_path = Globals.ensure_dir!(layout.source_path, 'source_path')
+    layout.source_path = PathUtils.ensure_dir!(layout.source_path, 'source_path')
 
     # Convention: source/src/{main,data}/sql/<product>/; optional override when already set.
     layout.product_sql_path = if layout.product_sql_path.nil?
@@ -144,14 +144,14 @@ class BuildConfig
     else
       PathConventions.expand_from(layout.source_path, layout.product_sql_path)
     end
-    layout.product_sql_path = Globals.ensure_dir!(layout.product_sql_path, 'product_sql_path')
+    layout.product_sql_path = PathUtils.ensure_dir!(layout.product_sql_path, 'product_sql_path')
 
     layout.product_data_path = if layout.product_data_path.nil?
       PathConventions.join(layout.source_path, PathConventions::DATA_REL, product.to_s)
     else
       PathConventions.expand_from(layout.source_path, layout.product_data_path)
     end
-    layout.product_data_path = Globals.ensure_dir!(layout.product_data_path, 'product_data_path')
+    layout.product_data_path = PathUtils.ensure_dir!(layout.product_data_path, 'product_data_path')
 
     layout.common_sql_paths = [
       PathConventions.internal_modules_sql(layout.source_path),
@@ -159,7 +159,7 @@ class BuildConfig
       PathConventions.join(PathConventions.database_build_root, PathConventions::BUILTIN_COMMON_SQL_REL).fix_pathname
     ].compact
     layout.common_sql_paths.map!.with_index { |path, idx|
-      Globals.ensure_dir!(path, "common_sql_paths[#{idx}]")
+      PathUtils.ensure_dir!(path, "common_sql_paths[#{idx}]")
     }
 
     layout.common_data_paths = [
@@ -167,16 +167,16 @@ class BuildConfig
       PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_DATA_REL)
     ].compact
     layout.common_data_paths.map!.with_index { |path, idx|
-      Globals.ensure_dir!(path, "common_data_paths[#{idx}]")
+      PathUtils.ensure_dir!(path, "common_data_paths[#{idx}]")
     }
 
-    layout.runscripts_path = Globals.ensure_dir!(
+    layout.runscripts_path = PathUtils.ensure_dir!(
       PathConventions.join(layout.build_config_path, SCRIPTS_DIR),
       'runscripts_path'
     )
 
     layout.dbdata_path = PathConventions.join(PathConventions.workspace_root, PathConventions::DBDATA_DIR) if layout.dbdata_path.nil?
-    layout.dbdata_path = Globals.ensure_dir!(layout.dbdata_path, 'dbdata_path')
+    layout.dbdata_path = PathUtils.ensure_dir!(layout.dbdata_path, 'dbdata_path')
 
     raise 'Temp path not set ($build_config.output.temp_path)' if output.temp_path.nil?
     raise 'Output path not set ($build_config.output.output_path)' if output.output_path.nil?

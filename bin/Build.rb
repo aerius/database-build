@@ -57,9 +57,9 @@ display_help if opts.has_key?('--help')
 # ------------------------------------
 
 # Settings
-require 'Globals.rb'
-Globals.load_settings(ARGV.size > 1 ? ARGV[1] : nil)
-Globals.determine_runscript_file(ARGV.size > 0 ? ARGV[0] : nil)
+require 'SettingsLoader.rb'
+SettingsLoader.load_settings(ARGV.size > 1 ? ARGV[1] : nil)
+SettingsLoader.determine_runscript_file(ARGV.size > 0 ? ARGV[0] : nil)
 
 # Logger
 require 'BuildLogger.rb'
