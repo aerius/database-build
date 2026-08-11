@@ -44,9 +44,14 @@ Layout path defaults (specified under `layout` in the `BuildConfig.rb`):
 |---|---|
 | `product_sql_path` | `<source_path>/src/main/sql/<product>/` |
 | `product_data_path` | `<source_path>/src/data/sql/<product>/` |
-| `common_sql_paths` | existing among `<source_path>/../modules/src/main/sql`, `<workspace>/database-modules/source/modules/src/main/sql`, and `database-build/common/src/main/sql` |
-| `common_data_paths` | existing among `<source_path>/../modules/src/data/sql` and `<workspace>/database-modules/source/modules/src/data/sql` |
 | `runscripts_path` | `<build_config_path>/scripts/` |
+| `common_sql_paths` / `common_data_paths` | Arrays of dirs that exist from the locations below |
+
+Common module locations (each type its own entry):
+
+- **Internal** (beside product source) — optional. Same parent as `<source_path>`: `modules/src/main/sql` and `modules/src/data/sql`.
+- **External** — optional. For now: fixed checkout name `database-modules` next to `database-build`, with fixed paths inside that repo: `source/modules/src/main/sql` and `source/modules/src/data/sql` (i.e. `<workspace>/database-modules/source/modules/src/{main,data}/sql`).
+- **Builtin** (SQL only) — required. `database-build/common/src/main/sql`.
 
 The workspace root is the parent directory of the `database-build` checkout (sibling repos such as `database-modules` and `dbdata` live there).
 
