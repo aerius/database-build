@@ -1,6 +1,6 @@
 require 'Utility.rb'
 require 'PathConventions.rb'
-require 'PathUtils.rb'
+require 'PathAssert.rb'
 require 'GitUtility.rb'
 require 'BuildConfig.rb'
 
@@ -29,8 +29,11 @@ class SettingsLoader
     determine_runscript_file(runscript_file_argument) unless runscript_file_argument.nil?
   end
 
-  # Private helpers
+  #
+  # Private section
+  #
   private
+
   # Expand path_argument; if not a file, try appending each suffix in order.
   # Returns the first existing non-directory path, or the expanded path if none match.
   def self.expand_with_suffixes(path_argument, suffixes)
@@ -54,7 +57,7 @@ class SettingsLoader
     else
       product_settings_file = expand_with_suffixes(product_settings_file_argument, ['.rb', 'Settings.rb'])
       # Cannot live in BuildConfig#finalize!: must exist before require and before
-      return PathUtils.ensure_file!(product_settings_file, 'product_settings_file')
+      return PathAssert.ensure_file!(product_settings_file, 'product_settings_file')
     end
   end
 
@@ -68,7 +71,7 @@ class SettingsLoader
     end
 
     # Cannot live in BuildConfig#finalize!: ARGV runscript is resolved here after finalize,
-    $build_config.session.runscript_file = PathUtils.ensure_file!(runscript_file, 'runscript_file')
+    $build_config.session.runscript_file = PathAssert.ensure_file!(runscript_file, 'runscript_file')
   end
 
 end

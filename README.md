@@ -7,7 +7,7 @@ Build tooling for PostgreSQL database projects.
 Product settings only need:
 
 ```ruby
-$build_config.product = :calculator_nl
+$build_config.product = :example_product
 $build_config.layout.source_path = '.'
 $build_config.layout.build_config_path = 'src/build'
 ```
@@ -50,7 +50,7 @@ Layout path defaults (specified under `layout` in the `BuildConfig.rb`):
 Common module locations (each type its own entry):
 
 - **Internal** (beside product source) — optional. Same parent as `<source_path>`: `modules/src/main/sql` and `modules/src/data/sql`.
-- **External** — optional. For now: fixed checkout name `database-modules` next to `database-build`, with fixed paths inside that repo: `source/modules/src/main/sql` and `source/modules/src/data/sql` (i.e. `<workspace>/database-modules/source/modules/src/{main,data}/sql`).
+- **External** — optional. For now: fixed checkout name `database-modules` next to `database-build`, with fixed paths inside that repo: `source/modules/src/main/sql` and `source/modules/src/data/sql` (i.e. ` /database-modules/source/modules/src/{main,data}/sql`).
 - **Builtin** (SQL only) — required. `database-build/common/src/main/sql`.
 
 The workspace root is the parent directory of the `database-build` checkout (sibling repos such as `database-modules` and `dbdata` live there).

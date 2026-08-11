@@ -11,8 +11,11 @@ class DataSourceCollector
     return parse_load_rb(logger, parse_path, common_data_paths, data_folder)
   end
 
-  # Private helpers
+  #
+  # Private section
+  #
   private
+
   # Given a folder, open the load.rb in there and parse the SQL files and folders it references
   def self.parse_load_rb(logger, parse_path, common_data_paths, data_folder = nil)
     data_folder.chomp!('/') unless data_folder.nil? # for search & replace

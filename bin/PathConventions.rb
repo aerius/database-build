@@ -52,8 +52,11 @@ module PathConventions
     expanded.form_filename
   end
 
-  # Private helpers
+  #
+  # Private section
+  #
   private
+
   def self.is_absolute?(path)
     path.start_with?('/') || path.match?(%r{^[A-Za-z]:[\\/]})
   end

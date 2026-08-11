@@ -120,12 +120,12 @@ class BuildConfig
     raise 'Build config path not set ($build_config.layout.build_config_path)' if layout.build_config_path.nil?
 
     layout.source_path = PathConventions.expand_from(product_settings_dir, layout.source_path)
-    layout.build_config_path = PathUtils.ensure_dir!(
+    layout.build_config_path = PathAssert.ensure_dir!(
       PathConventions.expand_from(product_settings_dir, layout.build_config_path),
       'build_config_path'
     )
 
-    layout.app_settings_file = PathUtils.ensure_file!(
+    layout.app_settings_file = PathAssert.ensure_file!(
       PathConventions.join(layout.build_config_path, CONFIG_DIR, APP_SETTINGS_FILE),
       'app_settings_file'
     )
@@ -137,7 +137,7 @@ class BuildConfig
     layout.user_settings_file = nil unless File.exist?(layout.user_settings_file)
     require layout.user_settings_file unless layout.user_settings_file.nil?
 
-    layout.source_path = PathUtils.ensure_dir!(layout.source_path, 'source_path')
+    layout.source_path = PathAssert.ensure_dir!(layout.source_path, 'source_path')
 
     # Convention: source/src/{main,data}/sql/<product>/; optional override when already set.
     layout.product_sql_path = if layout.product_sql_path.nil?
@@ -145,14 +145,14 @@ class BuildConfig
     else
       PathConventions.expand_from(layout.source_path, layout.product_sql_path)
     end
-    layout.product_sql_path = PathUtils.ensure_dir!(layout.product_sql_path, 'product_sql_path')
+    layout.product_sql_path = PathAssert.ensure_dir!(layout.product_sql_path, 'product_sql_path')
 
     layout.product_data_path = if layout.product_data_path.nil?
       PathConventions.join(layout.source_path, PathConventions::DATA_REL, product.to_s)
     else
       PathConventions.expand_from(layout.source_path, layout.product_data_path)
     end
-    layout.product_data_path = PathUtils.ensure_dir!(layout.product_data_path, 'product_data_path')
+    layout.product_data_path = PathAssert.ensure_dir!(layout.product_data_path, 'product_data_path')
 
     layout.common_sql_paths = [
       PathConventions.internal_modules_sql(layout.source_path),
@@ -160,7 +160,7 @@ class BuildConfig
       PathConventions.join(PathConventions.database_build_root, PathConventions::BUILTIN_COMMON_SQL_REL).fix_pathname
     ].compact
     layout.common_sql_paths.map!.with_index { |path, idx|
-      PathUtils.ensure_dir!(path, "common_sql_paths[#{idx}]")
+      PathAssert.ensure_dir!(path, "common_sql_paths[#{idx}]")
     }
 
     layout.common_data_paths = [
@@ -168,16 +168,16 @@ class BuildConfig
       PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_DATA_REL)
     ].compact
     layout.common_data_paths.map!.with_index { |path, idx|
-      PathUtils.ensure_dir!(path, "common_data_paths[#{idx}]")
+      PathAssert.ensure_dir!(path, "common_data_paths[#{idx}]")
     }
 
-    layout.runscripts_path = PathUtils.ensure_dir!(
+    layout.runscripts_path = PathAssert.ensure_dir!(
       PathConventions.join(layout.build_config_path, SCRIPTS_DIR),
       'runscripts_path'
     )
 
     layout.dbdata_path = PathConventions.join(PathConventions.workspace_root, PathConventions::DBDATA_DIR) if layout.dbdata_path.nil?
-    layout.dbdata_path = PathUtils.ensure_dir!(layout.dbdata_path, 'dbdata_path')
+    layout.dbdata_path = PathAssert.ensure_dir!(layout.dbdata_path, 'dbdata_path')
 
     raise 'Temp path not set ($build_config.output.temp_path)' if output.temp_path.nil?
     raise 'Output path not set ($build_config.output.output_path)' if output.output_path.nil?
@@ -185,7 +185,7 @@ class BuildConfig
     raise 'Database name prefix not set ($build_config.postgres.name_prefix)' if postgres.name_prefix.nil?
     raise 'PostgreSQL bin path not set ($build_config.postgres.bin_path)' if postgres.bin_path.nil?
     unless !ON_WINDOWS && postgres.bin_path.empty?
-      postgres.bin_path = PathUtils.ensure_dir!(postgres.bin_path, 'postgres.bin_path')
+      postgres.bin_path = PathAssert.ensure_dir!(postgres.bin_path, 'postgres.bin_path')
     end
     raise 'PostgreSQL username not set ($build_config.postgres.username)' if postgres.username.nil? || postgres.username.to_s.empty?
     raise 'PostgreSQL password not set ($build_config.postgres.password)' if postgres.password.nil? || postgres.password.to_s.empty?
@@ -208,8 +208,11 @@ class BuildConfig
     log_struct!(logger, 'session', session)
   end
 
-  # Private helpers
+  #
+  # Private section
+  #
   private
+
   def log_struct!(logger, name, struct, mask: [])
     struct.members.each do |member|
       value = struct[member]

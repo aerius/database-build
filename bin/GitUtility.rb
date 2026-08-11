@@ -45,8 +45,11 @@ class GitUtility
     return run_git(path, 'status --porcelain') != nil
   end
 
-  # Private helpers
+  #
+  # Private section
+  #
   private
+
   # Git executable for shell invocation: PATH name or quoted path when git bin path is set.
   def self.git_exe
     return $build_config.tools.git_bin_path.to_s.empty? ? 'git' : "\"#{$build_config.tools.git_bin_path}git\""

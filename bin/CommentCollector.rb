@@ -102,8 +102,11 @@ class CommentCollector
     return comments
   end
 
-  # Private helpers
+  #
+  # Private section
+  #
   private
+
   def self.process_comment_block(logger, comments, object, identifier, arguments, comment, file, default_schema = nil)
     comment_item = create_comment_item(object, identifier, arguments)
     comment_item.file = file

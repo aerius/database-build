@@ -85,8 +85,11 @@ class HTTPSDownloader
     end
   end
 
-  # Private helpers
+  #
+  # Private section
+  #
   private
+
   def set_auth(req)
     req.basic_auth @username, @password unless @username.nil? || @password.nil?
   end

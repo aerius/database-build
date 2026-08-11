@@ -21,8 +21,11 @@ class CommonModulesUtility
     return false
   end
 
-  # Private helpers
+  #
+  # Private section
+  #
   private
+
   # Returns array of entry hashes (repo_url, commit_hash, sql_paths, data_paths, had_uncommitted_changes), one per unique repo. Paths not in a git repo are skipped. Order: by repo_url, then commit_hash.
   def self.build_common_module_repos(common_sql_paths, common_data_paths)
     groups = {}

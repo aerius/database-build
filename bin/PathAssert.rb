@@ -1,18 +1,18 @@
 ##
 # Path existence checks used when resolving build layout paths.
 #
-class PathUtils
+class PathAssert
 
   # Ensure path is an existing directory; label is used for the raise message.
   def self.ensure_dir!(path, label)
-    path = path.fix_pathname
+    path = path.form_pathname
     raise "#{path} not found for: #{label}" unless File.exist?(path) && File.directory?(path)
     path
   end
 
   # Ensure path is an existing file; label is used for the raise message.
   def self.ensure_file!(path, label)
-    path = path.fix_filename
+    path = path.form_filename
     raise "#{path} not found for: #{label}" unless File.exist?(path) && !File.directory?(path)
     path
   end
