@@ -38,16 +38,12 @@ class SettingsLoader
   # Returns the first existing non-directory path, or the expanded path if none match.
   def self.expand_with_suffixes(path_argument, suffixes)
     path = File.expand_path(path_argument).form_filename
-    return path if file?(path)
+    return path if File.file?(path)
     suffixes.each do |suffix|
       candidate = (path + suffix).form_filename
-      return candidate if file?(candidate)
+      return candidate if File.file?(candidate)
     end
     path
-  end
-
-  def self.file?(path)
-    File.exist?(path) && !File.directory?(path)
   end
 
   def self.determine_product_settings_file(product_settings_file_argument)
@@ -65,7 +61,7 @@ class SettingsLoader
   def self.determine_runscript_file(runscript_file_argument)
     runscript_file = expand_with_suffixes(runscript_file_argument, ['.rb'])
 
-    unless file?(runscript_file) || $build_config.nil? then
+    unless File.file?(runscript_file) || $build_config.nil? then
       under_scripts = ($build_config.layout.runscripts_path + runscript_file_argument).form_filename
       runscript_file = expand_with_suffixes(under_scripts, ['.rb'])
     end
