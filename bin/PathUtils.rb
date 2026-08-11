@@ -3,17 +3,17 @@
 #
 class PathUtils
 
-  # Normalize path and raise unless it exists as a directory.
+  # Ensure path is an existing directory; label is used for the raise message.
   def self.ensure_dir!(path, label)
     path = path.fix_pathname
-    raise "#{label} not found (#{label} = \"#{path}\")" unless File.exist?(path) && File.directory?(path)
+    raise "#{path} not found for: #{label}" unless File.exist?(path) && File.directory?(path)
     path
   end
 
-  # Normalize path and raise unless it exists as a file.
+  # Ensure path is an existing file; label is used for the raise message.
   def self.ensure_file!(path, label)
     path = path.fix_filename
-    raise "#{label} not found (#{label} = \"#{path}\")" unless File.exist?(path) && !File.directory?(path)
+    raise "#{path} not found for: #{label}" unless File.exist?(path) && !File.directory?(path)
     path
   end
 
