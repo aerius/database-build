@@ -37,10 +37,10 @@ class SettingsLoader
   # Expand path_argument; if not a file, try appending each suffix in order.
   # Returns the first existing non-directory path, or the expanded path if none match.
   def self.expand_with_suffixes(path_argument, suffixes)
-    path = File.expand_path(path_argument).form_filename
+    path = File.expand_path(path_argument).fix_filename
     return path if File.file?(path)
     suffixes.each do |suffix|
-      candidate = (path + suffix).form_filename
+      candidate = (path + suffix).fix_filename
       return candidate if File.file?(candidate)
     end
     path
@@ -62,7 +62,7 @@ class SettingsLoader
     runscript_file = expand_with_suffixes(runscript_file_argument, ['.rb'])
 
     unless File.file?(runscript_file) || $build_config.nil? then
-      under_scripts = ($build_config.layout.runscripts_path + runscript_file_argument).form_filename
+      under_scripts = ($build_config.layout.runscripts_path + runscript_file_argument).fix_filename
       runscript_file = expand_with_suffixes(under_scripts, ['.rb'])
     end
 

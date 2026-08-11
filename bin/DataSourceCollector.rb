@@ -20,7 +20,7 @@ class DataSourceCollector
   def self.parse_load_rb(logger, parse_path, common_data_paths, data_folder = nil)
     data_folder.chomp!('/') unless data_folder.nil? # for search & replace
 
-    parse_path = parse_path.form_pathname
+    parse_path = parse_path.fix_pathname
     rb_filename = parse_path + 'load.rb'
     logger.error "Could not find file: #{rb_filename}" unless File.exist?(rb_filename)
 

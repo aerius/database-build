@@ -9,8 +9,8 @@ class GitUtility
 
     if ON_WINDOWS then
       path = nil
-      path = ENV['ProgramFiles(x86)'].form_pathname + 'Git/cmd/' unless ENV['ProgramFiles(x86)'].nil?
-      path = ENV['ProgramFiles'].form_pathname + 'Git/cmd/' if path.nil? && !ENV['ProgramFiles'].nil?
+      path = ENV['ProgramFiles(x86)'].fix_pathname + 'Git/cmd/' unless ENV['ProgramFiles(x86)'].nil?
+      path = ENV['ProgramFiles'].fix_pathname + 'Git/cmd/' if path.nil? && !ENV['ProgramFiles'].nil?
       return path.nil? ? '' : path  # empty: assume git is on PATH
     else # Linux / other
       return ''  # assume git is on PATH

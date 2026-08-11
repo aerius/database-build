@@ -28,7 +28,7 @@ module PathConventions
 
   def self.dir_if_exists(*parts)
     path = join(*parts)
-    (File.exist?(path) && File.directory?(path)) ? path.form_pathname : nil
+    (File.exist?(path) && File.directory?(path)) ? path.fix_pathname : nil
   end
 
   # Internal modules sit beside $source_path: <parent>/modules/src/{main,data}/sql
@@ -49,7 +49,7 @@ module PathConventions
     path = '.' if path.empty?
 
     expanded = is_absolute?(path) ? File.expand_path(path) : File.expand_path(path, base_dir)
-    expanded.form_filename
+    expanded.fix_filename
   end
 
   #
