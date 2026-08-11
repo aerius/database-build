@@ -139,8 +139,8 @@ class PostgresTools
     @@recorder_file = nil
   end
 
- private
-
+  # Private helpers
+  private
   # Commandline for psql command.
   def self.get_psql(logger = $logger)
     connectionstring = ''
@@ -306,5 +306,7 @@ class PostgresTools
       @@recorder_file.write(sql + appender) # I think write operations are atomic, i.e. thread-safe.
     end
   end
+
+
 
 end

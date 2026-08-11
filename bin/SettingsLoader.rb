@@ -29,8 +29,8 @@ class SettingsLoader
     determine_runscript_file(runscript_file_argument) unless runscript_file_argument.nil?
   end
 
- private
-
+  # Private helpers
+  private
   # Expand path_argument; if not a file, try appending each suffix in order.
   # Returns the first existing non-directory path, or the expanded path if none match.
   def self.expand_with_suffixes(path_argument, suffixes)
@@ -67,7 +67,7 @@ class SettingsLoader
       runscript_file = expand_with_suffixes(under_scripts, ['.rb'])
     end
 
-    # Cannot live in Globals#finalize!: ARGV runscript is resolved here after finalize,
+    # Cannot live in BuildConfig#finalize!: ARGV runscript is resolved here after finalize,
     $build_config.session.runscript_file = PathUtils.ensure_file!(runscript_file, 'runscript_file')
   end
 

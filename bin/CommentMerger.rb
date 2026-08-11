@@ -77,8 +77,8 @@ class CommentMerger
     return merged_comments
   end
 
- private
-
+  # Private helpers
+  private
   def self.fetch_database_structure(logger, collect_dependencies)
     comments = {}
 

@@ -118,8 +118,8 @@ class BuildLogger
     end
   end
 
- private
-
+  # Private helpers
+  private
   def cut_string_start(str, max_strlength)
     return (max_strlength != -1 && str.length > max_strlength) ? (str[0, max_strlength] + '...') : str
   end

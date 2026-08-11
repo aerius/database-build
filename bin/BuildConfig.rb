@@ -208,8 +208,8 @@ class BuildConfig
     log_struct!(logger, 'session', session)
   end
 
+  # Private helpers
   private
-
   def log_struct!(logger, name, struct, mask: [])
     struct.members.each do |member|
       value = struct[member]
