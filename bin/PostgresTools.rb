@@ -23,7 +23,7 @@ class PostgresTools
 
   # Execute PostgreSQL command(s) outside of a database.
   def self.execute_external_sql_command(command)
-    filename = $product_temp_path + 'execute_external_sql_command.tmp'
+    filename = $build_config.output.temp_path + 'execute_external_sql_command.tmp'
     write_unix_newline_file(filename, command)
     execute_postgres_command "#{get_psql()} --dbname \"postgres\" --file \"#{filename}\" --echo-all", "Error executing SQL external command: #{command}"
     # External commands aren't executed from inside a database; however it seems that if you do not specify a dbname, PostgreSQL will make something up.
@@ -32,7 +32,7 @@ class PostgresTools
 
   # Execute PostgreSQL command(s) on the current database.
   def self.execute_sql_command(command, original_filename = '')
-    filename = $product_temp_path + 'execute_sql_command.tmp'
+    filename = $build_config.output.temp_path + 'execute_sql_command.tmp'
     write_unix_newline_file(filename, command)
     execute_postgres_command "#{get_psql()} --dbname \"#{$database_name}\" --file \"#{filename}\" --echo-all",  "Error executing SQL command: #{command}", original_filename
     record(command)
@@ -44,7 +44,7 @@ class PostgresTools
     commands.each { |command_block|
       if command_block.is_a? Hash then
         # Command in several variations that is to be executed in parallel ({multithread} section)
-        # There's a simple thread pool of $max_threads going on here.
+        # There's a simple thread pool of $build_config.tools.max_threads going on here.
         Thread.abort_on_exception = true
         threads = []
         $logger.writeln "Running threads for: #{command_block.keys.join('; ')}..."
@@ -52,7 +52,7 @@ class PostgresTools
         command_block.each { |command_block_entry| # Put all work in the queue
           work_queue.push(command_block_entry)
         }
-        $max_threads.times do # Start $max_threads threads
+        $build_config.tools.max_threads.times do # Start $build_config.tools.max_threads threads
           threads << Thread.new {
             loop do # Each of these threads should keep on polling for work until the queue is empty
               begin
@@ -61,9 +61,9 @@ class PostgresTools
                 break # Queue empty: end of thread
               end
               variation_logger = BuildLogger.new
-              variation_logger.hint_level = $hint_level
-              variation_logger.open($product_log_path, '', variation_tag)
-              filename = $product_temp_path + "execute_sql_command_multithread_#{variation_tag}.tmp"
+              variation_logger.hint_level = $build_config.tools.hint_level
+              variation_logger.open($build_config.output.log_path, '', variation_tag)
+              filename = $build_config.output.temp_path + "execute_sql_command_multithread_#{variation_tag}.tmp"
               write_unix_newline_file(filename, command_variation)
               psql_cmd = "#{get_psql(variation_logger)} --dbname \"#{$database_name}\" --file \"#{filename}\" --echo-all"
               execute_postgres_command psql_cmd,  "Error executing SQL command: #{command_variation}", original_filename, variation_logger
@@ -83,7 +83,7 @@ class PostgresTools
 
   # Execute a PostgreSQL command on the current database and returns the resultset as an array of hashes { columname string => value string }.
   def self.fetch_sql_command(command, original_filename = '', logger = $logger)
-    filename = $product_temp_path + 'execute_sql_command.tmp'
+    filename = $build_config.output.temp_path + 'execute_sql_command.tmp'
     write_unix_newline_file(filename, command)
     str = fetch_postgres_command("#{get_psql()} --dbname \"#{$database_name}\" --file \"#{filename}\" --tuples-only --expanded",  "Error executing SQL command: #{command}", original_filename, logger)
     # String to array with hashes...
@@ -139,27 +139,30 @@ class PostgresTools
     @@recorder_file = nil
   end
 
- private
+  #
+  # Private section
+  #
+  private
 
   # Commandline for psql command.
   def self.get_psql(logger = $logger)
     connectionstring = ''
-    connectionstring += "--host \"#{$pg_hostname}\" " unless $pg_hostname.nil?
-    connectionstring += "--port \"#{$pg_port.to_s}\" " unless $pg_port.nil?
-    return "\"#{$pg_bin_path}psql\" #{connectionstring}--username \"#{$pg_username}\" --set ON_ERROR_STOP=1"
+    connectionstring += "--host \"#{$build_config.postgres.hostname}\" " unless $build_config.postgres.hostname.nil?
+    connectionstring += "--port \"#{$build_config.postgres.port.to_s}\" " unless $build_config.postgres.port.nil?
+    return "\"#{$build_config.postgres.bin_path}psql\" #{connectionstring}--username \"#{$build_config.postgres.username}\" --set ON_ERROR_STOP=1"
   end
 
   # Commandline for pg_dump command.
   def self.get_pg_dump(logger = $logger)
     connectionstring = ''
-    connectionstring += "--host \"#{$pg_hostname}\" " unless $pg_hostname.nil?
-    connectionstring += "--port \"#{$pg_port.to_s}\" " unless $pg_port.nil?
-    return "\"#{$pg_bin_path}pg_dump\" #{connectionstring}--username \"#{$pg_username}\""
+    connectionstring += "--host \"#{$build_config.postgres.hostname}\" " unless $build_config.postgres.hostname.nil?
+    connectionstring += "--port \"#{$build_config.postgres.port.to_s}\" " unless $build_config.postgres.port.nil?
+    return "\"#{$build_config.postgres.bin_path}pg_dump\" #{connectionstring}--username \"#{$build_config.postgres.username}\""
   end
 
   # Run a PostgreSQL commandline command; thus set PG password first.
   def self.execute_postgres_command(cmd, error_str, original_filename = '', logger = $logger)
-    set_pg_password($pg_password, logger)
+    set_pg_password($build_config.postgres.password, logger)
     logger.log 'FILE: ' + original_filename unless original_filename.empty?
     logger.log 'CMD: ' + cmd
     success = Utility.run_cmd(cmd, true, original_filename, logger)
@@ -168,7 +171,7 @@ class PostgresTools
 
   # Run a PostgreSQL commandline command and fetch the return string
   def self.fetch_postgres_command(cmd, error_str, original_filename = '', logger = $logger)
-    set_pg_password($pg_password, logger)
+    set_pg_password($build_config.postgres.password, logger)
     logger.log 'FILE: ' + original_filename unless original_filename.empty?
     logger.log 'CMD: ' + cmd
     rv = Utility.fetch_cmd(cmd, true, original_filename, logger)

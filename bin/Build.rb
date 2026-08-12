@@ -6,7 +6,8 @@
 # ------------------------------------
 
 # This makes sure we can 'require' from current folder in all Ruby versions.
-# We want an absolute path in there, and not '.', because the latter causes problems with Settings.rb being placed in multiple locations.
+# We want an absolute path in there, and not '.', because relative '.' causes
+# problems when the same basename is required from multiple directories.
 this_path = File.expand_path(File.dirname(__FILE__))
 $LOAD_PATH << this_path unless $LOAD_PATH.include?(this_path)
 $LOAD_PATH.delete('.') if $LOAD_PATH.include?('.')
@@ -25,8 +26,8 @@ def display_help
   puts "                      be absolute, relative to CWD, or in $run_scripts_path."
   puts "  product-settings-file"
   puts "                      Path and filename of product settings of product to"
-  puts "                      build. Contains $product and references to paths of"
-  puts "                      project, product data and sql, and common data and sql."
+  puts "                      build. Contains $build_config.product,"
+  puts "                      layout.source_path, and layout.build_config_path."
   puts "\nParameters:"
   puts "  -d --dbdata-path    Path where the table dump files are located (for"
   puts "                      load scripts)"
@@ -56,14 +57,16 @@ display_help if opts.has_key?('--help')
 # ------------------------------------
 
 # Settings
-require 'Globals.rb'
-Globals.load_settings(ARGV.size > 1 ? ARGV[1] : nil)
-Globals.determine_runscript_file(ARGV.size > 0 ? ARGV[0] : nil)
+require 'SettingsLoader.rb'
+SettingsLoader.load_settings(
+  ARGV.size > 1 ? ARGV[1] : nil,
+  ARGV.size > 0 ? ARGV[0] : nil
+)
 
 # Logger
 require 'BuildLogger.rb'
 $logger = BuildLogger.new
-$logger.open($product_log_path)
+$logger.open($build_config.output.log_path)
 
 # Scriptrunner will be the class encapsulating the user script
 require 'ScriptRunner.rb'
@@ -80,26 +83,19 @@ opts.each do |option, argument|
     when '--dbdata-path'; $script_runner.set_dbdata_path(argument)
     when '--database-name'; override_database_name = argument
     when '--version'; override_version = argument
-    when '--dump-filename'; $dump_filetitle = argument
-    when '--flags'; argument.split(',').each{ |flag| $build_flags << flag.strip.downcase.to_sym }
-    when '--hints'; $hint_level = argument.to_i
+    when '--dump-filename'; $build_config.session.dump_filetitle = argument
+    when '--flags'; argument.split(',').each{ |flag| $build_config.session.build_flags << flag.strip.downcase.to_sym }
+    when '--hints'; $build_config.tools.hint_level = argument.to_i
     when '--help'; display_help
   end
 end
 
-$logger.hint_level = $hint_level
+$logger.hint_level = $build_config.tools.hint_level
 $logger.major_hint "You are running a very old depecrated Ruby version (#{RUBY_VERSION}); updating to latest version is recommended" if Utility.is_ruby_version_below('2.2.0')
 
 # ------------------------------------
 
-$logger.writeln "Building product: #{$product.to_s}"
-$logger.writeln 'Build flags: ' + ($build_flags.empty? ? '<none>' : $build_flags.sort.join(', '))
-$logger.writeln "Runscript: #{$runscript_file}"
-$logger.writeln "Product settings file: #{$product_settings_file}"
-$logger.writeln "User product settings file: #{$user_product_settings_file}" unless $user_product_settings_file.nil?
-$logger.writeln "Project settings file: #{$project_settings_file}"
-$logger.writeln "User project settings file: #{$user_project_settings_file}" unless $user_project_settings_file.nil?
-$logger.writeln "Output path: #{$product_output_path}"
+$build_config.log!($logger)
 
 # Let's go!
 begin
@@ -108,8 +104,8 @@ begin
   $logger.writeln "Build started at #{Time.now.strftime('%d-%m-%Y %H:%M:%S')}"
   $logger.writeln ''
 
-  if CommonModulesUtility.any_had_uncommitted_changes?($product_sql_path, $product_data_path, $common_sql_paths, $common_data_paths) then
-    case $on_uncommitted_changes
+  if CommonModulesUtility.any_had_uncommitted_changes?($build_config.layout.product_sql_path, $build_config.layout.product_data_path, $build_config.layout.common_sql_paths, $build_config.layout.common_data_paths) then
+    case $build_config.tools.on_uncommitted_changes
     when :abort
       $logger.warn 'Uncommitted or untracked changes detected in product or common module repository. Aborting build.'
       exit 1
@@ -129,14 +125,14 @@ begin
   end
 
   # Clean up/prepare folders
-  if File.exist?($product_temp_path) && File.directory?($product_temp_path) then # possible previous run
-    $logger.writeln "Deleting '#{$product_temp_path}'..."
-    FileUtils.rm_r($product_temp_path)
-    $logger.error "Deleting '#{$product_temp_path}' FAILED!" if File.exist?($product_temp_path)
+  if File.exist?($build_config.output.temp_path) && File.directory?($build_config.output.temp_path) then # possible previous run
+    $logger.writeln "Deleting '#{$build_config.output.temp_path}'..."
+    FileUtils.rm_r($build_config.output.temp_path)
+    $logger.error "Deleting '#{$build_config.output.temp_path}' FAILED!" if File.exist?($build_config.output.temp_path)
   end
-  FileUtils.mkdir_p($product_temp_path)
+  FileUtils.mkdir_p($build_config.output.temp_path)
 
-  FileUtils.mkdir_p($product_output_path) unless File.exist?($product_output_path)
+  FileUtils.mkdir_p($build_config.output.output_path) unless File.exist?($build_config.output.output_path)
 
   # Initialize per product
   $comments_collected = false
@@ -148,10 +144,10 @@ begin
   $script_runner.execute  # This runs the user script
 
   # Cleaning up
-  if File.exist?($product_temp_path) then
-    $logger.writeln "Deleting #{$product_temp_path}..."
-    FileUtils.rm_r($product_temp_path)
-    $logger.writeln "(Deleting '#{$product_temp_path}' FAILED!)" if File.exist?($product_temp_path)
+  if File.exist?($build_config.output.temp_path) then
+    $logger.writeln "Deleting #{$build_config.output.temp_path}..."
+    FileUtils.rm_r($build_config.output.temp_path)
+    $logger.writeln "(Deleting '#{$build_config.output.temp_path}' FAILED!)" if File.exist?($build_config.output.temp_path)
   end
 
   $logger.writeln ''

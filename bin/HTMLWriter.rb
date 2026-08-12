@@ -281,7 +281,10 @@ function toggleTree(blockElement) {
     File.open(filename, 'w') { |file| file.write(html) }
   end
 
- private
+  #
+  # Private section
+  #
+  private
 
   def self.get_anchor_name(object, comment_item)
     # generate unique but reproducable anchor name for an item

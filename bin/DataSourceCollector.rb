@@ -11,7 +11,10 @@ class DataSourceCollector
     return parse_load_rb(logger, parse_path, common_data_paths, data_folder)
   end
 
- private
+  #
+  # Private section
+  #
+  private
 
   # Given a folder, open the load.rb in there and parse the SQL files and folders it references
   def self.parse_load_rb(logger, parse_path, common_data_paths, data_folder = nil)
@@ -83,7 +86,7 @@ class DataSourceCollector
         in_comment = false
       end
 
-      if !in_comment && line =~ /#{$db_essentials_function_prefix}load_table\s*\(\s*\'(.*)\'.*,\s*\'(\{data\_folder\}.+\.txt)\'/i then
+      if !in_comment && line =~ /#{$build_config.postgres.essentials_function_prefix}load_table\s*\(\s*\'(.*)\'.*,\s*\'(\{data\_folder\}.+\.txt)\'/i then
         table = $1
         datasource = $2
         datasource.gsub!('{data_folder}', data_folder) unless data_folder.nil?
@@ -108,4 +111,5 @@ class DataSourceCollector
     end
     return str
   end
+
 end

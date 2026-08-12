@@ -12,11 +12,11 @@ require 'CommonModulesUtility.rb'
 class ScriptCommands
 
   def has_build_flag(*flag)
-    return !flag.empty? && flag.all? { |f| $build_flags.include?(f.to_s.downcase.to_sym) }
+    return !flag.empty? && flag.all? { |f| $build_config.session.build_flags.include?(f.to_s.downcase.to_sym) }
   end
 
   def has_any_build_flag(*flag)
-    return !flag.empty? && flag.any? { |f| $build_flags.include?(f.to_s.downcase.to_sym) }
+    return !flag.empty? && flag.any? { |f| $build_config.session.build_flags.include?(f.to_s.downcase.to_sym) }
   end
 
   def set_database_name(database_name)
@@ -44,12 +44,12 @@ class ScriptCommands
     version = version.gsub('#', get_git_revision) if version.include?('#')
     $version = version
     $logger.writeln "Version = #{$version}"
-    set_database_name($database_name_prefix + '-' + $product.to_s + '-' + $version) if $database_name.nil?
+    set_database_name($build_config.postgres.name_prefix + '-' + $build_config.product.to_s + '-' + $version) if $database_name.nil?
   end
 
   def ensure_version
     if $version.nil? && !$database_name.nil? then
-      prefix = $database_name_prefix + '-' + $product.to_s + '-'
+      prefix = $build_config.postgres.name_prefix + '-' + $build_config.product.to_s + '-'
       if $database_name.starts_with?(prefix) && $database_name.length > prefix.length then
         set_version($database_name[(prefix.length)..($database_name.length-1)])
       end
@@ -73,13 +73,14 @@ class ScriptCommands
   end
 
   def get_git_revision
-    $git_bin_path.nil? ? 'unknown' : GitUtility.get_git_short_hash_for_path($product_sql_path)
+    $build_config.tools.git_bin_path.nil? ? 'unknown' : GitUtility.get_git_short_hash_for_path($build_config.layout.product_sql_path)
   end
 
   def set_dbdata_path(dbdata_path)
-    $dbdata_path = File.expand_path(dbdata_path.to_s).fix_pathname
-    raise "Cannot find table data file path: #{$dbdata_path}" unless File.exist?($dbdata_path) && File.directory?($dbdata_path)
-    $logger.writeln "Table data file path = #{$dbdata_path}"
+    path = File.expand_path(dbdata_path.to_s).fix_pathname
+    raise "Cannot find table data file path: #{path}" unless File.exist?(path) && File.directory?(path)
+    $build_config.layout.dbdata_path = path
+    $logger.writeln "Table data file path = #{path}"
   end
 
   def drop_database_if_exists(*params)
@@ -110,9 +111,9 @@ class ScriptCommands
 
     ensure_database_name
     $logger.writeln "Creating database #{$database_name}..."
-    with = "TEMPLATE \"#{$database_template}\""
-    with += " TABLESPACE \"#{$database_tablespace}\"" unless $database_tablespace.empty?
-    with += " LC_COLLATE '#{$database_collation}' LC_CTYPE '#{$database_collation}'" unless $database_collation.empty?
+    with = "TEMPLATE \"#{$build_config.postgres.template}\""
+    with += " TABLESPACE \"#{$build_config.postgres.tablespace}\"" unless $build_config.postgres.tablespace.empty?
+    with += " LC_COLLATE '#{$build_config.postgres.collation}' LC_CTYPE '#{$build_config.postgres.collation}'" unless $build_config.postgres.collation.empty?
     PostgresTools.execute_external_sql_command("CREATE DATABASE \"#{$database_name}\" WITH #{with}")
 
     if update_database_comment then
@@ -131,7 +132,7 @@ class ScriptCommands
   def import_database_structure(*params)
     ensure_database_name
 
-    $logger.writeln_with_timing("Importing all SQL from '#{$product_sql_path}'...") {
+    $logger.writeln_with_timing("Importing all SQL from '#{$build_config.layout.product_sql_path}'...") {
 
       as_is = false
       if params == [:sql_as_is] then
@@ -142,11 +143,11 @@ class ScriptCommands
 
       bullet = Utility.is_ruby_version_below('1.9.0') ? 250.chr : "\u00B7".force_encoding('UTF-8')
       print ' ['
-      Dir[$product_sql_path + '**/*.sql'].sort.each { |sql_filename|
+      Dir[$build_config.layout.product_sql_path + '**/*.sql'].sort.each { |sql_filename|
         if as_is then
           PostgresTools.execute_sql_file(sql_filename)
         else
-          contents = PostgresTools.process_sql_file(sql_filename, $common_sql_paths)
+          contents = PostgresTools.process_sql_file(sql_filename, $build_config.layout.common_sql_paths)
           PostgresTools.execute_sql_command(contents, sql_filename) unless contents.empty?
         end
         print bullet
@@ -159,7 +160,7 @@ class ScriptCommands
     ensure_database_name
 
     filename = nil
-    ([$product_data_path] + $common_data_paths).each { |data_path|
+    ([$build_config.layout.product_data_path] + $build_config.layout.common_data_paths).each { |data_path|
       filename = File.expand_path(data_path + sqlfilename).fix_filename
       filename += '.sql' if !File.exist?(filename) && File.exist?(filename + '.sql')
       break if File.exist?(filename)
@@ -173,7 +174,7 @@ class ScriptCommands
       elsif !params.empty? then
         $logger.error "Unknown parameter given to run_sql()"
       else
-        contents = PostgresTools.process_sql_file(filename, $common_data_paths, $dbdata_path)
+        contents = PostgresTools.process_sql_file(filename, $build_config.layout.common_data_paths, $build_config.layout.dbdata_path)
         PostgresTools.execute_sql_command_multithread_support(contents, filename) unless contents.empty?
       end
     }
@@ -181,12 +182,12 @@ class ScriptCommands
 
   def run_sql_folder(sqlfoldername)
     ensure_database_name
-    foldername = File.expand_path($product_data_path + sqlfoldername).fix_pathname
+    foldername = File.expand_path($build_config.layout.product_data_path + sqlfoldername).fix_pathname
     raise "Folder '#{foldername}' not found." unless File.exist?(foldername) && File.directory?(foldername)
-    raise "Folder '#{foldername}' is not located in the product folder." if foldername[0, $product_data_path.length] != $product_data_path
+    raise "Folder '#{foldername}' is not located in the product folder." if foldername[0, $build_config.layout.product_data_path.length] != $build_config.layout.product_data_path
     $logger.writeln "Running SQL folder '#{foldername}'..."
     Dir[foldername + '**/*.sql'].sort.each { |sql_filename|
-      sql_filename = sql_filename[$product_data_path.length..sql_filename.length]
+      sql_filename = sql_filename[$build_config.layout.product_data_path.length..sql_filename.length]
       run_sql(sql_filename)
     }
   end
@@ -200,7 +201,7 @@ class ScriptCommands
   end
 
   def load_data
-    filename = File.expand_path($product_data_path + 'load.rb').fix_filename
+    filename = File.expand_path($build_config.layout.product_data_path + 'load.rb').fix_filename
     $logger.error "File not found: #{filename}" unless File.exist?(filename)
     stacktrace_filename = Pathname.new(filename).relative_path_from(Pathname.new(File.expand_path(File.dirname(__FILE__))))
     eval(IO.readlines(filename).join, nil, stacktrace_filename.to_s)
@@ -251,15 +252,15 @@ class ScriptCommands
   def synchronize_serials
     ensure_database_name
     $logger.writeln "Synchronizing all serials..."
-    PostgresTools.execute_sql_command("SELECT #{$db_essentials_function_prefix}synchronize_all_serials()");
+    PostgresTools.execute_sql_command("SELECT #{$build_config.postgres.essentials_function_prefix}synchronize_all_serials()");
   end
   alias_method :synchronise_serials, :synchronize_serials
 
   def ensure_comments_collected
     if !$comments_collected then
-      $logger.writeln "Scanning for comments in '#{$product_sql_path}'..."
-      root_path = File.expand_path(File.dirname($project_settings_file) + '/../../').fix_pathname
-      $comments = CommentCollector.collect($logger, $product_sql_path, $common_sql_paths, root_path)
+      $logger.writeln "Scanning for comments in '#{$build_config.layout.product_sql_path}'..."
+      root_path = File.expand_path('..', $build_config.layout.build_config_path).fix_pathname
+      $comments = CommentCollector.collect($logger, $build_config.layout.product_sql_path, $build_config.layout.common_sql_paths, root_path)
       $comments_collected = true
     end
   end
@@ -281,8 +282,8 @@ class ScriptCommands
 
   def ensure_datasourcesinfo_collected
     if $datasources.nil? then
-      $logger.writeln "Scanning for data sources in '#{$product_data_path}'..."
-      $datasources = DataSourceCollector.collect($logger, $product_data_path, $common_data_paths, $dbdata_path)
+      $logger.writeln "Scanning for data sources in '#{$build_config.layout.product_data_path}'..."
+      $datasources = DataSourceCollector.collect($logger, $build_config.layout.product_data_path, $build_config.layout.common_data_paths, $build_config.layout.dbdata_path)
     end
   end
 
@@ -293,8 +294,8 @@ class ScriptCommands
     ensure_datasourcesinfo_collected
     $logger.minor_hint 'generation of RTF documentation is no longer maintained in favor of the superior HTML documentation'
     filename = "#{$database_name} SQL Comments.rtf" if filename.empty?
-    filename = File.expand_path($product_output_path + filename).fix_filename
-    $logger.writeln "Generating RTF documentation in '#{$product_output_path}'..."
+    filename = File.expand_path($build_config.output.output_path + filename).fix_filename
+    $logger.writeln "Generating RTF documentation in '#{$build_config.output.output_path}'..."
     RTFWriter.create_rtf(filename, $comments, $datasources)
   end
 
@@ -311,8 +312,8 @@ class ScriptCommands
     end
 
     filename = "#{$database_name}_sqldocgen.html" if filename.empty?
-    filename = File.expand_path($product_output_path + filename).fix_filename
-    $logger.writeln "Generating HTML documentation in '#{$product_output_path}'..."
+    filename = File.expand_path($build_config.output.output_path + filename).fix_filename
+    $logger.writeln "Generating HTML documentation in '#{$build_config.output.output_path}'..."
     HTMLWriter.create_html(filename, $database_name, comments, $datasources, !params.include?(:no_dependencies))
   end
 
@@ -321,8 +322,8 @@ class ScriptCommands
     ensure_database_name
     ensure_datasourcesinfo_collected
     filename = "#{$database_name}_datasources.json" if filename.empty?
-    filename = File.expand_path($product_output_path + filename).fix_filename
-    $logger.writeln "Generating datasources-JSON in '#{$product_output_path}'..."
+    filename = File.expand_path($build_config.output.output_path + filename).fix_filename
+    $logger.writeln "Generating datasources-JSON in '#{$build_config.output.output_path}'..."
     datasources = $datasources.reduce({}) { |accum, (filename, tablename)| (accum[tablename] ||= []) << File.basename(filename); accum }
     File.write(filename, JSON.pretty_generate(datasources))
   end
@@ -332,7 +333,7 @@ class ScriptCommands
     $logger.write "Running unit tests... "
     unittest_count = 0
     unittest_failed = 0
-    functions = PostgresTools.fetch_sql_command("SELECT * FROM #{$db_essentials_function_prefix}list_unittest_functions('#{$db_unittest_prefix}')");
+    functions = PostgresTools.fetch_sql_command("SELECT * FROM #{$build_config.postgres.essentials_function_prefix}list_unittest_functions('#{$build_config.postgres.unittest_prefix}')");
     $logger.write 'none found.' if functions.empty?
     $logger.writeln ''
     functions.each{ |function|
@@ -342,7 +343,7 @@ class ScriptCommands
         unittest_count += 1
         function_returns = function['returns']
         $logger.major_hint "#{function_name}() returns \"#{function_returns}\"; should have no return value" if function_returns != 'void'
-        rv = PostgresTools.fetch_sql_command("BEGIN; SELECT * FROM #{$db_essentials_function_prefix}execute_unittest('#{function_name}'); ROLLBACK;");
+        rv = PostgresTools.fetch_sql_command("BEGIN; SELECT * FROM #{$build_config.postgres.essentials_function_prefix}execute_unittest('#{function_name}'); ROLLBACK;");
         if rv.empty? then
           $logger.warn "Could not read result from #{function_name}()"
         elsif rv[0].has_key?('errcode') then
@@ -368,20 +369,20 @@ class ScriptCommands
   def validate_contents(*params)
     ensure_database_name
     $logger.writeln_with_timing("Validating database contents...") {
-      PostgresTools.execute_sql_command("\\set VERBOSITY terse \n SELECT #{$db_essentials_function_prefix}validate_all()");
+      PostgresTools.execute_sql_command("\\set VERBOSITY terse \n SELECT #{$build_config.postgres.essentials_function_prefix}validate_all()");
       if params.include?(:abort_on_errors) then
-        rs = PostgresTools.fetch_sql_command("SELECT number_of_tests FROM #{$db_essentials_function_prefix}last_validation_run_view WHERE result = 'error'");
+        rs = PostgresTools.fetch_sql_command("SELECT number_of_tests FROM #{$build_config.postgres.essentials_function_prefix}last_validation_run_view WHERE result = 'error'");
         num_errors = rs[0]['number_of_tests'].to_i
-        $logger.error "Validation yielded #{num_errors} error(s), please consult the logs and #{$db_essentials_function_prefix}last_validation_logs_view" if num_errors > 0
+        $logger.error "Validation yielded #{num_errors} error(s), please consult the logs and #{$build_config.postgres.essentials_function_prefix}last_validation_logs_view" if num_errors > 0
       end
     }
   end
 
   def create_summary
     ensure_database_name
-    filename = File.expand_path($product_output_path + '{title}_{datesuffix}.csv').fix_filename
-    $logger.writeln_with_timing("Creating database summary in '#{$product_output_path}'...") {
-      PostgresTools.execute_sql_command("SELECT #{$db_essentials_function_prefix}output_summary_table('#{filename}')");
+    filename = File.expand_path($build_config.output.output_path + '{title}_{datesuffix}.csv').fix_filename
+    $logger.writeln_with_timing("Creating database summary in '#{$build_config.output.output_path}'...") {
+      PostgresTools.execute_sql_command("SELECT #{$build_config.postgres.essentials_function_prefix}output_summary_table('#{filename}')");
     }
   end
 
@@ -404,12 +405,12 @@ class ScriptCommands
       end
     }
 
-    filepath = $product_output_path if filepath.nil?
+    filepath = $build_config.output.output_path if filepath.nil?
     filepath = filepath.fix_pathname
-    if $dump_filetitle.nil? then
+    if $build_config.session.dump_filetitle.nil? then
       $dump_filename = File.expand_path(filepath + $database_name + '.backup').fix_filename
     else
-      $dump_filename = File.expand_path(filepath + $dump_filetitle).fix_filename
+      $dump_filename = File.expand_path(filepath + $build_config.session.dump_filetitle).fix_filename
     end
 
     $logger.writeln_with_timing("Dumping database to '#{$dump_filename}'...") {
@@ -443,20 +444,20 @@ class ScriptCommands
     require 'etc'
     add_constant 'CURRENT_DATABASE_NAME', get_database_name(), schema
     add_constant 'CURRENT_DATABASE_VERSION', get_version(), schema unless $version.nil?
-    add_constant 'CURRENT_DATABASE_PRODUCT', $product.to_s, schema unless $product.nil?
+    add_constant 'CURRENT_DATABASE_PRODUCT', $build_config.product.to_s, schema unless $build_config.product.nil?
     add_constant 'CURRENT_GIT_REVISION', get_git_revision, schema
     add_constant 'CURRENT_DATABASE_BUILD_DATE', Time.now.strftime('%d-%m-%Y %H:%M:%S'), schema
     add_constant 'CURRENT_DATABASE_BUILD_USER', Etc.getlogin, schema rescue nil
     add_constant 'CURRENT_DATABASE_BUILD_NODE', Etc.uname[:nodename], schema rescue nil
     add_constant 'CURRENT_DATABASE_BUILD_VERSION', get_database_build_version(), schema
-    add_constant 'CURRENT_BUILD_COMMON_MODULE_REPO_HASHES', CommonModulesUtility.build_repo_hashes($common_sql_paths, $common_data_paths), schema
-    add_constant 'CURRENT_BUILD_SCRIPT_HAD_UNCOMMITTED_CHANGES', (CommonModulesUtility.any_had_uncommitted_changes?($product_sql_path, $product_data_path, $common_sql_paths, $common_data_paths) ? 'true' : 'false'), schema
+    add_constant 'CURRENT_BUILD_COMMON_MODULE_REPO_HASHES', CommonModulesUtility.build_repo_hashes($build_config.layout.common_sql_paths, $build_config.layout.common_data_paths), schema
+    add_constant 'CURRENT_BUILD_SCRIPT_HAD_UNCOMMITTED_CHANGES', (CommonModulesUtility.any_had_uncommitted_changes?($build_config.layout.product_sql_path, $build_config.layout.product_data_path, $build_config.layout.common_sql_paths, $build_config.layout.common_data_paths) ? 'true' : 'false'), schema
   end
 
   def cluster_tables
     ensure_database_name
     $logger.writeln "Clustering all tables..."
-    PostgresTools.execute_sql_command("SELECT #{$db_essentials_function_prefix}cluster_all_tables()");
+    PostgresTools.execute_sql_command("SELECT #{$build_config.postgres.essentials_function_prefix}cluster_all_tables()");
   end
 
   def terminate_connections
@@ -470,7 +471,7 @@ class ScriptCommands
     ensure_database_name
     filename = "#{$database_name}.sql" if filename.empty?
     $logger.writeln "Starting SQL recording into file '#{filename}'..."
-    filename = File.expand_path($product_output_path + filename).fix_filename
+    filename = File.expand_path($build_config.output.output_path + filename).fix_filename
     PostgresTools.start_recording(filename)
   end
 

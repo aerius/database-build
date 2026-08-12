@@ -3,6 +3,20 @@
 #
 class GitUtility
 
+  # Default git bin path: GIT_BIN env, else Windows Program Files Git/cmd/, else '' (use PATH).
+  def self.default_bin_path
+    return ENV['GIT_BIN'] unless ENV['GIT_BIN'].nil?
+
+    if ON_WINDOWS then
+      path = nil
+      path = ENV['ProgramFiles(x86)'].fix_pathname + 'Git/cmd/' unless ENV['ProgramFiles(x86)'].nil?
+      path = ENV['ProgramFiles'].fix_pathname + 'Git/cmd/' if path.nil? && !ENV['ProgramFiles'].nil?
+      return path.nil? ? '' : path  # empty: assume git is on PATH
+    else # Linux / other
+      return ''  # assume git is on PATH
+    end
+  end
+
   # Returns Git's abbreviated hash for the repo containing path, or nil. Raises if abbreviation is longer than 10 chars.
   def self.get_git_short_hash_for_path(path)
     short = run_git(path, 'log -1 --pretty=format:%h')
@@ -31,9 +45,14 @@ class GitUtility
     return run_git(path, 'status --porcelain') != nil
   end
 
-  # Git executable for shell invocation: PATH name or quoted path when $git_bin_path is set.
+  #
+  # Private section
+  #
+  private
+
+  # Git executable for shell invocation: PATH name or quoted path when git bin path is set.
   def self.git_exe
-    return $git_bin_path.to_s.empty? ? 'git' : "\"#{$git_bin_path}git\""
+    return $build_config.tools.git_bin_path.to_s.empty? ? 'git' : "\"#{$build_config.tools.git_bin_path}git\""
   end
 
   # Shell stderr redirect for discarding git noise: cmd.exe has no /dev/null (use 2>nul); Unix uses 2>/dev/null.
@@ -62,5 +81,4 @@ class GitUtility
     return nil
   end
 
-  private_class_method :git_exe, :git_stderr_null, :run_git
 end
