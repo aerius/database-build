@@ -51,7 +51,7 @@ display_help if opts.has_key?('--help')
 
 # ------------------------------------
 
-# Settings (flags before prepare for clean vs dev materialization)
+# Settings
 require 'SettingsLoader.rb'
 SettingsLoader.prepare(
   opts['--flags'],
