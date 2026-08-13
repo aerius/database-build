@@ -64,10 +64,10 @@ Set in product or App settings:
 $build_config.layout.external_common_modules_file = 'externals/modules.rb'
 ```
 
-Modules file content (assigns `$build_config.session.common_module_versions` or `$common_module_versions`):
+Modules file content (assigns `$build_config.session.common_module_versions`):
 
 ```ruby
-$common_module_versions = [
+$build_config.session.common_module_versions = [
   {
     # plain HTTPS only — credentials via GIT_USERNAME / GIT_TOKEN, never in this file
     'git_repository' => 'https://github.com/aerius/database-modules.git',

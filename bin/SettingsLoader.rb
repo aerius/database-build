@@ -92,7 +92,7 @@ class SettingsLoader
   end
 
   # Load optional layout.external_common_modules_file into session.common_module_versions.
-  # Modules files may assign $build_config.session.common_module_versions or $common_module_versions.
+  # Modules files must assign $build_config.session.common_module_versions.
   def self.load_external_modules_file!
     path = $build_config.layout.external_common_modules_file
     if path.nil? || path.to_s.empty? then
@@ -100,14 +100,8 @@ class SettingsLoader
       return
     end
 
-    $common_module_versions = nil
     require path
-
-    versions = $build_config.session.common_module_versions
-    if (versions.nil? || (versions.respond_to?(:empty?) && versions.empty?)) && !$common_module_versions.nil? then
-      versions = $common_module_versions
-    end
-    $build_config.session.common_module_versions = Array(versions)
+    $build_config.session.common_module_versions = Array($build_config.session.common_module_versions)
   end
 
 end
