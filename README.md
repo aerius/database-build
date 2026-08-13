@@ -45,7 +45,7 @@ Layout path defaults (specified under `layout` in the `BuildConfig.rb`):
 | `product_sql_path` | `<source_path>/src/main/sql/<product>/` |
 | `product_data_path` | `<source_path>/src/data/sql/<product>/` |
 | `runscripts_path` | `<build_config_path>/scripts/` |
-| `common_sql_paths` / `common_data_paths` | Arrays of dirs merged after `SettingsLoader.prepare!` (internal + external + builtin) |
+| `common_sql_paths` / `common_data_paths` | Arrays of dirs merged after `SettingsLoader.prepare` (internal + external + builtin) |
 | `external_common_modules_file` | Optional path to a modules file (relative to product settings dir or absolute) |
 
 Common module locations (each type its own entry):
@@ -76,7 +76,7 @@ $build_config.session.common_module_versions = [
 ]
 ```
 
-`SettingsLoader.prepare!` (Build / SyncDBData) materializes external common modules under `output.target_path/externals/`.
+`SettingsLoader.prepare` (Build / SyncDBData) materializes external common modules under `output.target_path/externals/`.
 
 | Mode | Externals come from |
 |------|---------------------|

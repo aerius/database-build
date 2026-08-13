@@ -65,7 +65,7 @@ class GitUtility
 
   # Raises unless repo_url is a plain HTTPS URL (no SSH, no embedded credentials).
   # Auth for private clones is only via GIT_USERNAME / GIT_TOKEN.
-  def self.require_plain_https_repo_url!(repo_url)
+  def self.require_plain_https_repo_url(repo_url)
     url = repo_url.to_s
     raise "git_repository must be an HTTPS URL without credentials (got \"#{url}\")" unless url =~ %r{\Ahttps://}i
     raise "git_repository must not include credentials; use GIT_USERNAME/GIT_TOKEN (got \"#{url}\")" if url =~ %r{\Ahttps://[^/]*@}i
@@ -75,7 +75,7 @@ class GitUtility
   # When GIT_USERNAME and GIT_TOKEN are set, HTTPS URLs are cloned with those credentials.
   # The token is never written to command logs or left on remote.origin.url.
   def self.clone_repo(repo_url, target_dir)
-    require_plain_https_repo_url!(repo_url)
+    require_plain_https_repo_url(repo_url)
     parent = File.dirname(target_dir)
     FileUtils.mkdir_p(parent)
     raise "Git clone target already exists: '#{target_dir}'" if File.exist?(target_dir)
@@ -110,7 +110,7 @@ class GitUtility
   private
 
   # Returns repo_url with GIT_USERNAME:GIT_TOKEN embedded when both env vars are set.
-  # Caller must pass a plain HTTPS URL (see require_plain_https_repo_url!).
+  # Caller must pass a plain HTTPS URL (see require_plain_https_repo_url).
   def self.authenticated_clone_url(repo_url)
     username = ENV['GIT_USERNAME'].to_s
     token = ENV['GIT_TOKEN'].to_s

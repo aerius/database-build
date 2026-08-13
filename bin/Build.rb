@@ -58,7 +58,7 @@ display_help if opts.has_key?('--help')
 
 # Settings
 require 'SettingsLoader.rb'
-SettingsLoader.prepare!(
+SettingsLoader.prepare(
   ARGV.size > 1 ? ARGV[1] : nil,
   ARGV.size > 0 ? ARGV[0] : nil,
   build_flags: opts['--flags']
@@ -95,7 +95,7 @@ $logger.major_hint "You are running a very old deprecated Ruby version (#{RUBY_V
 
 # ------------------------------------
 
-$build_config.log!($logger)
+$build_config.log($logger)
 
 # Let's go!
 begin

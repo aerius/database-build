@@ -11,8 +11,8 @@ class ExternalModules
   TARGET_DIRNAME = 'externals'
 
   # Materialize externals and merge paths into $build_config.
-  def self.ensure_prepared!(logger: nil)
-    materialize!(logger)
+  def self.prepare(logger: nil)
+    materialize(logger)
   end
 
   #
@@ -21,7 +21,7 @@ class ExternalModules
   private
 
   # Clone or copy each modules-file entry into the target tree, then apply merged common paths.
-  def self.materialize!(logger = nil)
+  def self.materialize(logger = nil)
     clean_build = $build_config.session.build_flags.include?(:clean)
     versions = Array($build_config.session.common_module_versions)
     target_root = resolve_target_root_path
@@ -35,7 +35,7 @@ class ExternalModules
     # Resolve source root for dev builds
     source_root = nil
     if !versions.empty? && !clean_build then
-      source_root = resolve_source_root!
+      source_root = resolve_source_root
     end
 
     # Materialize each entry
@@ -45,14 +45,14 @@ class ExternalModules
 
       target_dir = File.join(target_root, repo_key).fix_pathname.chomp('/')
 
-      populate_target_dir!(target_dir, repo_url, entry['git_reference'], clean_build, source_root, logger)
+      populate_target_dir(target_dir, repo_url, entry['git_reference'], clean_build, source_root, logger)
 
       external_sql_paths << File.join(target_dir, PathConventions::EXTERNAL_MODULES_SQL_REL).fix_pathname.chomp('/')
       external_data_paths << File.join(target_dir, PathConventions::EXTERNAL_MODULES_DATA_REL).fix_pathname.chomp('/')
     end
 
-    validate_materialized_paths!(external_sql_paths, external_data_paths)
-    $build_config.apply_common_module_paths!(external_sql_paths, external_data_paths)
+    require_materialized_paths(external_sql_paths, external_data_paths)
+    $build_config.apply_common_module_paths(external_sql_paths, external_data_paths)
 
     unless logger.nil? then
       logger.writeln "Prepared common modules at #{target_root}"
@@ -66,7 +66,7 @@ class ExternalModules
   end
 
   # Parent of the product git root: external repos are siblings of the product checkout.
-  def self.resolve_source_root!
+  def self.resolve_source_root
     product_sql = $build_config.layout.product_sql_path
     product_root = GitUtility.get_git_repo_root(product_sql)
     raise "Cannot derive external common modules source root: product SQL path is not in a git repository (product_sql_path = \"#{product_sql}\")" if product_root.nil? || product_root.to_s.empty?
@@ -79,7 +79,7 @@ class ExternalModules
     seen = {}
     entries.each do |entry|
       repo = entry.fetch('git_repository')
-      GitUtility.require_plain_https_repo_url!(repo)
+      GitUtility.require_plain_https_repo_url(repo)
       if entry.key?('sql_path') || entry.key?('data_path') then
         raise "External modules entry for '#{repo}' must not set sql_path/data_path; layout is fixed (#{PathConventions::EXTERNAL_MODULES_SQL_REL} / #{PathConventions::EXTERNAL_MODULES_DATA_REL})"
       end
@@ -94,7 +94,7 @@ class ExternalModules
     return repo_url.to_s.sub(%r{/$}, '').sub(%r{\.git$}i, '').split('/').last
   end
 
-  def self.populate_target_dir!(target_dir, repo_url, gitref, clean_build, source_root, logger)
+  def self.populate_target_dir(target_dir, repo_url, gitref, clean_build, source_root, logger)
     if clean_build then
       raise "External modules entry for '#{repo_url}' missing 'git_reference'" if gitref.nil? || gitref.to_s.empty?
       
@@ -122,7 +122,7 @@ class ExternalModules
     end
   end
 
-  def self.validate_materialized_paths!(sql_paths, data_paths)
+  def self.require_materialized_paths(sql_paths, data_paths)
     sql_paths.each_with_index { |path, idx|
       raise "External common SQL path not found (#{idx}: \"#{path}\")" unless File.directory?(path)
     }

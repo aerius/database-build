@@ -10,15 +10,15 @@ $build_config = nil
 
 ##
 # CLI bootstrap for $build_config: resolve ARGV paths, require product settings, finalize,
-# materialize external common modules. App/User settings are loaded inside BuildConfig#finalize!.
+# materialize external common modules. App/User settings are loaded inside BuildConfig#finalize.
 #
 class SettingsLoader
 
-  # Prepare $build_config for Build / Sync: load settings, materialize or restore externals.
+  # Prepare $build_config for Build / Sync: load settings, materialize externals.
   # build_flags may be nil, a comma-separated String, or an Array (must include :clean for clean/Docker).
-  def self.prepare!(product_settings_file_argument, runscript_file_argument = nil, build_flags: [])
+  def self.prepare(product_settings_file_argument, runscript_file_argument = nil, build_flags: [])
     $build_config = BuildConfig.new_empty
-    $build_config.apply_defaults!
+    $build_config.apply_defaults
     $build_config.session.build_flags = parse_build_flags(build_flags)
 
     # Product settings (mandatory) — assign $build_config.product / layout.*
@@ -26,10 +26,10 @@ class SettingsLoader
     $build_config.session.product_settings_file = product_settings_file
     require product_settings_file
 
-    $build_config.finalize!(product_settings_dir: File.dirname(product_settings_file))
+    $build_config.finalize(product_settings_dir: File.dirname(product_settings_file))
 
-    load_external_modules_file!
-    ExternalModules.ensure_prepared!(logger: nil)
+    load_external_modules_file
+    ExternalModules.prepare(logger: nil)
 
     determine_runscript_file(runscript_file_argument) unless runscript_file_argument.nil?
   end
@@ -73,8 +73,8 @@ class SettingsLoader
       exit
     else
       product_settings_file = expand_with_suffixes(product_settings_file_argument, ['.rb', 'Settings.rb'])
-      # Cannot live in BuildConfig#finalize!: must exist before require and before
-      return PathAssert.ensure_file!(product_settings_file, 'product_settings_file')
+      # Cannot live in BuildConfig#finalize: must exist before require and before
+      return PathAssert.require_file(product_settings_file, 'product_settings_file')
     end
   end
 
@@ -87,13 +87,13 @@ class SettingsLoader
       runscript_file = expand_with_suffixes(under_scripts, ['.rb'])
     end
 
-    # Cannot live in BuildConfig#finalize!: ARGV runscript is resolved here after finalize,
-    $build_config.session.runscript_file = PathAssert.ensure_file!(runscript_file, 'runscript_file')
+    # Cannot live in BuildConfig#finalize: ARGV runscript is resolved here after finalize,
+    $build_config.session.runscript_file = PathAssert.require_file(runscript_file, 'runscript_file')
   end
 
   # Load optional layout.external_common_modules_file into session.common_module_versions.
   # Modules files must assign $build_config.session.common_module_versions.
-  def self.load_external_modules_file!
+  def self.load_external_modules_file
     path = $build_config.layout.external_common_modules_file
     if path.nil? || path.to_s.empty? then
       $build_config.session.common_module_versions = []

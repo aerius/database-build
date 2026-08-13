@@ -51,9 +51,9 @@ display_help if opts.has_key?('--help')
 
 # ------------------------------------
 
-# Settings (flags before prepare! for clean vs dev materialization)
+# Settings (flags before prepare for clean vs dev materialization)
 require 'SettingsLoader.rb'
-SettingsLoader.prepare!(ARGV.size > 0 ? ARGV[0] : nil, build_flags: opts['--flags'])
+SettingsLoader.prepare(ARGV.size > 0 ? ARGV[0] : nil, build_flags: opts['--flags'])
 
 # Logger
 require 'BuildLogger.rb'
