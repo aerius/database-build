@@ -23,7 +23,7 @@ class ExternalModules
   # Clone or copy each modules-file entry into the target tree, then apply merged common paths.
   def self.materialize(logger = nil)
     clean_build = $build_config.session.build_flags.include?(:clean)
-    versions = Array($build_config.session.common_module_versions)
+    versions = $build_config.session.common_module_versions
     target_root = resolve_target_root_path
     
     external_sql_paths = []

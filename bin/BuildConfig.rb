@@ -212,10 +212,10 @@ class BuildConfig
     ).fix_pathname
 
     layout.common_sql_paths = (
-      Array(@internal_common_sql_paths) + Array(external_sql_paths) + [builtin_sql]
+      @internal_common_sql_paths + external_sql_paths + [builtin_sql]
     ).map { |path| path.fix_pathname.chomp('/') }
     layout.common_data_paths = (
-      Array(@internal_common_data_paths) + Array(external_data_paths)
+      @internal_common_data_paths + external_data_paths
     ).map { |path| path.fix_pathname.chomp('/') }
 
     layout.common_sql_paths.map!.with_index { |path, idx|

@@ -37,7 +37,7 @@ class SettingsLoader
   # Accepts nil, a comma-separated String, or an Array of flags/symbols.
   def self.parse_build_flags(flags_argument)
     return [] if flags_argument.nil?
-    parts = flags_argument.is_a?(String) ? flags_argument.split(',') : Array(flags_argument)
+    parts = flags_argument.is_a?(String) ? flags_argument.split(',') : flags_argument
     normalize_build_flags(parts)
   end
 
@@ -48,7 +48,7 @@ class SettingsLoader
 
   def self.normalize_build_flags(build_flags)
     flags = []
-    Array(build_flags).each do |flag|
+    build_flags.each do |flag|
       sym = flag.to_s.strip.downcase.to_sym
       flags << sym unless sym.to_s.empty? || flags.include?(sym)
     end
@@ -101,7 +101,6 @@ class SettingsLoader
     end
 
     require path
-    $build_config.session.common_module_versions = Array($build_config.session.common_module_versions)
   end
 
 end
