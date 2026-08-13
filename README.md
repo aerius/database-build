@@ -115,6 +115,31 @@ Typical `AppSettings.rb` / `UserSettings.rb` assignments:
 
 Both modes write `$build_config.layout.dbdata_path` from `DBDATA_PATH` into `UserSettings.rb` under `DBCONFIG_PATH`.
 
+### Docker image as a local build host
+
+`/build-database.sh` is for reproducible product DB images and always uses `--flags clean`. Developers can also run the image only for Ruby + PostgreSQL and call `Build.rb` / `SyncDBData.rb` on mounted sources. Omit `--flags clean` to copy external modules from sibling checkouts (same as a host build).
+
+Mount the workspace parent so the product repo and external module repos are siblings (and include `.git` on the product tree — needed to find the product git root):
+
+```text
+/work/<product-repo>/
+/work/database-modules/    # sibling named after the repo basename
+```
+
+Example:
+
+```bash
+docker run --rm -it \
+  -v /path/to/git:/work \
+  aerius-database-build:<tag> \
+  ruby /aerius-database-build/bin/Build.rb default \
+    /work/<product>/path/to/settings.rb \
+    --database-name=local \
+    --version=local
+```
+
+Do not pass `--flags clean` unless you want pinned clones. The base image does not install `git`; non-clean materialization only needs the sibling directories on the volume.
+
 ## Build script
 
 ### Reproducible builds — git hashes and uncommitted state
