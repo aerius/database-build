@@ -11,7 +11,7 @@ class ExternalModules
   TARGET_DIRNAME = 'externals'
 
   # Materialize externals and merge paths into $build_config.
-  def self.prepare(logger: nil)
+  def self.prepare(logger = nil)
     materialize(logger)
   end
 

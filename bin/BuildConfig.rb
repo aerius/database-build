@@ -9,7 +9,7 @@ HINT_LEVEL_ALL = 2
 #   1. BuildConfig.new_empty
 #   2. apply_defaults                         — fill defaults on the empty config
 #   3. require product settings                — assign product / layout.* (overrides)
-#   4. finalize(product_settings_dir:)        — load App/UserSettings, derive internal/builtin layout
+#   4. finalize(product_settings_dir)         — load App/UserSettings, derive internal/builtin layout
 #   5. ExternalModules.prepare                — materialize externals, merge common SQL/data paths
 #   6. optional runscript resolve              — after finalize (needs layout.runscripts_path)
 #   7. log(logger)                            — optional; dump resolved config (Build.rb)
@@ -120,7 +120,7 @@ class BuildConfig
   end
 
   # Expand relative layout paths, derive fixed paths, normalize and validate.
-  def finalize(product_settings_dir:)
+  def finalize(product_settings_dir)
     raise 'Product not set ($build_config.product)' if product.nil?
     raise 'Source path not set ($build_config.layout.source_path)' if layout.source_path.nil?
     raise 'Build config path not set ($build_config.layout.build_config_path)' if layout.build_config_path.nil?
@@ -233,8 +233,8 @@ class BuildConfig
     logger.writeln "product: #{product}"
     log_struct(logger, 'layout', layout)
     log_struct(logger, 'output', output)
-    log_struct(logger, 'postgres', postgres, mask: [:password])
-    log_struct(logger, 'tools', tools, mask: [:https_data_password])
+    log_struct(logger, 'postgres', postgres, [:password])
+    log_struct(logger, 'tools', tools, [:https_data_password])
     log_struct(logger, 'session', session)
   end
 
@@ -243,7 +243,7 @@ class BuildConfig
   #
   private
 
-  def log_struct(logger, name, struct, mask: [])
+  def log_struct(logger, name, struct, mask = [])
     struct.members.each do |member|
       value = struct[member]
       value = '<set>' if mask.include?(member) && !value.nil? && !value.to_s.empty?

@@ -16,7 +16,7 @@ class SettingsLoader
 
   # Prepare $build_config for Build / Sync: load settings, materialize externals.
   # build_flags may be nil, a comma-separated String, or an Array (must include :clean for clean/Docker).
-  def self.prepare(product_settings_file_argument, runscript_file_argument = nil, build_flags: [])
+  def self.prepare(build_flags, product_settings_file_argument, runscript_file_argument = nil)
     $build_config = BuildConfig.new_empty
     $build_config.apply_defaults
     $build_config.session.build_flags = parse_build_flags(build_flags)
@@ -26,10 +26,10 @@ class SettingsLoader
     $build_config.session.product_settings_file = product_settings_file
     require product_settings_file
 
-    $build_config.finalize(product_settings_dir: File.dirname(product_settings_file))
+    $build_config.finalize(File.dirname(product_settings_file))
 
     load_external_modules_file
-    ExternalModules.prepare(logger: nil)
+    ExternalModules.prepare
 
     determine_runscript_file(runscript_file_argument) unless runscript_file_argument.nil?
   end

@@ -59,9 +59,9 @@ display_help if opts.has_key?('--help')
 # Settings
 require 'SettingsLoader.rb'
 SettingsLoader.prepare(
+  opts['--flags'],
   ARGV.size > 1 ? ARGV[1] : nil,
-  ARGV.size > 0 ? ARGV[0] : nil,
-  build_flags: opts['--flags']
+  ARGV.size > 0 ? ARGV[0] : nil
 )
 
 # Logger
