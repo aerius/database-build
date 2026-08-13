@@ -58,9 +58,10 @@ display_help if opts.has_key?('--help')
 
 # Settings
 require 'SettingsLoader.rb'
-SettingsLoader.load_settings(
+SettingsLoader.prepare!(
   ARGV.size > 1 ? ARGV[1] : nil,
-  ARGV.size > 0 ? ARGV[0] : nil
+  ARGV.size > 0 ? ARGV[0] : nil,
+  build_flags: opts['--flags']
 )
 
 # Logger
@@ -84,14 +85,13 @@ opts.each do |option, argument|
     when '--database-name'; override_database_name = argument
     when '--version'; override_version = argument
     when '--dump-filename'; $build_config.session.dump_filetitle = argument
-    when '--flags'; argument.split(',').each{ |flag| $build_config.session.build_flags << flag.strip.downcase.to_sym }
     when '--hints'; $build_config.tools.hint_level = argument.to_i
     when '--help'; display_help
   end
 end
 
 $logger.hint_level = $build_config.tools.hint_level
-$logger.major_hint "You are running a very old depecrated Ruby version (#{RUBY_VERSION}); updating to latest version is recommended" if Utility.is_ruby_version_below('2.2.0')
+$logger.major_hint "You are running a very old deprecated Ruby version (#{RUBY_VERSION}); updating to latest version is recommended" if Utility.is_ruby_version_below('3.2.0')
 
 # ------------------------------------
 

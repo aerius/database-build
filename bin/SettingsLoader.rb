@@ -3,21 +3,23 @@ require 'PathConventions.rb'
 require 'PathAssert.rb'
 require 'GitUtility.rb'
 require 'BuildConfig.rb'
+require 'ExternalModules.rb'
 
 # Single process handle for build settings (groups: layout, output, postgres, tools, session)
 $build_config = nil
 
 ##
-# CLI bootstrap for $build_config: resolve ARGV paths, require product settings, finalize.
-# App/User settings are loaded inside BuildConfig#finalize!.
+# CLI bootstrap for $build_config: resolve ARGV paths, require product settings, finalize,
+# materialize external common modules. App/User settings are loaded inside BuildConfig#finalize!.
 #
 class SettingsLoader
 
-  # Load product settings into $build_config and finalize. If runscript_file_argument is
-  # given, resolve it after finalize (needs layout.runscripts_path).
-  def self.load_settings(product_settings_file_argument, runscript_file_argument = nil)
+  # Prepare $build_config for Build / Sync: load settings, materialize or restore externals.
+  # build_flags may be nil, a comma-separated String, or an Array (must include :clean for clean/Docker).
+  def self.prepare!(product_settings_file_argument, runscript_file_argument = nil, build_flags: [])
     $build_config = BuildConfig.new_empty
     $build_config.apply_defaults!
+    $build_config.session.build_flags = parse_build_flags(build_flags)
 
     # Product settings (mandatory) — assign $build_config.product / layout.*
     product_settings_file = determine_product_settings_file(product_settings_file_argument)
@@ -26,13 +28,32 @@ class SettingsLoader
 
     $build_config.finalize!(product_settings_dir: File.dirname(product_settings_file))
 
+    load_external_modules_file!
+    ExternalModules.ensure_prepared!(logger: nil)
+
     determine_runscript_file(runscript_file_argument) unless runscript_file_argument.nil?
+  end
+
+  # Accepts nil, a comma-separated String, or an Array of flags/symbols.
+  def self.parse_build_flags(flags_argument)
+    return [] if flags_argument.nil?
+    parts = flags_argument.is_a?(String) ? flags_argument.split(',') : Array(flags_argument)
+    normalize_build_flags(parts)
   end
 
   #
   # Private section
   #
   private
+
+  def self.normalize_build_flags(build_flags)
+    flags = []
+    Array(build_flags).each do |flag|
+      sym = flag.to_s.strip.downcase.to_sym
+      flags << sym unless sym.to_s.empty? || flags.include?(sym)
+    end
+    flags
+  end
 
   # Expand path_argument; if not a file, try appending each suffix in order.
   # Returns the first existing non-directory path, or the expanded path if none match.
@@ -68,6 +89,25 @@ class SettingsLoader
 
     # Cannot live in BuildConfig#finalize!: ARGV runscript is resolved here after finalize,
     $build_config.session.runscript_file = PathAssert.ensure_file!(runscript_file, 'runscript_file')
+  end
+
+  # Load optional layout.external_common_modules_file into session.common_module_versions.
+  # Modules files may assign $build_config.session.common_module_versions or $common_module_versions.
+  def self.load_external_modules_file!
+    path = $build_config.layout.external_common_modules_file
+    if path.nil? || path.to_s.empty? then
+      $build_config.session.common_module_versions = []
+      return
+    end
+
+    $common_module_versions = nil
+    require path
+
+    versions = $build_config.session.common_module_versions
+    if (versions.nil? || (versions.respond_to?(:empty?) && versions.empty?)) && !$common_module_versions.nil? then
+      versions = $common_module_versions
+    end
+    $build_config.session.common_module_versions = Array(versions)
   end
 
 end

@@ -28,30 +28,32 @@ def display_help
   puts "     --from-https     Sync from $https_data HTTPS. Supply HTTPS url if different from default"
   puts "  -l --to-local       Sync to local db-data folder. Supply path if different from default"
   puts "  -c --continue       Continue on file not found errors"
+  puts "     --flags          Comma separated list of build flags (e.g. clean)"
   puts "  -i --info           Displays defaults path (does not run)"
   puts "  -h --help           This help"
   puts ""
   exit
 end
 
-$opts = {}
+opts = {}
 GetoptLong.new(
     ['--path', '-p', GetoptLong::REQUIRED_ARGUMENT],
     ['--from-https', GetoptLong::OPTIONAL_ARGUMENT],
     ['--from-local', '-f', GetoptLong::OPTIONAL_ARGUMENT],
     ['--to-local', '-l', GetoptLong::OPTIONAL_ARGUMENT],
+    ['--flags', GetoptLong::REQUIRED_ARGUMENT],
     ['--continue', '-c', GetoptLong::NO_ARGUMENT],
     ['--info', '-i', GetoptLong::NO_ARGUMENT],
     ['--help', '-h', GetoptLong::NO_ARGUMENT]
-).each { |option, argument| $opts[option.downcase] = argument }
+).each { |option, argument| opts[option.downcase] = argument }
 
-display_help if $opts.has_key?('--help')
+display_help if opts.has_key?('--help')
 
 # ------------------------------------
 
-# Settings
+# Settings (flags before prepare! for clean vs dev materialization)
 require 'SettingsLoader.rb'
-SettingsLoader.load_settings(ARGV.size > 0 ? ARGV[0] : nil)
+SettingsLoader.prepare!(ARGV.size > 0 ? ARGV[0] : nil, build_flags: opts['--flags'])
 
 # Logger
 require 'BuildLogger.rb'
@@ -85,8 +87,8 @@ def display_info
   exit
 end
 
-def parse_commandline
-  $opts.each do |option, argument|
+def parse_commandline(opts)
+  opts.each do |option, argument|
     case option.downcase
       when '--path'
         $build_config.layout.product_data_path = File.expand_path(argument.to_s).fix_pathname
@@ -110,7 +112,7 @@ def parse_commandline
     end
   end
 
-  display_info if $opts.has_key?('--info')
+  display_info if opts.has_key?('--info')
 
   if $source == :https then
     $logger.writeln "Syncing from HTTPS (#{$from_https})"
@@ -322,7 +324,7 @@ end
 
 # ---------
 
-parse_commandline
+parse_commandline(opts)
 
 $datasources = DataSourceCollector.collect($logger, $build_config.layout.product_data_path, $build_config.layout.common_data_paths, nil).keys
 

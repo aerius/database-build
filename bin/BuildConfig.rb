@@ -5,13 +5,14 @@ HINT_LEVEL_ALL = 2
 ##
 # Build settings and derived layout paths ($build_config), grouped for clarity.
 #
-# Call order (see SettingsLoader.load_settings):
+# Call order (see SettingsLoader.prepare!):
 #   1. BuildConfig.new_empty
 #   2. apply_defaults!                         — fill defaults on the empty config
 #   3. require product settings                — assign product / layout.* (overrides)
-#   4. finalize!(product_settings_dir:)        — load App/UserSettings, derive & validate paths
-#   5. optional runscript resolve              — after finalize (needs layout.runscripts_path)
-#   6. log!(logger)                            — optional; dump resolved config (Build.rb)
+#   4. finalize!(product_settings_dir:)        — load App/UserSettings, derive internal/builtin layout
+#   5. ExternalModules.ensure_prepared!        — materialize externals, merge common SQL/data paths
+#   6. optional runscript resolve              — after finalize (needs layout.runscripts_path)
+#   7. log!(logger)                            — optional; dump resolved config (Build.rb)
 #
 # Settings files assign into $build_config; overrides in steps 3–4 replace defaults from step 2.
 #
@@ -27,7 +28,8 @@ class BuildConfig
     :product_sql_path, :product_data_path,
     :common_sql_paths, :common_data_paths,
     :runscripts_path, :dbdata_path,
-    :app_settings_file, :user_settings_file
+    :app_settings_file, :user_settings_file,
+    :external_common_modules_file
   )
 
   Output = Struct.new(
@@ -48,11 +50,13 @@ class BuildConfig
 
   Session = Struct.new(
     :product_settings_file, :runscript_file,
-    :build_flags, :dump_filetitle
+    :build_flags, :dump_filetitle,
+    :common_module_versions
   )
 
   attr_accessor :product
   attr_reader :layout, :output, :postgres, :tools, :session
+  attr_reader :internal_common_sql_paths, :internal_common_data_paths
 
   def initialize(product, layout, output, postgres, tools, session)
     @product = product
@@ -61,16 +65,18 @@ class BuildConfig
     @postgres = postgres
     @tools = tools
     @session = session
+    @internal_common_sql_paths = []
+    @internal_common_data_paths = []
   end
 
   def self.new_empty
     new(
       nil,
-      Layout.new(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
+      Layout.new(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
       Output.new(nil, nil, nil, nil),
       Postgres.new(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
       Tools.new(nil, nil, nil, nil, nil, nil, nil),
-      Session.new(nil, nil, [], nil)
+      Session.new(nil, nil, [], nil, [])
     )
   end
 
@@ -154,22 +160,23 @@ class BuildConfig
     end
     layout.product_data_path = PathAssert.ensure_dir!(layout.product_data_path, 'product_data_path')
 
-    layout.common_sql_paths = [
-      PathConventions.internal_modules_sql(layout.source_path),
-      PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_SQL_REL),
-      PathConventions.join(PathConventions.database_build_root, PathConventions::BUILTIN_COMMON_SQL_REL).fix_pathname
+    # Internal modules only here; externals come from the modules file + ExternalModules;
+    # merged common_*_paths are set by apply_common_module_paths! after materialize/restore.
+    @internal_common_sql_paths = [
+      PathConventions.internal_modules_sql(layout.source_path)
     ].compact
-    layout.common_sql_paths.map!.with_index { |path, idx|
-      PathAssert.ensure_dir!(path, "common_sql_paths[#{idx}]")
-    }
+    @internal_common_data_paths = [
+      PathConventions.internal_modules_data(layout.source_path)
+    ].compact
 
-    layout.common_data_paths = [
-      PathConventions.internal_modules_data(layout.source_path),
-      PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_DATA_REL)
-    ].compact
-    layout.common_data_paths.map!.with_index { |path, idx|
-      PathAssert.ensure_dir!(path, "common_data_paths[#{idx}]")
-    }
+    if layout.external_common_modules_file.nil? || layout.external_common_modules_file.to_s.empty?
+      layout.external_common_modules_file = nil
+    else
+      layout.external_common_modules_file = PathAssert.ensure_file!(
+        PathConventions.expand_from(product_settings_dir, layout.external_common_modules_file),
+        'external_common_modules_file'
+      )
+    end
 
     layout.runscripts_path = PathAssert.ensure_dir!(
       PathConventions.join(layout.build_config_path, SCRIPTS_DIR),
@@ -194,6 +201,29 @@ class BuildConfig
     output.output_path = output.output_path.fix_pathname
     output.temp_path = output.temp_path.fix_pathname
     tools.git_bin_path = tools.git_bin_path.fix_pathname unless (tools.git_bin_path.nil? || tools.git_bin_path.empty?)
+
+    self
+  end
+
+  # Merge internal + external + builtin into layout.common_sql_paths / common_data_paths and validate.
+  def apply_common_module_paths!(external_sql_paths, external_data_paths)
+    builtin_sql = PathConventions.join(
+      PathConventions.database_build_root, PathConventions::BUILTIN_COMMON_SQL_REL
+    ).fix_pathname
+
+    layout.common_sql_paths = (
+      Array(@internal_common_sql_paths) + Array(external_sql_paths) + [builtin_sql]
+    ).map { |path| path.fix_pathname.chomp('/') }
+    layout.common_data_paths = (
+      Array(@internal_common_data_paths) + Array(external_data_paths)
+    ).map { |path| path.fix_pathname.chomp('/') }
+
+    layout.common_sql_paths.map!.with_index { |path, idx|
+      PathAssert.ensure_dir!(path, "common_sql_paths[#{idx}]")
+    }
+    layout.common_data_paths.map!.with_index { |path, idx|
+      PathAssert.ensure_dir!(path, "common_data_paths[#{idx}]")
+    }
 
     self
   end

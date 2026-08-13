@@ -45,21 +45,59 @@ Layout path defaults (specified under `layout` in the `BuildConfig.rb`):
 | `product_sql_path` | `<source_path>/src/main/sql/<product>/` |
 | `product_data_path` | `<source_path>/src/data/sql/<product>/` |
 | `runscripts_path` | `<build_config_path>/scripts/` |
-| `common_sql_paths` / `common_data_paths` | Arrays of dirs that exist from the locations below |
+| `common_sql_paths` / `common_data_paths` | Arrays of dirs merged after `SettingsLoader.prepare!` (internal + external + builtin) |
+| `external_common_modules_file` | Optional path to a modules file (relative to product settings dir or absolute) |
 
 Common module locations (each type its own entry):
 
 - **Internal** (beside product source) — optional. Same parent as `<source_path>`: `modules/src/main/sql` and `modules/src/data/sql`.
-- **External** — optional. For now: fixed checkout name `database-modules` next to `database-build`, with fixed paths inside that repo: `source/modules/src/main/sql` and `source/modules/src/data/sql` (i.e. ` /database-modules/source/modules/src/{main,data}/sql`).
+- **External** — optional. Declared in a modules file via `layout.external_common_modules_file` (any HTTPS repo; sql/data paths inside each repo are fixed: `source/modules/src/{main,data}/sql`). Materialized under `<output.target_path>/externals/`.
 - **Builtin** (SQL only) — required. `database-build/common/src/main/sql`.
 
-The workspace root is the parent directory of the `database-build` checkout (sibling repos such as `database-modules` and `dbdata` live there).
+The workspace is the parent of the `database-build` checkout. Product repos, external module repos, and the `dbdata/` folder usually live there as siblings. Dev builds copy external modules from siblings of the **product** git root (normally the same workspace).
+
+### External modules file
+
+Set in product or App settings:
+
+```ruby
+$build_config.layout.external_common_modules_file = 'externals/modules.rb'
+```
+
+Modules file content (assigns `$build_config.session.common_module_versions` or `$common_module_versions`):
+
+```ruby
+$common_module_versions = [
+  {
+    # plain HTTPS only — credentials via GIT_USERNAME / GIT_TOKEN, never in this file
+    'git_repository' => 'https://github.com/aerius/database-modules.git',
+    'git_reference' => 'abc123def456',
+  },
+]
+```
+
+`SettingsLoader.prepare!` (Build / SyncDBData) materializes external common modules under `output.target_path/externals/`.
+
+| Mode | Externals come from |
+|------|---------------------|
+| Dev (default) | Copy from sibling checkouts of the product git root (local edits included; not forced to `git_reference`) |
+| Clean / Docker (`--flags clean`) | `git clone` + checkout each `git_reference` |
+
+```bash
+# Dev
+ruby bin/SyncDBData.rb path/to/settings.rb --to-local
+ruby bin/Build.rb default path/to/settings.rb --version '#'
+
+# Clean
+ruby bin/Build.rb default path/to/settings.rb --flags clean --version '#'
+```
 
 ### Overridable settings
 
 Typical `AppSettings.rb` / `UserSettings.rb` assignments:
 
 - `$build_config.layout.dbdata_path` (default `<workspace>/dbdata/`)
+- `$build_config.layout.external_common_modules_file`
 - `$build_config.postgres.name_prefix` (default `AERIUS`)
 - `$build_config.postgres.username` / `.password` (default `aerius`)
 - `$build_config.tools.https_data_path` / `.https_data_username` / `.https_data_password`
@@ -68,7 +106,7 @@ Typical `AppSettings.rb` / `UserSettings.rb` assignments:
 
 ### Docker
 
-`docker/build-database.sh` writes `$build_config.layout.dbdata_path` from `DBDATA_PATH` into `UserSettings.rb` under `DBCONFIG_PATH` (the `config/` directory), so the image does not depend on the workspace `dbdata/` convention.
+`docker/build-database.sh` always passes `--flags clean` to Sync and Build, installs `git` for external clones (even when product sources are `COPY`'d), and writes `$build_config.layout.dbdata_path` from `DBDATA_PATH` into `UserSettings.rb` under `DBCONFIG_PATH`.
 
 ## Build script
 
@@ -81,6 +119,8 @@ When your runscript calls `add_build_constants`, the build stores:
 - **CURRENT_BUILD_COMMON_MODULE_REPO_HASHES** — A JSON string with one entry per common module repository (from `$build_config.layout.common_sql_paths` / `$build_config.layout.common_data_paths`). Each entry has `repo_url`, `commit_hash`, `sql_paths` (array), `data_paths` (array), and `had_uncommitted_changes`. A repository can have multiple paths, so the path arrays can have more than one element. Paths are relative to the git repository root, not to the project settings file.
 
 - **CURRENT_BUILD_SCRIPT_HAD_UNCOMMITTED_CHANGES** — `'true'` if the product sql path repository, product data path repository, or any common module repository had uncommitted or untracked changes; `'false'` otherwise.
+
+- **CURRENT_BUILD_CLEAN_BUILD_USED** — `'true'` when the build was started with `--flags clean`; `'false'` otherwise.
 
 Example JSON stored in CURRENT_BUILD_COMMON_MODULE_REPO_HASHES:
 
