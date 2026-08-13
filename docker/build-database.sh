@@ -40,11 +40,6 @@ else
   : ${DATABASE_VERSION?'DATABASE_VERSION must be set if source code is present locally..'}
 fi
 
-# Install git and ssh
-apk --no-cache add --virtual .git-deps git openssh
-git --version
-ssh -V
-
 # Make our own PGDATA.
 # We are unfortunately doing this because we want the data to persist but the default PGDATA directory is marked as a volume, which cannot be undone.
 mkdir -p "${PGDATA}" && chown -R postgres:postgres "${PGDATA}" && chmod 777 "${PGDATA}"
@@ -114,10 +109,9 @@ else
   pg_resetwal --pgdata "${PGDATA}"
 fi
 
-# Image cleanup (removing unneeded db-data, git directory and git dependencies)
+# Image cleanup (removing unneeded db-data and cloned product git directory)
 [[ "${DBDATA_CLEANUP}" == 'true' ]] && rm -rf "${DBDATA_PATH}"
 [[ "${CLONE_DBSOURCE}" == true ]] && rm -rf "${GIT_REPOSITORY}"
-apk del .git-deps
 # Exit with 0 if this stage is reached, otherwise the return code from
 #  the last if statement might be used, which might let Docker think the build failed
 exit 0

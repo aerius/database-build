@@ -106,7 +106,7 @@ Typical `AppSettings.rb` / `UserSettings.rb` assignments:
 
 ### Docker
 
-`docker/build-database.sh` always passes `--flags clean` (clone external modules at pinned `git_reference`) and installs `git` for that. Whether the product/`DBSOURCE` tree is cloned is separate:
+`docker/build-database.sh` always passes `--flags clean` (clone external modules at pinned `git_reference`). The image includes `git` and `openssh` for product/externals clones. Whether the product/`DBSOURCE` tree is cloned is separate:
 
 | `CLONE_DBSOURCE` | When | Product / `DBSOURCE` |
 |------------------|------|----------------------|
@@ -138,7 +138,7 @@ docker run --rm -it \
     --version=local
 ```
 
-Do not pass `--flags clean` unless you want pinned clones. The base image does not install `git`; non-clean materialization only needs the sibling directories on the volume.
+Do not pass `--flags clean` unless you want pinned clones. Non-clean materialization only needs the sibling directories on the volume (`git` is in the image but unused for that path).
 
 ## Build script
 
