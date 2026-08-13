@@ -30,8 +30,11 @@ class GitUtility
   end
 
   # Returns git repo root for path, or nil.
+  # Prefers `git rev-parse`; if git is unavailable, walks parents for a `.git` entry.
   def self.get_git_repo_root(path)
-    return run_git(path, 'rev-parse --show-toplevel')
+    root = run_git(path, 'rev-parse --show-toplevel')
+    return root unless root.nil? || root.to_s.empty?
+    return find_git_repo_root_by_dot_git(path)
   end
 
   # Returns full git commit hash for the repo containing path, or nil.
@@ -144,6 +147,20 @@ class GitUtility
   rescue
     Dir.chdir(curr_dir) if defined?(curr_dir) && Dir.pwd != curr_dir
     return nil
+  end
+
+  # Walk parents of path looking for a `.git` entry; return that directory or nil.
+  def self.find_git_repo_root_by_dot_git(path)
+    return nil if path.nil? || path.to_s.empty?
+    start = File.exist?(path) ? (File.directory?(path) ? path : File.dirname(path)) : nil
+    return nil if start.nil?
+    dir = File.expand_path(start)
+    loop do
+      return dir.fix_pathname.chomp('/') if File.exist?(File.join(dir, '.git'))
+      parent = File.expand_path('..', dir)
+      return nil if parent == dir
+      dir = parent
+    end
   end
 
 end

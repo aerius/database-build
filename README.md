@@ -81,7 +81,7 @@ $common_module_versions = [
 | Mode | Externals come from |
 |------|---------------------|
 | Dev (default) | Copy from sibling checkouts of the product git root (local edits included; not forced to `git_reference`) |
-| Clean / Docker (`--flags clean`) | `git clone` + checkout each `git_reference` |
+| Clean (`--flags clean` / Docker) | `git clone` + checkout each `git_reference` |
 
 ```bash
 # Dev
@@ -106,7 +106,14 @@ Typical `AppSettings.rb` / `UserSettings.rb` assignments:
 
 ### Docker
 
-`docker/build-database.sh` always passes `--flags clean` to Sync and Build, installs `git` for external clones (even when product sources are `COPY`'d), and writes `$build_config.layout.dbdata_path` from `DBDATA_PATH` into `UserSettings.rb` under `DBCONFIG_PATH`.
+`docker/build-database.sh` always passes `--flags clean` (clone external modules at pinned `git_reference`) and installs `git` for that. Whether the product/`DBSOURCE` tree is cloned is separate:
+
+| `CLONE_DBSOURCE` | When | Product / `DBSOURCE` |
+|------------------|------|----------------------|
+| `false` | `DBSOURCE_PATH` directory present | Local COPY/mount |
+| `true` | directory missing | `git clone` product repo (`GIT_*`), then paths are prefixed with `GIT_REPOSITORY` |
+
+Both modes write `$build_config.layout.dbdata_path` from `DBDATA_PATH` into `UserSettings.rb` under `DBCONFIG_PATH`.
 
 ## Build script
 
