@@ -52,15 +52,14 @@ class GitUtility
     return run_git(path, 'status --porcelain') != nil
   end
 
-  # Returns true if the repo at path is checked out at gitref (full or short hash).
+  # Returns true if HEAD at path resolves to the same commit as gitref
+  # (full/short hash, tag, or branch name in that repo).
   def self.ref_matches_path?(path, gitref)
     return false if path.nil? || !File.directory?(path) || gitref.nil? || gitref.to_s.empty?
     current = get_git_hash_for_path(path)
-    return true if current == gitref
-    short = get_git_short_hash_for_path(path)
-    return true if short == gitref
-    return true if !current.nil? && current.start_with?(gitref.to_s)
-    return false
+    return false if current.nil?
+    desired = resolve_commit(path, gitref)
+    return !desired.nil? && desired == current
   end
 
   # Raises unless repo_url is a plain HTTPS URL (no SSH, no embedded credentials).
@@ -91,14 +90,14 @@ class GitUtility
     end
   end
 
-  # Checks out gitref in target_dir. Raises on failure.
+  # Checks out gitref in target_dir (commit hash, tag, or branch). Raises on failure.
   def self.checkout_ref(target_dir, gitref)
     raise "Git checkout target not found: '#{target_dir}'" unless File.directory?(target_dir)
     checkout_cmd = "cd \"#{target_dir}\" && #{git_exe} checkout --quiet \"#{gitref}\""
     raise "Git checkout failed for '#{gitref}' in '#{target_dir}'" unless Utility.run_cmd(checkout_cmd, true, "git checkout #{gitref}")
   end
 
-  # Clones repo_url into target_dir and checks out gitref. Raises on failure.
+  # Clones repo_url into target_dir and checks out gitref (commit hash, tag, or branch). Raises on failure.
   def self.clone_and_checkout(repo_url, target_dir, gitref)
     clone_repo(repo_url, target_dir)
     checkout_ref(target_dir, gitref)
@@ -108,6 +107,13 @@ class GitUtility
   # Private section
   #
   private
+
+  # Resolves gitref to a full commit hash in the repo at path, or nil.
+  def self.resolve_commit(path, gitref)
+    return nil if gitref.nil? || gitref.to_s.empty?
+    # Peel annotated tags to the commit (^{commit}); works for hashes/branches/tags.
+    return run_git(path, "rev-parse \"#{gitref.to_s.gsub('"', '')}^{commit}\"")
+  end
 
   # Returns repo_url with GIT_USERNAME:GIT_TOKEN embedded when both env vars are set.
   # Caller must pass a plain HTTPS URL (see require_plain_https_repo_url).

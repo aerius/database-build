@@ -71,7 +71,8 @@ $build_config.session.common_module_versions = [
   {
     # plain HTTPS only — credentials via GIT_USERNAME / GIT_TOKEN, never in this file
     'git_repository' => 'https://github.com/aerius/database-modules.git',
-    'git_reference' => 'abc123def456',
+    # commit hash, tag, or branch (clean builds: git clone + checkout)
+    'git_reference' => 'v1.2.3',
   },
 ]
 ```
