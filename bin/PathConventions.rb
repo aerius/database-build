@@ -6,18 +6,16 @@ module PathConventions
   DATA_REL = 'src/data/sql'
   MODULES_DIR = 'modules'
   DBDATA_DIR = 'dbdata'
-  MODULES_REPO = 'database-modules'
-  # Sibling modules repo: <workspace>/database-modules/source/modules/src/{main,data}/sql
-  MODULES_SQL_REL = 'source/modules/src/main/sql'
-  MODULES_DATA_REL = 'source/modules/src/data/sql'
   BUILTIN_COMMON_SQL_REL = 'common/src/main/sql'
+  EXTERNAL_MODULES_SQL_REL = 'source/modules/src/main/sql'
+  EXTERNAL_MODULES_DATA_REL = 'source/modules/src/data/sql'
 
   # database-build checkout root (parent of bin/)
   def self.database_build_root
     File.expand_path('..', File.dirname($0))
   end
 
-  # Parent of database-build (workspace containing sibling repos)
+  # Parent of database-build (workspace: sibling repo checkouts and dbdata/ folder)
   def self.workspace_root
     File.expand_path('..', database_build_root)
   end

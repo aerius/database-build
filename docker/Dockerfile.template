@@ -133,9 +133,10 @@ ENV POSTGRES_DB='postgres' \
     PGCONF_INCLUDE_DIR='/postgresconf.d'
 
 RUN apk update && apk upgrade \
-    # add ruby dependencies + curl + inotify-tools
+    # add ruby dependencies + curl + inotify-tools + git (product/externals clone)
     && apk --no-cache add ruby ruby-rake ruby-bigdecimal ruby-bundler \
     libstdc++ tzdata bash ca-certificates inotify-tools \
+    git openssh \
     \
     # disable generating documentation for (ruby)gems
     && echo 'gem: --no-document' > /etc/gemrc \
@@ -145,6 +146,8 @@ RUN apk update && apk upgrade \
     && gem install clbustos-rtf \
     && ruby --version \
     && gem list \
+    && git --version \
+    && ssh -V \
     \
     # create necessary common folders (required by aerius-database-build - but not used by us yet)
     && mkdir -p aerius-database-common/src/data/sql \
