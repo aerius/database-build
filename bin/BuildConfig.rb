@@ -8,19 +8,18 @@ HINT_LEVEL_ALL = 2
 # Call order (see SettingsLoader.prepare):
 #   1. BuildConfig.new_empty
 #   2. apply_defaults                         — fill defaults on the empty config
-#   3. require product settings                — assign product / layout.* (overrides)
-#   4. finalize(product_settings_dir)         — load App/UserSettings, derive internal/builtin layout
+#   3. require product settings                — assign product
+#   4. finalize(source_path)                  — fix roots, load App/UserSettings, derive internal/builtin layout
 #   5. ExternalModules.prepare                — materialize externals, merge common SQL/data paths
 #   6. optional runscript resolve              — after finalize (needs layout.runscripts_path)
 #   7. log(logger)                            — optional; dump resolved config (Build.rb)
 #
 # Settings files assign into $build_config; overrides in steps 3–4 replace defaults from step 2.
+# The whole layout is fixed: the source folder (CWD), its src/build, src/main/sql/<product>/ and
+# src/data/sql/<profile>/; settings files must not assign layout.source_path, build_config_path,
+# product_sql_path or product_data_path.
 #
 class BuildConfig
-  CONFIG_DIR = 'config'
-  SCRIPTS_DIR = 'scripts'
-  APP_SETTINGS_FILE = 'AppSettings.rb'
-  USER_SETTINGS_FILE = 'UserSettings.rb'
   DEFAULT_DATABASE_NAME_PREFIX = 'AERIUS'
 
   Layout = Struct.new(
@@ -42,8 +41,6 @@ class BuildConfig
     :essentials_function_prefix, :unittest_prefix
   )
 
-  Db = Struct.new(:postgres)
-
   Https = Struct.new(:data_path, :username, :password)
 
   Sync = Struct.new(:source, :target, :continue, :https)
@@ -55,19 +52,19 @@ class BuildConfig
 
   Session = Struct.new(
     :product_settings_file, :runscript_file,
-    :build_flags, :dump_filetitle,
+    :profile, :build_flags, :dump_filetitle,
     :common_module_versions
   )
 
   attr_accessor :product
-  attr_reader :layout, :output, :db, :sync, :tools, :session
+  attr_reader :layout, :output, :postgres, :sync, :tools, :session
   attr_reader :internal_common_sql_paths, :internal_common_data_paths
 
-  def initialize(product, layout, output, db, sync, tools, session)
+  def initialize(product, layout, output, postgres, sync, tools, session)
     @product = product
     @layout = layout
     @output = output
-    @db = db
+    @postgres = postgres
     @sync = sync
     @tools = tools
     @session = session
@@ -80,10 +77,10 @@ class BuildConfig
       nil,
       Layout.new(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
       Output.new(nil, nil, nil, nil),
-      Db.new(Postgres.new(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)),
+      Postgres.new(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
       Sync.new(nil, nil, nil, Https.new(nil, nil, nil)),
       Tools.new(nil, nil, nil, nil),
-      Session.new(nil, nil, [], nil, [])
+      Session.new(nil, nil, nil, [], nil, [])
     )
   end
 
@@ -94,29 +91,29 @@ class BuildConfig
     output.output_path = File.expand_path(output.target_path + '/build/').fix_pathname
     output.temp_path = File.expand_path(output.target_path + '/temp/').fix_pathname
 
-    db.postgres.username = 'aerius'
-    db.postgres.password = 'aerius'
+    postgres.username = 'aerius'
+    postgres.password = 'aerius'
 
     if !ENV['POSTGRESQL_BIN'].nil? then
-      db.postgres.bin_path = ENV['POSTGRESQL_BIN']
+      postgres.bin_path = ENV['POSTGRESQL_BIN']
     elsif ON_WINDOWS then
       if !ENV['CommonProgramW6432'].nil? then
-        db.postgres.bin_path = Utility.find_best_postgresql_path(File.expand_path(ENV['CommonProgramW6432'] + '/../'))
+        postgres.bin_path = Utility.find_best_postgresql_path(File.expand_path(ENV['CommonProgramW6432'] + '/../'))
       elsif !ENV['ProgramFiles(x86)'].nil? then
-        db.postgres.bin_path = Utility.find_best_postgresql_path(ENV['ProgramFiles(x86)'])
+        postgres.bin_path = Utility.find_best_postgresql_path(ENV['ProgramFiles(x86)'])
       elsif !ENV['ProgramFiles'].nil? then
-        db.postgres.bin_path = Utility.find_best_postgresql_path(ENV['ProgramFiles'])
+        postgres.bin_path = Utility.find_best_postgresql_path(ENV['ProgramFiles'])
       end
     else
-      db.postgres.bin_path = ''
+      postgres.bin_path = ''
     end
 
-    db.postgres.template = 'template0'
-    db.postgres.tablespace = ''
-    db.postgres.collation = ''
-    db.postgres.name_prefix = DEFAULT_DATABASE_NAME_PREFIX
-    db.postgres.essentials_function_prefix = 'system.'
-    db.postgres.unittest_prefix = 'unittest_'
+    postgres.template = 'template0'
+    postgres.tablespace = ''
+    postgres.collation = ''
+    postgres.name_prefix = DEFAULT_DATABASE_NAME_PREFIX
+    postgres.essentials_function_prefix = 'system.'
+    postgres.unittest_prefix = 'unittest_'
 
     tools.git_bin_path = GitUtility.default_bin_path
     tools.max_threads = 10
@@ -130,83 +127,18 @@ class BuildConfig
     self
   end
 
-  # Expand relative layout paths, derive fixed paths, normalize and validate.
-  def finalize(product_settings_dir)
+  # Fix roots at source_path, derive fixed paths, normalize and validate.
+  def finalize(source_path)
     raise 'Product not set ($build_config.product)' if product.nil?
-    raise 'Source path not set ($build_config.layout.source_path)' if layout.source_path.nil?
-    raise 'Build config path not set ($build_config.layout.build_config_path)' if layout.build_config_path.nil?
 
-    layout.source_path = PathConventions.expand_from(product_settings_dir, layout.source_path)
-    layout.build_config_path = PathAssert.require_directory(
-      PathConventions.expand_from(product_settings_dir, layout.build_config_path),
-      'build_config_path'
-    )
-
-    layout.app_settings_file = PathAssert.require_file(
-      PathConventions.join(layout.build_config_path, CONFIG_DIR, APP_SETTINGS_FILE),
-      'app_settings_file'
-    )
-    require layout.app_settings_file
-
-    layout.user_settings_file = PathConventions.join(
-      layout.build_config_path, CONFIG_DIR, USER_SETTINGS_FILE
-    ).fix_filename
-    layout.user_settings_file = nil unless File.exist?(layout.user_settings_file)
-    require layout.user_settings_file unless layout.user_settings_file.nil?
-
-    layout.source_path = PathAssert.require_directory(layout.source_path, 'source_path')
-
-    # Convention: source/src/{main,data}/sql/<product>/; optional override when already set.
-    layout.product_sql_path = if layout.product_sql_path.nil?
-      PathConventions.join(layout.source_path, PathConventions::SQL_REL, product.to_s)
-    else
-      PathConventions.expand_from(layout.source_path, layout.product_sql_path)
-    end
-    layout.product_sql_path = PathAssert.require_directory(layout.product_sql_path, 'product_sql_path')
-
-    layout.product_data_path = if layout.product_data_path.nil?
-      PathConventions.join(layout.source_path, PathConventions::DATA_REL, product.to_s)
-    else
-      PathConventions.expand_from(layout.source_path, layout.product_data_path)
-    end
-    layout.product_data_path = PathAssert.require_directory(layout.product_data_path, 'product_data_path')
-
-    # Internal modules only here; externals come from the modules file + ExternalModules;
-    # merged common_*_paths are set by apply_common_module_paths after materialize.
-    @internal_common_sql_paths = [
-      PathConventions.internal_modules_sql(layout.source_path)
-    ].compact
-    @internal_common_data_paths = [
-      PathConventions.internal_modules_data(layout.source_path)
-    ].compact
-
-    # Fixed beside profiles/: <product_settings_dir>/../externals/modules.rb when present.
-    modules_file = PathConventions.expand_from(product_settings_dir, PathConventions::EXTERNAL_COMMON_MODULES_REL)
-    layout.external_common_modules_file = File.file?(modules_file) ? modules_file : nil
-
-    layout.runscripts_path = PathAssert.require_directory(
-      PathConventions.join(layout.build_config_path, SCRIPTS_DIR),
-      'runscripts_path'
-    )
-
-    layout.dbdata_path = PathConventions.join(PathConventions.workspace_root, PathConventions::DBDATA_DIR) if layout.dbdata_path.nil?
-    layout.dbdata_path = PathAssert.require_directory(layout.dbdata_path, 'dbdata_path')
-
-    raise 'Temp path not set ($build_config.output.temp_path)' if output.temp_path.nil?
-    raise 'Output path not set ($build_config.output.output_path)' if output.output_path.nil?
-    raise 'Log path not set ($build_config.output.log_path)' if output.log_path.nil?
-    raise 'Database name prefix not set ($build_config.db.postgres.name_prefix)' if db.postgres.name_prefix.nil?
-    raise 'PostgreSQL bin path not set ($build_config.db.postgres.bin_path)' if db.postgres.bin_path.nil?
-    unless !ON_WINDOWS && db.postgres.bin_path.empty?
-      db.postgres.bin_path = PathAssert.require_directory(db.postgres.bin_path, 'db.postgres.bin_path')
-    end
-    raise 'PostgreSQL username not set ($build_config.db.postgres.username)' if db.postgres.username.nil? || db.postgres.username.to_s.empty?
-    raise 'PostgreSQL password not set ($build_config.db.postgres.password)' if db.postgres.password.nil? || db.postgres.password.to_s.empty?
-
-    output.log_path = output.log_path.fix_pathname
-    output.output_path = output.output_path.fix_pathname
-    output.temp_path = output.temp_path.fix_pathname
-    tools.git_bin_path = tools.git_bin_path.fix_pathname unless (tools.git_bin_path.nil? || tools.git_bin_path.empty?)
+    require_roots_unassigned('product settings')
+    resolve_roots(source_path)
+    load_settings
+    derive_fixed_layout
+    derive_product_paths
+    derive_internal_modules
+    derive_dbdata
+    normalize_and_validate
 
     self
   end
@@ -239,7 +171,7 @@ class BuildConfig
     logger.writeln "product: #{product}"
     log_struct(logger, 'layout', layout)
     log_struct(logger, 'output', output)
-    log_struct(logger, 'db.postgres', db.postgres, [:password])
+    log_struct(logger, 'postgres', postgres, [:password])
     log_struct(logger, 'sync', sync, [], { https: [:password] })
     log_struct(logger, 'tools', tools)
     log_struct(logger, 'session', session)
@@ -249,6 +181,100 @@ class BuildConfig
   # Private section
   #
   private
+
+  def require_roots_unassigned(settings_name)
+    return if layout.source_path.nil? && layout.build_config_path.nil?
+    raise "layout.source_path / layout.build_config_path are fixed (the source folder and its #{PathConventions::BUILD_CONFIG_REL}); remove them from #{settings_name}"
+  end
+
+  def require_product_paths_unassigned
+    return if layout.product_sql_path.nil? && layout.product_data_path.nil?
+    raise "layout.product_sql_path / layout.product_data_path are fixed (#{PathConventions::SQL_REL}/<product>/ and #{PathConventions::DATA_REL}/<profile>/); remove them from the settings files"
+  end
+
+  def resolve_roots(source_path)
+    layout.source_path = PathAssert.require_directory(source_path, 'source_path')
+    layout.build_config_path = PathAssert.require_directory(
+      PathConventions.build_config(layout.source_path),
+      'build_config_path'
+    )
+  end
+
+  def load_settings
+    source_path = layout.source_path
+    build_config_path = layout.build_config_path
+
+    layout.app_settings_file = PathAssert.require_file(
+      PathConventions.app_settings(layout.build_config_path),
+      'app_settings_file'
+    )
+    require layout.app_settings_file
+
+    layout.user_settings_file = PathConventions.user_settings(layout.build_config_path)
+    layout.user_settings_file = nil unless File.exist?(layout.user_settings_file)
+    require layout.user_settings_file unless layout.user_settings_file.nil?
+
+    if layout.source_path != source_path || layout.build_config_path != build_config_path then
+      raise 'layout.source_path / layout.build_config_path are fixed; remove them from AppSettings.rb / UserSettings.rb'
+    end
+  end
+
+  def derive_fixed_layout
+    layout.external_common_modules_file = PathConventions.external_modules_file(layout.build_config_path)
+    layout.runscripts_path = PathAssert.require_directory(
+      PathConventions.runscripts(layout.build_config_path),
+      'runscripts_path'
+    )
+  end
+
+  # SQL per product (src/main/sql/<product>/), data set per profile (src/data/sql/<profile>/).
+  def derive_product_paths
+    require_product_paths_unassigned
+    raise 'Profile not set ($build_config.session.profile)' if session.profile.nil?
+
+    layout.product_sql_path = PathAssert.require_directory(
+      PathConventions.product_sql(layout.source_path, product),
+      'product_sql_path'
+    )
+    layout.product_data_path = PathAssert.require_directory(
+      PathConventions.product_data(layout.source_path, session.profile),
+      'product_data_path'
+    )
+  end
+
+  def derive_internal_modules
+    # Internal modules only here; externals come from the modules file + ExternalModules;
+    # merged common_*_paths are set by apply_common_module_paths after materialize.
+    @internal_common_sql_paths = [
+      PathConventions.internal_modules_sql(layout.source_path)
+    ].compact
+    @internal_common_data_paths = [
+      PathConventions.internal_modules_data(layout.source_path)
+    ].compact
+  end
+
+  def derive_dbdata
+    layout.dbdata_path = PathConventions.default_dbdata if layout.dbdata_path.nil?
+    layout.dbdata_path = PathAssert.require_directory(layout.dbdata_path, 'dbdata_path')
+  end
+
+  def normalize_and_validate
+    raise 'Temp path not set ($build_config.output.temp_path)' if output.temp_path.nil?
+    raise 'Output path not set ($build_config.output.output_path)' if output.output_path.nil?
+    raise 'Log path not set ($build_config.output.log_path)' if output.log_path.nil?
+    raise 'Database name prefix not set ($build_config.postgres.name_prefix)' if postgres.name_prefix.nil?
+    raise 'PostgreSQL bin path not set ($build_config.postgres.bin_path)' if postgres.bin_path.nil?
+    unless !ON_WINDOWS && postgres.bin_path.empty?
+      postgres.bin_path = PathAssert.require_directory(postgres.bin_path, 'postgres.bin_path')
+    end
+    raise 'PostgreSQL username not set ($build_config.postgres.username)' if postgres.username.nil? || postgres.username.to_s.empty?
+    raise 'PostgreSQL password not set ($build_config.postgres.password)' if postgres.password.nil? || postgres.password.to_s.empty?
+
+    output.log_path = output.log_path.fix_pathname
+    output.output_path = output.output_path.fix_pathname
+    output.temp_path = output.temp_path.fix_pathname
+    tools.git_bin_path = tools.git_bin_path.fix_pathname unless (tools.git_bin_path.nil? || tools.git_bin_path.empty?)
+  end
 
   # nested_masks: { member_name => [secret_fields] } for Struct-valued members
   def log_struct(logger, name, struct, mask = [], nested_masks = {})

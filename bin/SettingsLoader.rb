@@ -12,21 +12,28 @@ $build_config = nil
 # CLI bootstrap for $build_config: resolve ARGV paths, require product settings, finalize,
 # materialize external common modules. App/User settings are loaded inside BuildConfig#finalize.
 #
+# Must be run from the product source folder (the folder containing src/build/); product
+# settings are always a profile under src/build/profiles/.
+#
 class SettingsLoader
 
   # Prepare $build_config for Build / Sync: load settings, materialize externals.
   # build_flags may be nil, a comma-separated String, or an Array (must include :clean for clean/Docker).
-  def self.prepare(build_flags, product_settings_file_argument, runscript_file_argument = nil)
+  # profile_argument may be nil when src/build/profiles/ holds exactly one profile.
+  def self.prepare(build_flags, profile_argument, runscript_file_argument = nil)
+    source_path = determine_source_path
+
     $build_config = BuildConfig.new_empty
     $build_config.apply_defaults
     $build_config.session.build_flags = parse_build_flags(build_flags)
 
-    # Product settings (mandatory) — assign $build_config.product / layout.*
-    product_settings_file = determine_product_settings_file(product_settings_file_argument)
+    # Product settings (mandatory) — assign $build_config.product / optional layout.* overrides
+    product_settings_file = determine_product_settings_file(source_path, profile_argument)
     $build_config.session.product_settings_file = product_settings_file
+    $build_config.session.profile = File.basename(product_settings_file, '.rb')
     require product_settings_file
 
-    $build_config.finalize(File.dirname(product_settings_file))
+    $build_config.finalize(source_path)
 
     load_external_modules_file
     ExternalModules.prepare
@@ -67,21 +74,36 @@ class SettingsLoader
     path
   end
 
-  def self.determine_product_settings_file(product_settings_file_argument)
-    if product_settings_file_argument.nil? || product_settings_file_argument.start_with?('-') then
-      puts 'Specify a product-settings file. See --help for more information.'
-      exit
+  # The CWD is the product source folder; it must contain src/build/profiles/.
+  def self.determine_source_path
+    source_path = Dir.pwd.fix_pathname
+    profiles_path = PathConventions.profiles(source_path)
+    unless File.directory?(profiles_path) then
+      raise "Run from the product source folder (the folder containing #{PathConventions::BUILD_CONFIG_REL}/); \"#{profiles_path}\" not found"
+    end
+    source_path
+  end
+
+  # Profile name: the file name of src/build/profiles/<profile>.rb without .rb (no path, no .rb).
+  # Without a name, the single profile is used. The profile name also selects the data set:
+  # src/data/sql/<profile>/.
+  def self.determine_product_settings_file(source_path, profile_argument)
+    profiles_path = PathConventions.profiles(source_path)
+    available = Dir[File.join(profiles_path, '*.rb')].map { |path| File.basename(path, '.rb') }.sort
+
+    profile = profile_argument.to_s
+    if profile.empty? || profile.start_with?('-') then
+      raise "No profile given and #{available.size} profiles found in \"#{profiles_path}\" (#{available.join(', ')}); specify one" unless available.size == 1
+      profile = available.first
+    end
+    if profile =~ %r{[/\\]} || profile.downcase.end_with?('.rb') then
+      raise "Profile must be a name without path or .rb, e.g. 'latest' for #{PathConventions::BUILD_CONFIG_REL}/#{PathConventions::PROFILES_DIR}/latest.rb (got \"#{profile_argument}\")"
     end
 
-    # Absolute / CWD-relative path first; otherwise under fixed src/build/profiles/.
-    product_settings_file = expand_with_suffixes(product_settings_file_argument, ['.rb', 'Settings.rb'])
-    unless File.file?(product_settings_file)
-      under_profiles = File.join(PathConventions::PROFILES_REL, product_settings_file_argument)
-      product_settings_file = expand_with_suffixes(under_profiles, ['.rb', 'Settings.rb'])
-    end
+    product_settings_file = File.join(profiles_path, profile + '.rb').fix_filename
+    raise "Profile '#{profile}' not found in \"#{profiles_path}\" (available: #{available.join(', ')})" unless File.file?(product_settings_file)
 
-    # Cannot live in BuildConfig#finalize: must exist before require and before finalize.
-    PathAssert.require_file(product_settings_file, 'product_settings_file')
+    product_settings_file
   end
 
   # First absolute path or relative to CWD; otherwise under layout.runscripts_path.

@@ -20,14 +20,14 @@ require 'Utility.rb'
 # ------------------------------------
 
 def display_help
-  puts "Syntax:\n  ruby #{File.basename(__FILE__)} ruby-script-file product-settings-file [parameters]\n\n"
+  puts "Syntax (run from the product source folder, the folder containing src/build/):"
+  puts "  ruby #{File.basename(__FILE__)} ruby-script-file [profile] [parameters]\n\n"
   puts "  ruby-script-file"
   puts "                      Path and filename of runscript with the build steps. Can"
-  puts "                      be absolute, relative to CWD, or in $run_scripts_path."
-  puts "  product-settings-file"
-  puts "                      Path to product settings, or a profile name under"
-  puts "                      src/build/profiles/. Contains $build_config.product,"
-  puts "                      layout.source_path, and layout.build_config_path."
+  puts "                      be absolute, relative to CWD, or in src/build/scripts/."
+  puts "  profile"
+  puts "                      Product settings name under src/build/profiles/ (e.g."
+  puts "                      latest). Optional when there is only one profile."
   puts "\nParameters:"
   puts "  -d --dbdata-path    Path where the table dump files are located (for"
   puts "                      load scripts)"
@@ -91,7 +91,7 @@ opts.each do |option, argument|
 end
 
 $logger.hint_level = $build_config.tools.hint_level
-$logger.major_hint "You are running a very old deprecated Ruby version (#{RUBY_VERSION}); updating to latest version is recommended" if Utility.is_ruby_version_below('3.2.0')
+$logger.major_hint "You are running an end-of-life Ruby version (#{RUBY_VERSION}); updating to latest version is recommended" if Utility.is_ruby_version_below('3.2.0')
 
 # ------------------------------------
 

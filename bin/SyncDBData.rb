@@ -15,14 +15,12 @@ require 'PostgresTools.rb'
 # ------------------------------------
 
 def display_help
-  puts "Syntax:\n  ruby #{File.basename(__FILE__)} product-settings-file [parameters]\n\n"
-  puts "  product-settings-file"
-  puts "                      Path to product settings, or a profile name under"
-  puts "                      src/build/profiles/."
+  puts "Syntax (run from the product source folder, the folder containing src/build/):"
+  puts "  ruby #{File.basename(__FILE__)} [profile] [parameters]\n\n"
+  puts "  profile"
+  puts "                      Product settings name under src/build/profiles/ (e.g."
+  puts "                      latest). Optional when there is only one profile."
   puts "\nParameters:"
-  puts "  -p --path           Path where the to-be-parsed SQL files are located (export of"
-  puts "                      database/src/build/scripts/sql). Supply if different from"
-  puts "                      default"
   puts "  -f --from-local     Sync from local db-data folder. Supply db-data path if different from default"
   puts "     --from-https     Sync from $https_data HTTPS. Supply HTTPS url if different from default"
   puts "  -l --to-local       Sync to local db-data folder. Supply path if different from default"
@@ -36,7 +34,6 @@ end
 
 opts = {}
 GetoptLong.new(
-    ['--path', '-p', GetoptLong::REQUIRED_ARGUMENT],
     ['--from-https', GetoptLong::OPTIONAL_ARGUMENT],
     ['--from-local', '-f', GetoptLong::OPTIONAL_ARGUMENT],
     ['--to-local', '-l', GetoptLong::OPTIONAL_ARGUMENT],
@@ -81,7 +78,7 @@ $target_overwritten = false
 # ---------
 
 def display_info
-  puts "Default parsing path:", '  ' + $build_config.layout.product_data_path
+  puts "Parsing path:", '  ' + $build_config.layout.product_data_path
   puts "Default local db-data source:", '  ' + $from_local
   puts "Default HTTPS source:", '  ' + ($from_https || '(unset)')
   puts "Default local db-data target:", '  ' + $to_local
@@ -91,8 +88,6 @@ end
 def parse_commandline(opts)
   opts.each do |option, argument|
     case option.downcase
-      when '--path'
-        $build_config.layout.product_data_path = File.expand_path(argument.to_s).fix_pathname
       when '--from-https'
         raise 'Can only have one source' if $source_overwritten
         $build_config.sync.source = :https

@@ -44,12 +44,12 @@ class ScriptCommands
     version = version.gsub('#', get_git_revision) if version.include?('#')
     $version = version
     $logger.writeln "Version = #{$version}"
-    set_database_name($build_config.db.postgres.name_prefix + '-' + $build_config.product.to_s + '-' + $version) if $database_name.nil?
+    set_database_name($build_config.postgres.name_prefix + '-' + $build_config.product.to_s + '-' + $version) if $database_name.nil?
   end
 
   def ensure_version
     if $version.nil? && !$database_name.nil? then
-      prefix = $build_config.db.postgres.name_prefix + '-' + $build_config.product.to_s + '-'
+      prefix = $build_config.postgres.name_prefix + '-' + $build_config.product.to_s + '-'
       if $database_name.starts_with?(prefix) && $database_name.length > prefix.length then
         set_version($database_name[(prefix.length)..($database_name.length-1)])
       end
@@ -111,9 +111,9 @@ class ScriptCommands
 
     ensure_database_name
     $logger.writeln "Creating database #{$database_name}..."
-    with = "TEMPLATE \"#{$build_config.db.postgres.template}\""
-    with += " TABLESPACE \"#{$build_config.db.postgres.tablespace}\"" unless $build_config.db.postgres.tablespace.empty?
-    with += " LC_COLLATE '#{$build_config.db.postgres.collation}' LC_CTYPE '#{$build_config.db.postgres.collation}'" unless $build_config.db.postgres.collation.empty?
+    with = "TEMPLATE \"#{$build_config.postgres.template}\""
+    with += " TABLESPACE \"#{$build_config.postgres.tablespace}\"" unless $build_config.postgres.tablespace.empty?
+    with += " LC_COLLATE '#{$build_config.postgres.collation}' LC_CTYPE '#{$build_config.postgres.collation}'" unless $build_config.postgres.collation.empty?
     PostgresTools.execute_external_sql_command("CREATE DATABASE \"#{$database_name}\" WITH #{with}")
 
     if update_database_comment then
@@ -251,7 +251,7 @@ class ScriptCommands
   def synchronize_serials
     ensure_database_name
     $logger.writeln "Synchronizing all serials..."
-    PostgresTools.execute_sql_command("SELECT #{$build_config.db.postgres.essentials_function_prefix}synchronize_all_serials()");
+    PostgresTools.execute_sql_command("SELECT #{$build_config.postgres.essentials_function_prefix}synchronize_all_serials()");
   end
   alias_method :synchronise_serials, :synchronize_serials
 
@@ -332,7 +332,7 @@ class ScriptCommands
     $logger.write "Running unit tests... "
     unittest_count = 0
     unittest_failed = 0
-    functions = PostgresTools.fetch_sql_command("SELECT * FROM #{$build_config.db.postgres.essentials_function_prefix}list_unittest_functions('#{$build_config.db.postgres.unittest_prefix}')");
+    functions = PostgresTools.fetch_sql_command("SELECT * FROM #{$build_config.postgres.essentials_function_prefix}list_unittest_functions('#{$build_config.postgres.unittest_prefix}')");
     $logger.write 'none found.' if functions.empty?
     $logger.writeln ''
     functions.each{ |function|
@@ -342,7 +342,7 @@ class ScriptCommands
         unittest_count += 1
         function_returns = function['returns']
         $logger.major_hint "#{function_name}() returns \"#{function_returns}\"; should have no return value" if function_returns != 'void'
-        rv = PostgresTools.fetch_sql_command("BEGIN; SELECT * FROM #{$build_config.db.postgres.essentials_function_prefix}execute_unittest('#{function_name}'); ROLLBACK;");
+        rv = PostgresTools.fetch_sql_command("BEGIN; SELECT * FROM #{$build_config.postgres.essentials_function_prefix}execute_unittest('#{function_name}'); ROLLBACK;");
         if rv.empty? then
           $logger.warn "Could not read result from #{function_name}()"
         elsif rv[0].has_key?('errcode') then
@@ -368,11 +368,11 @@ class ScriptCommands
   def validate_contents(*params)
     ensure_database_name
     $logger.writeln_with_timing("Validating database contents...") {
-      PostgresTools.execute_sql_command("\\set VERBOSITY terse \n SELECT #{$build_config.db.postgres.essentials_function_prefix}validate_all()");
+      PostgresTools.execute_sql_command("\\set VERBOSITY terse \n SELECT #{$build_config.postgres.essentials_function_prefix}validate_all()");
       if params.include?(:abort_on_errors) then
-        rs = PostgresTools.fetch_sql_command("SELECT number_of_tests FROM #{$build_config.db.postgres.essentials_function_prefix}last_validation_run_view WHERE result = 'error'");
+        rs = PostgresTools.fetch_sql_command("SELECT number_of_tests FROM #{$build_config.postgres.essentials_function_prefix}last_validation_run_view WHERE result = 'error'");
         num_errors = rs[0]['number_of_tests'].to_i
-        $logger.error "Validation yielded #{num_errors} error(s), please consult the logs and #{$build_config.db.postgres.essentials_function_prefix}last_validation_logs_view" if num_errors > 0
+        $logger.error "Validation yielded #{num_errors} error(s), please consult the logs and #{$build_config.postgres.essentials_function_prefix}last_validation_logs_view" if num_errors > 0
       end
     }
   end
@@ -381,7 +381,7 @@ class ScriptCommands
     ensure_database_name
     filename = File.expand_path($build_config.output.output_path + '{title}_{datesuffix}.csv').fix_filename
     $logger.writeln_with_timing("Creating database summary in '#{$build_config.output.output_path}'...") {
-      PostgresTools.execute_sql_command("SELECT #{$build_config.db.postgres.essentials_function_prefix}output_summary_table('#{filename}')");
+      PostgresTools.execute_sql_command("SELECT #{$build_config.postgres.essentials_function_prefix}output_summary_table('#{filename}')");
     }
   end
 
@@ -457,7 +457,7 @@ class ScriptCommands
   def cluster_tables
     ensure_database_name
     $logger.writeln "Clustering all tables..."
-    PostgresTools.execute_sql_command("SELECT #{$build_config.db.postgres.essentials_function_prefix}cluster_all_tables()");
+    PostgresTools.execute_sql_command("SELECT #{$build_config.postgres.essentials_function_prefix}cluster_all_tables()");
   end
 
   def terminate_connections

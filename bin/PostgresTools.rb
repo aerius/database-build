@@ -147,22 +147,22 @@ class PostgresTools
   # Commandline for psql command.
   def self.get_psql(logger = $logger)
     connectionstring = ''
-    connectionstring += "--host \"#{$build_config.db.postgres.hostname}\" " unless $build_config.db.postgres.hostname.nil?
-    connectionstring += "--port \"#{$build_config.db.postgres.port.to_s}\" " unless $build_config.db.postgres.port.nil?
-    return "\"#{$build_config.db.postgres.bin_path}psql\" #{connectionstring}--username \"#{$build_config.db.postgres.username}\" --set ON_ERROR_STOP=1"
+    connectionstring += "--host \"#{$build_config.postgres.hostname}\" " unless $build_config.postgres.hostname.nil?
+    connectionstring += "--port \"#{$build_config.postgres.port.to_s}\" " unless $build_config.postgres.port.nil?
+    return "\"#{$build_config.postgres.bin_path}psql\" #{connectionstring}--username \"#{$build_config.postgres.username}\" --set ON_ERROR_STOP=1"
   end
 
   # Commandline for pg_dump command.
   def self.get_pg_dump(logger = $logger)
     connectionstring = ''
-    connectionstring += "--host \"#{$build_config.db.postgres.hostname}\" " unless $build_config.db.postgres.hostname.nil?
-    connectionstring += "--port \"#{$build_config.db.postgres.port.to_s}\" " unless $build_config.db.postgres.port.nil?
-    return "\"#{$build_config.db.postgres.bin_path}pg_dump\" #{connectionstring}--username \"#{$build_config.db.postgres.username}\""
+    connectionstring += "--host \"#{$build_config.postgres.hostname}\" " unless $build_config.postgres.hostname.nil?
+    connectionstring += "--port \"#{$build_config.postgres.port.to_s}\" " unless $build_config.postgres.port.nil?
+    return "\"#{$build_config.postgres.bin_path}pg_dump\" #{connectionstring}--username \"#{$build_config.postgres.username}\""
   end
 
   # Run a PostgreSQL commandline command; thus set PG password first.
   def self.execute_postgres_command(cmd, error_str, original_filename = '', logger = $logger)
-    set_pg_password($build_config.db.postgres.password, logger)
+    set_pg_password($build_config.postgres.password, logger)
     logger.log 'FILE: ' + original_filename unless original_filename.empty?
     logger.log 'CMD: ' + cmd
     success = Utility.run_cmd(cmd, true, original_filename, logger)
@@ -171,7 +171,7 @@ class PostgresTools
 
   # Run a PostgreSQL commandline command and fetch the return string
   def self.fetch_postgres_command(cmd, error_str, original_filename = '', logger = $logger)
-    set_pg_password($build_config.db.postgres.password, logger)
+    set_pg_password($build_config.postgres.password, logger)
     logger.log 'FILE: ' + original_filename unless original_filename.empty?
     logger.log 'CMD: ' + cmd
     rv = Utility.fetch_cmd(cmd, true, original_filename, logger)
