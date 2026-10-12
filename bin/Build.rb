@@ -20,14 +20,14 @@ require 'Utility.rb'
 # ------------------------------------
 
 def display_help
-  puts "Syntax:\n  ruby #{File.basename(__FILE__)} ruby-script-file product-settings-file [parameters]\n\n"
+  puts "Syntax (run from the product source folder, the folder containing src/build/):"
+  puts "  ruby #{File.basename(__FILE__)} ruby-script-file [profile] [parameters]\n\n"
   puts "  ruby-script-file"
   puts "                      Path and filename of runscript with the build steps. Can"
-  puts "                      be absolute, relative to CWD, or in $run_scripts_path."
-  puts "  product-settings-file"
-  puts "                      Path and filename of product settings of product to"
-  puts "                      build. Contains $build_config.product,"
-  puts "                      layout.source_path, and layout.build_config_path."
+  puts "                      be absolute, relative to CWD, or in src/build/scripts/."
+  puts "  profile"
+  puts "                      Product settings name under src/build/profiles/ (e.g."
+  puts "                      latest). Optional when there is only one profile."
   puts "\nParameters:"
   puts "  -d --dbdata-path    Path where the table dump files are located (for"
   puts "                      load scripts)"
@@ -58,7 +58,8 @@ display_help if opts.has_key?('--help')
 
 # Settings
 require 'SettingsLoader.rb'
-SettingsLoader.load_settings(
+SettingsLoader.prepare(
+  opts['--flags'],
   ARGV.size > 1 ? ARGV[1] : nil,
   ARGV.size > 0 ? ARGV[0] : nil
 )
@@ -84,18 +85,17 @@ opts.each do |option, argument|
     when '--database-name'; override_database_name = argument
     when '--version'; override_version = argument
     when '--dump-filename'; $build_config.session.dump_filetitle = argument
-    when '--flags'; argument.split(',').each{ |flag| $build_config.session.build_flags << flag.strip.downcase.to_sym }
     when '--hints'; $build_config.tools.hint_level = argument.to_i
     when '--help'; display_help
   end
 end
 
 $logger.hint_level = $build_config.tools.hint_level
-$logger.major_hint "You are running a very old depecrated Ruby version (#{RUBY_VERSION}); updating to latest version is recommended" if Utility.is_ruby_version_below('2.2.0')
+$logger.major_hint "You are running an end-of-life Ruby version (#{RUBY_VERSION}); updating to latest version is recommended" if Utility.is_ruby_version_below('3.2.0')
 
 # ------------------------------------
 
-$build_config.log!($logger)
+$build_config.log($logger)
 
 # Let's go!
 begin

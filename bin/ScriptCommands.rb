@@ -141,7 +141,6 @@ class ScriptCommands
         $logger.error "Unknown parameter given to import_database_structure()"
       end
 
-      bullet = Utility.is_ruby_version_below('1.9.0') ? 250.chr : "\u00B7".force_encoding('UTF-8')
       print ' ['
       Dir[$build_config.layout.product_sql_path + '**/*.sql'].sort.each { |sql_filename|
         if as_is then
@@ -150,7 +149,7 @@ class ScriptCommands
           contents = PostgresTools.process_sql_file(sql_filename, $build_config.layout.common_sql_paths)
           PostgresTools.execute_sql_command(contents, sql_filename) unless contents.empty?
         end
-        print bullet
+        print "\u00B7"
       }
       print ']'
     }
@@ -452,6 +451,7 @@ class ScriptCommands
     add_constant 'CURRENT_DATABASE_BUILD_VERSION', get_database_build_version(), schema
     add_constant 'CURRENT_BUILD_COMMON_MODULE_REPO_HASHES', CommonModulesUtility.build_repo_hashes($build_config.layout.common_sql_paths, $build_config.layout.common_data_paths), schema
     add_constant 'CURRENT_BUILD_SCRIPT_HAD_UNCOMMITTED_CHANGES', (CommonModulesUtility.any_had_uncommitted_changes?($build_config.layout.product_sql_path, $build_config.layout.product_data_path, $build_config.layout.common_sql_paths, $build_config.layout.common_data_paths) ? 'true' : 'false'), schema
+    add_constant 'CURRENT_BUILD_CLEAN_BUILD_USED', ($build_config.session.build_flags.include?(:clean) ? 'true' : 'false'), schema
   end
 
   def cluster_tables
