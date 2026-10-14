@@ -13,13 +13,16 @@ set -e
 : ${DBDATA_CLEANUP:=true} # A reason not to clean it up would be to cache the files using buildkit
 
 # If the source code isn't made available by the extending Dockerfile we need to use git to check it out
-USE_GIT=! [[ -d "${DBSOURCE_PATH}" ]]
-
-[[ ${USE_GIT} ]] && echo 'Source code present in GIT..'
-! [[ ${USE_GIT} ]] && echo 'Source code present locally..'
+if [[ -d "${DBSOURCE_PATH}" ]]; then
+  USE_GIT=false
+  echo 'Source code present locally..'
+else
+  USE_GIT=true
+  echo 'Source code present in GIT..'
+fi
 
 # Do git specific validations and fix paths if needed
-if [[ ${USE_GIT} ]]; then
+if ${USE_GIT}; then
   : ${GIT_USERNAME?'GIT_USERNAME must be provided'}
   : ${GIT_TOKEN?'GIT_TOKEN must be provided'}
   : ${GIT_HOSTNAME?'GIT_HOSTNAME must be provided'}
@@ -35,15 +38,15 @@ else
 fi
 
 # add git dependencies if needed
-[[ ${USE_GIT} ]] && apk --no-cache add --virtual .git-deps git openssh
+${USE_GIT} && apk --no-cache add --virtual .git-deps git openssh
 
 # Make our own PGDATA.
 # We are unfortunately doing this because we want the data to persist but the default PGDATA directory is marked as a volume, which cannot be undone.
 mkdir -p "${PGDATA}" && chown -R postgres:postgres "${PGDATA}" && chmod 777 "${PGDATA}"
 
 # fetch repo if needed
-[[ ${USE_GIT} ]] && git --version
-[[ ${USE_GIT} ]] && git clone "https://${GIT_USERNAME}:${GIT_TOKEN}@${GIT_HOSTNAME}/${GIT_ORG}/${GIT_REPOSITORY}.git"
+${USE_GIT} && git --version
+${USE_GIT} && git clone "https://${GIT_USERNAME}:${GIT_TOKEN}@${GIT_HOSTNAME}/${GIT_ORG}/${GIT_REPOSITORY}.git"
 
 # Fixed layout: DBSOURCE_PATH is the product source folder (containing src/build/)
 DBCONFIG_PATH="${DBSOURCE_PATH}/src/build/config"
@@ -61,7 +64,7 @@ echo "\$build_config.layout.dbdata_path = '${DBDATA_PATH}'" >> "${DBCONFIG_PATH}
 [[ -n "${HTTPS_DATA_PASSWORD}" ]] && echo "\$build_config.sync.https.password = '${HTTPS_DATA_PASSWORD}'" >> "${DBCONFIG_PATH}/UserSettings.rb"
 
 # Set git support off in the build script
-! [[ ${USE_GIT} ]] && echo "\$build_config.tools.git_bin_path = nil" >> "${DBCONFIG_PATH}/UserSettings.rb"
+! ${USE_GIT} && echo "\$build_config.tools.git_bin_path = nil" >> "${DBCONFIG_PATH}/UserSettings.rb"
 
 # sync db-data files we need
 echo 'Syncing database data files..'
@@ -108,8 +111,8 @@ fi
 if [[ "${DBDATA_CLEANUP}" == 'true' ]]; then
   rm -rf "${DBDATA_PATH}"
 fi
-[[ ${USE_GIT} ]] && rm -rf "${GIT_REPOSITORY}"
-[[ ${USE_GIT} ]] && apk del .git-deps
+${USE_GIT} && rm -rf "${GIT_REPOSITORY}"
+${USE_GIT} && apk del .git-deps
 
 # Exit with 0 if this stage is reached, otherwise the return code from
 #  the last if statement might be used, which might let Docker think the build failed
