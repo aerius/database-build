@@ -95,7 +95,7 @@ $logger.major_hint "You are running a very old depecrated Ruby version (#{RUBY_V
 
 # ------------------------------------
 
-$build_config.log!($logger)
+$build_config.log($logger)
 
 # Let's go!
 begin

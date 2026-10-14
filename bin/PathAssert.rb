@@ -3,15 +3,15 @@
 #
 class PathAssert
 
-  # Ensure path is an existing directory; label is used for the raise message.
-  def self.ensure_dir!(path, label)
+  # Raise unless path is an existing directory; label is used in the message.
+  def self.require_directory(path, label)
     path = path.fix_pathname
     raise "#{path} not found for: #{label}" unless File.directory?(path)
     path
   end
 
-  # Ensure path is an existing file; label is used for the raise message.
-  def self.ensure_file!(path, label)
+  # Raise unless path is an existing file; label is used in the message.
+  def self.require_file(path, label)
     path = path.fix_filename
     raise "#{path} not found for: #{label}" unless File.file?(path)
     path
