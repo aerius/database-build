@@ -4,27 +4,32 @@ require 'PathAssert.rb'
 require 'GitUtility.rb'
 require 'BuildConfig.rb'
 
-# Single process handle for build settings (groups: layout, output, postgres, tools, session)
+# Single process handle for build settings (groups: layout, output, postgres, sync, tools, session)
 $build_config = nil
 
 ##
 # CLI bootstrap for $build_config: resolve ARGV paths, require product settings, finalize.
 # App/User settings are loaded inside BuildConfig#finalize.
 #
+# Must be run from the product source folder (the folder containing src/build/); product
+# settings are always a profile under src/build/profiles/.
+#
 class SettingsLoader
 
   # Load product settings into $build_config and finalize. If runscript_file_argument is
   # given, resolve it after finalize (needs layout.runscripts_path).
-  def self.load_settings(product_settings_file_argument, runscript_file_argument = nil)
+  # profile_argument may be nil when src/build/profiles/ holds exactly one profile.
+  def self.load_settings(profile_argument, runscript_file_argument = nil)
+    source_path = determine_source_path
+
     $build_config = BuildConfig.new_empty
     $build_config.apply_defaults
 
-    # Product settings (mandatory) — assign $build_config.product / layout.*
-    product_settings_file = determine_product_settings_file(product_settings_file_argument)
-    $build_config.session.product_settings_file = product_settings_file
-    require product_settings_file
+    # Product settings (mandatory) — assign $build_config.product
+    determine_product_settings_file(source_path, profile_argument)
+    require $build_config.session.product_settings_file
 
-    $build_config.finalize(File.dirname(product_settings_file))
+    $build_config.finalize(source_path)
 
     determine_runscript_file(runscript_file_argument) unless runscript_file_argument.nil?
   end
@@ -46,15 +51,40 @@ class SettingsLoader
     path
   end
 
-  def self.determine_product_settings_file(product_settings_file_argument)
-    if product_settings_file_argument.nil? || product_settings_file_argument.start_with?('-') then
-      puts 'Specify a product-settings file. See --help for more information.'
-      exit
-    else
-      product_settings_file = expand_with_suffixes(product_settings_file_argument, ['.rb', 'Settings.rb'])
-      # Cannot live in BuildConfig#finalize: must exist before require and before
-      return PathAssert.require_file(product_settings_file, 'product_settings_file')
+  # The CWD is the product source folder; it must contain src/build/profiles/.
+  def self.determine_source_path
+    source_path = Dir.pwd.fix_pathname
+    profiles_path = PathConventions.profiles(source_path)
+    unless File.directory?(profiles_path) then
+      raise "Run from the product source folder (the folder containing #{PathConventions::BUILD_CONFIG_REL}/); \"#{profiles_path}\" not found"
     end
+    source_path
+  end
+
+  # Sets session.profile and session.product_settings_file (src/build/profiles/<profile>.rb) from
+  # profile_argument: a bare name without path or .rb (e.g. 'latest'). Without a name, the
+  # single profile is used. Raises when the name is invalid, not found, or omitted while
+  # several profiles exist.
+  def self.determine_product_settings_file(source_path, profile_argument)
+    profiles_path = PathConventions.profiles(source_path)
+    available = Dir[File.join(profiles_path, '*.rb')].map { |path| File.basename(path, '.rb') }.sort
+
+    profile = profile_argument.to_s
+    if profile.empty? then
+      if available.size != 1 then
+        raise "No profile given and #{available.size} profiles found in \"#{profiles_path}\" (#{available.join(', ')}); specify one"
+      end
+      profile = available.first
+    end
+    if profile =~ %r{[/\\]} || profile.downcase.end_with?('.rb') then
+      raise "Profile must be a name without path or .rb, e.g. 'latest' for #{PathConventions::BUILD_CONFIG_REL}/#{PathConventions::PROFILES_DIR}/latest.rb (got \"#{profile_argument}\")"
+    end
+
+    product_settings_file = File.join(profiles_path, profile + '.rb').fix_filename
+    raise "Profile '#{profile}' not found in \"#{profiles_path}\" (available: #{available.join(', ')})" unless File.file?(product_settings_file)
+
+    $build_config.session.profile = profile
+    $build_config.session.product_settings_file = product_settings_file
   end
 
   # First absolute path or relative to CWD; otherwise under layout.runscripts_path.

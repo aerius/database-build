@@ -8,10 +8,8 @@ set -e
 : ${DATABASE_NAME?'DATABASE_NAME must be provided'}
 
 # default values if not set
-: ${DBCONFIG_PATH:=aerius-database-build-config/config}
 : ${DBRUNSCRIPT:=default}
-: ${DBSETTINGS_BASE_DIRECTORY:=.}
-: ${DBSETTINGS_PATH:=settings.rb}
+: ${DBPROFILE:=} # Profile under src/build/profiles/; optional when there is only one
 : ${DBDATA_CLEANUP:=true} # A reason not to clean it up would be to cache the files using buildkit
 
 # If the source code isn't made available by the extending Dockerfile we need to use git to check it out
@@ -31,7 +29,6 @@ if [[ ${USE_GIT} ]]; then
   : ${DATABASE_VERSION:=#}
 
   DBSOURCE_PATH="${GIT_REPOSITORY}/${DBSOURCE_PATH}"
-  DBCONFIG_PATH="${GIT_REPOSITORY}/${DBCONFIG_PATH}"
 else
   # We require a version outside of git
    : ${DATABASE_VERSION?'DATABASE_VERSION must be set if source code is present locally..'}
@@ -48,6 +45,11 @@ mkdir -p "${PGDATA}" && chown -R postgres:postgres "${PGDATA}" && chmod 777 "${P
 [[ ${USE_GIT} ]] && git --version
 [[ ${USE_GIT} ]] && git clone "https://${GIT_USERNAME}:${GIT_TOKEN}@${GIT_HOSTNAME}/${GIT_ORG}/${GIT_REPOSITORY}.git"
 
+# Fixed layout: DBSOURCE_PATH is the product source folder (containing src/build/)
+DBCONFIG_PATH="${DBSOURCE_PATH}/src/build/config"
+PROFILE_ARGS=()
+[[ -n "${DBPROFILE}" ]] && PROFILE_ARGS=("${DBPROFILE}")
+
 # create db-data folder for the repo
 mkdir -p "${DBDATA_PATH}"
 
@@ -55,8 +57,8 @@ mkdir -p "${DBDATA_PATH}"
 echo "\$build_config.layout.dbdata_path = '${DBDATA_PATH}'" >> "${DBCONFIG_PATH}/UserSettings.rb"
 
 # configure repo with the HTTPS credentials given if set
-[[ -n "${HTTPS_DATA_USERNAME}" ]] && echo "\$build_config.tools.https_data_username = '${HTTPS_DATA_USERNAME}'" >> "${DBCONFIG_PATH}/UserSettings.rb"
-[[ -n "${HTTPS_DATA_PASSWORD}" ]] && echo "\$build_config.tools.https_data_password = '${HTTPS_DATA_PASSWORD}'" >> "${DBCONFIG_PATH}/UserSettings.rb"
+[[ -n "${HTTPS_DATA_USERNAME}" ]] && echo "\$build_config.sync.https.username = '${HTTPS_DATA_USERNAME}'" >> "${DBCONFIG_PATH}/UserSettings.rb"
+[[ -n "${HTTPS_DATA_PASSWORD}" ]] && echo "\$build_config.sync.https.password = '${HTTPS_DATA_PASSWORD}'" >> "${DBCONFIG_PATH}/UserSettings.rb"
 
 # Set git support off in the build script
 ! [[ ${USE_GIT} ]] && echo "\$build_config.tools.git_bin_path = nil" >> "${DBCONFIG_PATH}/UserSettings.rb"
@@ -64,7 +66,7 @@ echo "\$build_config.layout.dbdata_path = '${DBDATA_PATH}'" >> "${DBCONFIG_PATH}
 # sync db-data files we need
 echo 'Syncing database data files..'
 cd "${DBSOURCE_PATH}/"
-ruby /aerius-database-build/bin/SyncDBData.rb "${DBSETTINGS_BASE_DIRECTORY}/${DBSETTINGS_PATH}" --to-local
+ruby /aerius-database-build/bin/SyncDBData.rb "${PROFILE_ARGS[@]}" --to-local
 
 # initialize database
 # (this is a wrapper provided by the postgres image, which will initialize the db if it isn't already and is executed when starting the image for the first time.
@@ -84,7 +86,7 @@ done
 echo 'PostgreSQL is up again'
 
 # execute database build
-ruby /aerius-database-build/bin/Build.rb "${DBRUNSCRIPT}" "${DBSETTINGS_BASE_DIRECTORY}/${DBSETTINGS_PATH}" -v "${DATABASE_VERSION}" -n "${DATABASE_NAME}"
+ruby /aerius-database-build/bin/Build.rb "${DBRUNSCRIPT}" "${PROFILE_ARGS[@]}" -v "${DATABASE_VERSION}" -n "${DATABASE_NAME}"
 
 # make the image smaller by doing a VACUUM FULL ANALYZE
 psql -U "${POSTGRES_USER}" -d "${DATABASE_NAME}" -c 'VACUUM FULL ANALYZE'

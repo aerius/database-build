@@ -6,20 +6,19 @@ HINT_LEVEL_ALL = 2
 # Build settings and derived layout paths ($build_config), grouped for clarity.
 #
 # Call order (see SettingsLoader.load_settings):
+#   0. determine_source_path                  — the CWD; must contain src/build/profiles/
 #   1. BuildConfig.new_empty
 #   2. apply_defaults                         — fill defaults on the empty config
-#   3. require product settings               — assign product / layout.* (overrides)
-#   4. finalize(product_settings_dir)         — load App/UserSettings, derive & validate paths
+#   3. pick profile, require it               — assign product (and overrides)
+#   4. finalize(source_path)                  — load App/UserSettings, fix roots, derive & validate paths
 #   5. optional runscript resolve             — after finalize (needs layout.runscripts_path)
 #   6. log(logger)                            — optional; dump resolved config (Build.rb)
 #
 # Settings files assign into $build_config; overrides in steps 3–4 replace defaults from step 2.
+# The whole layout is fixed: the source folder (CWD), its src/build, src/main/sql/<product>/ and
+# src/data/sql/<profile>/; finalize overwrites these if settings files assign them.
 #
 class BuildConfig
-  CONFIG_DIR = 'config'
-  SCRIPTS_DIR = 'scripts'
-  APP_SETTINGS_FILE = 'AppSettings.rb'
-  USER_SETTINGS_FILE = 'UserSettings.rb'
   DEFAULT_DATABASE_NAME_PREFIX = 'AERIUS'
 
   Layout = Struct.new(
@@ -40,25 +39,29 @@ class BuildConfig
     :essentials_function_prefix, :unittest_prefix
   )
 
+  Https = Struct.new(:data_path, :username, :password)
+
+  Sync = Struct.new(:source, :target, :continue, :https)
+
   Tools = Struct.new(
     :git_bin_path,
-    :https_data_path, :https_data_username, :https_data_password,
     :max_threads, :on_uncommitted_changes, :hint_level
   )
 
   Session = Struct.new(
     :product_settings_file, :runscript_file,
-    :build_flags, :dump_filetitle
+    :profile, :build_flags, :dump_filetitle
   )
 
   attr_accessor :product
-  attr_reader :layout, :output, :postgres, :tools, :session
+  attr_reader :layout, :output, :postgres, :sync, :tools, :session
 
-  def initialize(product, layout, output, postgres, tools, session)
+  def initialize(product, layout, output, postgres, sync, tools, session)
     @product = product
     @layout = layout
     @output = output
     @postgres = postgres
+    @sync = sync
     @tools = tools
     @session = session
   end
@@ -69,8 +72,9 @@ class BuildConfig
       Layout.new(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
       Output.new(nil, nil, nil, nil),
       Postgres.new(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
-      Tools.new(nil, nil, nil, nil, nil, nil, nil),
-      Session.new(nil, nil, [], nil)
+      Sync.new(nil, nil, nil, Https.new(nil, nil, nil)),
+      Tools.new(nil, nil, nil, nil),
+      Session.new(nil, nil, nil, [], nil)
     )
   end
 
@@ -110,50 +114,89 @@ class BuildConfig
     tools.on_uncommitted_changes = :warn
     tools.hint_level = HINT_LEVEL_ALL
 
+    sync.source = :https
+    sync.target = :local
+    sync.continue = false
+
     self
   end
 
-  # Expand relative layout paths, derive fixed paths, normalize and validate.
-  def finalize(product_settings_dir)
+  # Load App/UserSettings, fix roots at source_path, derive fixed paths, normalize and validate.
+  def finalize(source_path)
     raise 'Product not set ($build_config.product)' if product.nil?
-    raise 'Source path not set ($build_config.layout.source_path)' if layout.source_path.nil?
-    raise 'Build config path not set ($build_config.layout.build_config_path)' if layout.build_config_path.nil?
 
-    layout.source_path = PathConventions.expand_from(product_settings_dir, layout.source_path)
+    load_settings(source_path)
+    resolve_roots(source_path)
+    derive_fixed_layout
+    derive_product_paths
+    derive_common_modules
+    derive_dbdata
+    normalize_and_validate
+
+    self
+  end
+
+  # Log the resolved $build_config values (masks secrets), using the supplied logger object.
+  def log(logger)
+    logger.writeln "product: #{product}"
+    log_struct(logger, 'layout', layout)
+    log_struct(logger, 'output', output)
+    log_struct(logger, 'postgres', postgres, [:password])
+    log_struct(logger, 'sync', sync, [], { https: [:password] })
+    log_struct(logger, 'tools', tools)
+    log_struct(logger, 'session', session)
+  end
+
+  #
+  # Private section
+  #
+  private
+
+  def resolve_roots(source_path)
+    layout.source_path = PathAssert.require_directory(source_path, 'source_path')
     layout.build_config_path = PathAssert.require_directory(
-      PathConventions.expand_from(product_settings_dir, layout.build_config_path),
+      PathConventions.build_config(layout.source_path),
       'build_config_path'
     )
+  end
+
+  # Before resolve_roots, so the fixed roots overwrite anything assigned here.
+  def load_settings(source_path)
+    build_config_path = PathConventions.build_config(source_path)
 
     layout.app_settings_file = PathAssert.require_file(
-      PathConventions.join(layout.build_config_path, CONFIG_DIR, APP_SETTINGS_FILE),
+      PathConventions.app_settings(build_config_path),
       'app_settings_file'
     )
     require layout.app_settings_file
 
-    layout.user_settings_file = PathConventions.join(
-      layout.build_config_path, CONFIG_DIR, USER_SETTINGS_FILE
-    ).fix_filename
+    layout.user_settings_file = PathConventions.user_settings(build_config_path)
     layout.user_settings_file = nil unless File.exist?(layout.user_settings_file)
     require layout.user_settings_file unless layout.user_settings_file.nil?
+  end
 
-    layout.source_path = PathAssert.require_directory(layout.source_path, 'source_path')
+  def derive_fixed_layout
+    layout.runscripts_path = PathAssert.require_directory(
+      PathConventions.runscripts(layout.build_config_path),
+      'runscripts_path'
+    )
+  end
 
-    # Convention: source/src/{main,data}/sql/<product>/; optional override when already set.
-    layout.product_sql_path = if layout.product_sql_path.nil?
-      PathConventions.join(layout.source_path, PathConventions::SQL_REL, product.to_s)
-    else
-      PathConventions.expand_from(layout.source_path, layout.product_sql_path)
-    end
-    layout.product_sql_path = PathAssert.require_directory(layout.product_sql_path, 'product_sql_path')
+  # SQL per product (src/main/sql/<product>/), data set per profile (src/data/sql/<profile>/).
+  def derive_product_paths
+    raise 'Profile not set ($build_config.session.profile)' if session.profile.nil?
 
-    layout.product_data_path = if layout.product_data_path.nil?
-      PathConventions.join(layout.source_path, PathConventions::DATA_REL, product.to_s)
-    else
-      PathConventions.expand_from(layout.source_path, layout.product_data_path)
-    end
-    layout.product_data_path = PathAssert.require_directory(layout.product_data_path, 'product_data_path')
+    layout.product_sql_path = PathAssert.require_directory(
+      PathConventions.product_sql(layout.source_path, product),
+      'product_sql_path'
+    )
+    layout.product_data_path = PathAssert.require_directory(
+      PathConventions.product_data(layout.source_path, session.profile),
+      'product_data_path'
+    )
+  end
 
+  def derive_common_modules
     layout.common_sql_paths = [
       PathConventions.internal_modules_sql(layout.source_path),
       PathConventions.dir_if_exists(PathConventions.workspace_root, PathConventions::MODULES_REPO, PathConventions::MODULES_SQL_REL),
@@ -170,15 +213,14 @@ class BuildConfig
     layout.common_data_paths.map!.with_index { |path, idx|
       PathAssert.require_directory(path, "common_data_paths[#{idx}]")
     }
+  end
 
-    layout.runscripts_path = PathAssert.require_directory(
-      PathConventions.join(layout.build_config_path, SCRIPTS_DIR),
-      'runscripts_path'
-    )
-
-    layout.dbdata_path = PathConventions.join(PathConventions.workspace_root, PathConventions::DBDATA_DIR) if layout.dbdata_path.nil?
+  def derive_dbdata
+    layout.dbdata_path = PathConventions.default_dbdata if layout.dbdata_path.nil?
     layout.dbdata_path = PathAssert.require_directory(layout.dbdata_path, 'dbdata_path')
+  end
 
+  def normalize_and_validate
     raise 'Temp path not set ($build_config.output.temp_path)' if output.temp_path.nil?
     raise 'Output path not set ($build_config.output.output_path)' if output.output_path.nil?
     raise 'Log path not set ($build_config.output.log_path)' if output.log_path.nil?
@@ -194,30 +236,23 @@ class BuildConfig
     output.output_path = output.output_path.fix_pathname
     output.temp_path = output.temp_path.fix_pathname
     tools.git_bin_path = tools.git_bin_path.fix_pathname unless (tools.git_bin_path.nil? || tools.git_bin_path.empty?)
-
-    self
   end
 
-  # Log the resolved $build_config values (masks secrets), using the supplied logger object.
-  def log(logger)
-    logger.writeln "product: #{product}"
-    log_struct(logger, 'layout', layout)
-    log_struct(logger, 'output', output)
-    log_struct(logger, 'postgres', postgres, [:password])
-    log_struct(logger, 'tools', tools, [:https_data_password])
-    log_struct(logger, 'session', session)
-  end
-
-  #
-  # Private section
-  #
-  private
-
-  def log_struct(logger, name, struct, mask = [])
+  # Write each member of struct as "<name>.<member>: <value>" to the logger.
+  # mask: secret members; nested_masks: { member => [secret members] } for Struct members.
+  def log_struct(logger, name, struct, mask = [], nested_masks = {})
     struct.members.each do |member|
       value = struct[member]
+      # Nested Struct (e.g. sync.https): log its members under "<name>.<member>"; one level deep only
+      if value.is_a?(Struct)
+        nested_mask = nested_masks[member] || []
+        log_struct(logger, "#{name}.#{member}", value, nested_mask)
+        next
+      end
+      # Never log secrets; an empty secret shows <none> so a missing password is visible
       value = '<set>' if mask.include?(member) && !value.nil? && !value.to_s.empty?
       value = '<none>' if value.nil? || (value.respond_to?(:empty?) && value.empty?)
+      # Arrays (e.g. common_sql_paths): one indented line per item
       if value.is_a?(Array)
         logger.writeln "#{name}.#{member}:"
         value.each_with_index { |item, idx| logger.writeln "  [#{idx}] #{item}" }

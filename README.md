@@ -4,56 +4,72 @@ Build tooling for PostgreSQL database projects.
 
 ## Convention over configuration
 
-Product settings only need:
+`Build.rb` and `SyncDBData.rb` must be run from the product source folder: the folder containing `src/build/`. The layout below is fixed and cannot be configured:
+
+```text
+<source folder>/              # current directory
+  src/build/                  # build config
+    profiles/                 # product settings, one file per profile
+      latest.rb
+    config/
+      AppSettings.rb
+      UserSettings.rb         # optional
+    scripts/                  # runscripts
+  src/main/sql/<product>/     # database structure, shared by all profiles
+  src/data/sql/<profile>/     # data set of one profile, entry point load.rb
+```
+
+A profile is a Ruby file `src/build/profiles/<profile>.rb`; the profile name is that file name without `.rb` (`latest.rb` -> profile `latest`).
+
+The profile argument is only that name (`latest`); a file name (`latest.rb`) or path is refused. It is optional when `profiles/` holds exactly one profile.
+
+The profile name also selects the data set: profile `latest` loads `src/data/sql/latest/load.rb`, profile `integration-test` loads `src/data/sql/integration-test/load.rb`. `Build.rb` (`load_data`) and `SyncDBData.rb` (which dbdata files to fetch) both follow it. Data shared between profiles belongs in the internal modules data folder (`../modules/src/data/sql`), which `run_sql` searches after the profile's data folder.
+
+```text
+src/build/profiles/
+  latest.rb             - src/data/sql/latest/
+  integration-test.rb   - src/data/sql/integration-test/
+src/main/sql/<product>/ # same for both
+```
+
+A profile only needs:
 
 ```ruby
 $build_config.product = :example_product
-$build_config.layout.source_path = '.'
-$build_config.layout.build_config_path = 'src/build'
 ```
 
-Paths may be relative to the product `settings.rb` directory.
-
-`$build_config.layout.build_config_path` has a fixed layout:
-
-```text
-build-config/
-  config/
-    AppSettings.rb
-    UserSettings.rb   # optional
-  scripts/            # runscripts
-```
-
-All settings are stored on `$build_config` (`BuildConfig.rb`) in groups. Settings files should assign into `$build_config` (no separate settings `$globals`).
-Optional: set `layout.product_sql_path` / `layout.product_data_path` before finalize to override the `<product>` subfolder convention (paths relative to `source_path`).
+All settings are stored on `$build_config` (`BuildConfig.rb`) in groups. Settings files should assign into `$build_config`.
 
 | Group | Description |
 |---|---|
 | `product` | Product identity |
 | `layout` | Where source, modules, data, and scripts live |
 | `output` | Where build artifacts and logs are written |
-| `postgres` | How to talk to PostgreSQL |
+| `postgres` | Database connection and naming (PostgreSQL) |
+| `sync` | Sync modes and implementations (e.g. `sync.https`) |
 | `tools` | Ancillary tooling and build behaviour |
 | `session` | Per-run invocation state |
 
 Field names and defaults: see [`bin/BuildConfig.rb`](bin/BuildConfig.rb).
 
-Layout path defaults (specified under `layout` in the `BuildConfig.rb`):
-
-| Field | Convention |
-|---|---|
-| `product_sql_path` | `<source_path>/src/main/sql/<product>/` |
-| `product_data_path` | `<source_path>/src/data/sql/<product>/` |
-| `runscripts_path` | `<build_config_path>/scripts/` |
-| `common_sql_paths` / `common_data_paths` | Arrays of dirs that exist from the locations below |
+The common SQL and data paths used by the build are derived: internal, then external, then builtin.
 
 Common module locations (each type its own entry):
 
-- **Internal** (beside product source) — optional. Same parent as `<source_path>`: `modules/src/main/sql` and `modules/src/data/sql`.
+- **Internal** (beside product source) — optional. Next to the source folder: `../modules/src/main/sql` and `../modules/src/data/sql`.
 - **External** — optional. For now: fixed checkout name `database-modules` next to `database-build`, with fixed paths inside that repo: `source/modules/src/main/sql` and `source/modules/src/data/sql` (i.e. ` /database-modules/source/modules/src/{main,data}/sql`).
 - **Builtin** (SQL only) — required. `database-build/common/src/main/sql`.
 
-The workspace root is the parent directory of the `database-build` checkout (sibling repos such as `database-modules` and `dbdata` live there).
+The workspace is the parent of the `database-build` checkout (sibling repos such as `database-modules` and `dbdata` live there).
+
+```bash
+# From the product source folder; profile name under src/build/profiles/ (optional with one profile)
+# Usual layout: <workspace>/<product repo>/source/database/<database product folder>
+cd <workspace>/<product repo>/source/database/<database product folder>
+
+ruby ../../../../database-build/bin/SyncDBData.rb latest --to-local
+ruby ../../../../database-build/bin/Build.rb default latest --version '#'
+```
 
 ### Overridable settings
 
@@ -62,13 +78,14 @@ Typical `AppSettings.rb` / `UserSettings.rb` assignments:
 - `$build_config.layout.dbdata_path` (default `<workspace>/dbdata/`)
 - `$build_config.postgres.name_prefix` (default `AERIUS`)
 - `$build_config.postgres.username` / `.password` (default `aerius`)
-- `$build_config.tools.https_data_path` / `.https_data_username` / `.https_data_password`
+- `$build_config.sync.source` / `.target` (default `:https` / `:local`)
+- `$build_config.sync.https.data_path` / `.username` / `.password`
 
-`SyncDBData.rb --from-https` downloads into `$build_config.layout.dbdata_path` from `$build_config.tools.https_data_path` (or from `--from-https` / `--to-local` when given).
+`SyncDBData.rb --from-https` downloads into `$build_config.layout.dbdata_path` from `$build_config.sync.https.data_path` (or from `--from-https` / `--to-local` when given).
 
 ### Docker
 
-`docker/build-database.sh` writes `$build_config.layout.dbdata_path` from `DBDATA_PATH` into `UserSettings.rb` under `DBCONFIG_PATH` (the `config/` directory), so the image does not depend on the workspace `dbdata/` convention.
+`DBSOURCE_PATH` is the product source folder; `docker/build-database.sh` runs the scripts from there. `DBPROFILE` selects the profile under `src/build/profiles/` (optional when there is only one). The script writes `$build_config.layout.dbdata_path` from `DBDATA_PATH` into `<DBSOURCE_PATH>/src/build/config/UserSettings.rb`, so the image does not depend on the workspace `dbdata/` convention.
 
 ## Build script
 
@@ -78,7 +95,7 @@ When using Build.rb directly, a database is not 100% reproducible (uncommitted c
 
 When your runscript calls `add_build_constants`, the build stores:
 
-- **CURRENT_BUILD_COMMON_MODULE_REPO_HASHES** — A JSON string with one entry per common module repository (from `$build_config.layout.common_sql_paths` / `$build_config.layout.common_data_paths`). Each entry has `repo_url`, `commit_hash`, `sql_paths` (array), `data_paths` (array), and `had_uncommitted_changes`. A repository can have multiple paths, so the path arrays can have more than one element. Paths are relative to the git repository root, not to the project settings file.
+- **CURRENT_BUILD_COMMON_MODULE_REPO_HASHES** — A JSON string with one entry per common module repository (from the derived common SQL and data paths). Each entry has `repo_url`, `commit_hash`, `sql_paths` (array), `data_paths` (array), and `had_uncommitted_changes`. A repository can have multiple paths, so the path arrays can have more than one element. Paths are relative to the git repository root, not to the project settings file.
 
 - **CURRENT_BUILD_SCRIPT_HAD_UNCOMMITTED_CHANGES** — `'true'` if the product sql path repository, product data path repository, or any common module repository had uncommitted or untracked changes; `'false'` otherwise.
 
