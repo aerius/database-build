@@ -15,37 +15,33 @@ require 'PostgresTools.rb'
 # ------------------------------------
 
 def display_help
-  puts "Syntax:\n  ruby #{File.basename(__FILE__)} product-settings-file [parameters]\n\n"
-  puts "  product-settings-file"
-  puts "                      Path and filename of product settings of product to"
-  puts "                      sync datasources for. Contains $product and references to paths of"
-  puts "                      project, product data and sql, and common data and sql."
+  puts "Syntax (run from the product source folder, the folder containing src/build/):"
+  puts "  ruby #{File.basename(__FILE__)} [profile] [parameters]\n\n"
+  puts "  profile"
+  puts "                      Product settings name under src/build/profiles/ (e.g."
+  puts "                      latest). Optional when there is only one profile."
   puts "\nParameters:"
-  puts "  -p --path           Path where the to-be-parsed SQL files are located (export of"
-  puts "                      database/src/build/scripts/sql). Supply if different from"
-  puts "                      default"
   puts "  -f --from-local     Sync from local db-data folder. Supply db-data path if different from default"
-  puts "     --from-https     Sync from $https_data HTTPS. Supply HTTPS url if different from default"
+  puts "     --from-https     Sync from $build_config.sync.https.data_path. Supply HTTPS url if different from default"
   puts "  -l --to-local       Sync to local db-data folder. Supply path if different from default"
   puts "  -c --continue       Continue on file not found errors"
-  puts "  -i --info           Displays defaults path (does not run)"
+  puts "  -i --info           Displays the resolved paths (does not run)"
   puts "  -h --help           This help"
   puts ""
   exit
 end
 
-$opts = {}
+opts = {}
 GetoptLong.new(
-    ['--path', '-p', GetoptLong::REQUIRED_ARGUMENT],
     ['--from-https', GetoptLong::OPTIONAL_ARGUMENT],
     ['--from-local', '-f', GetoptLong::OPTIONAL_ARGUMENT],
     ['--to-local', '-l', GetoptLong::OPTIONAL_ARGUMENT],
     ['--continue', '-c', GetoptLong::NO_ARGUMENT],
     ['--info', '-i', GetoptLong::NO_ARGUMENT],
     ['--help', '-h', GetoptLong::NO_ARGUMENT]
-).each { |option, argument| $opts[option.downcase] = argument }
+).each { |option, argument| opts[option.downcase] = argument }
 
-display_help if $opts.has_key?('--help')
+display_help if opts.has_key?('--help')
 
 # ------------------------------------
 
@@ -63,7 +59,7 @@ $logger.open($build_config.output.log_path, 'sync_dbdata')
 
 $from_local = $build_config.layout.dbdata_path
 $to_local = $from_local
-$from_https = $build_config.tools.https_data_path.fix_pathname unless $build_config.tools.https_data_path.nil?
+$from_https = $build_config.sync.https.data_path.fix_pathname unless $build_config.sync.https.data_path.nil?
 
 # ---------
 
@@ -71,77 +67,76 @@ $source_path = nil
 $target_path = nil
 $src_fs = nil
 $tgt_fs = nil
-$continue = false
 $source_overwritten = false
 $target_overwritten = false
 
 # ---------
 
 def display_info
-  puts "Default parsing path:", '  ' + $build_config.layout.product_data_path
-  puts "Default local db-data source:", '  ' + $from_local
-  puts "Default HTTPS source:", '  ' + ($from_https || '(unset)')
-  puts "Default local db-data target:", '  ' + $to_local
+  puts "Profile:", '  ' + $build_config.session.profile
+  puts "Parsing paths:", '  ' + $build_config.layout.product_data_path
+  $build_config.layout.common_data_paths.each { |path| puts '  ' + path }
+  puts "Local db-data source:", '  ' + $from_local
+  puts "HTTPS source:", '  ' + ($from_https || '(unset)')
+  puts "Local db-data target:", '  ' + $to_local
   exit
 end
 
-def parse_commandline
-  $opts.each do |option, argument|
+def parse_commandline(opts)
+  opts.each do |option, argument|
     case option.downcase
-      when '--path'
-        $build_config.layout.product_data_path = File.expand_path(argument.to_s).fix_pathname
       when '--from-https'
         raise 'Can only have one source' if $source_overwritten
-        $source = :https
+        $build_config.sync.source = :https
         $source_overwritten = true
         $from_https = argument.to_s.fix_pathname unless argument.to_s.strip.empty?
       when '--from-local'
         raise 'Can only have one source' if $source_overwritten
-        $source = :local
+        $build_config.sync.source = :local
         $source_overwritten = true
         $from_local = File.expand_path(argument.to_s).fix_pathname unless argument.to_s.strip.empty?
       when '--to-local'
         raise 'Can only have one target' if $target_overwritten
-        $target = :local
+        $build_config.sync.target = :local
         $target_overwritten = true
         $to_local = File.expand_path(argument.to_s).fix_pathname unless argument.to_s.strip.empty?
       when '--continue'
-        $continue = true
+        $build_config.sync.continue = true
     end
   end
 
-  display_info if $opts.has_key?('--info')
+  display_info if opts.has_key?('--info')
 
-  if $source == :https then
+  if $build_config.sync.source == :https then
     $logger.writeln "Syncing from HTTPS (#{$from_https})"
-  elsif $source == :local then
+  elsif $build_config.sync.source == :local then
     $logger.writeln "Syncing from local (#{$from_local})"
   end
 
   $logger.writeln "Syncing to local (#{$to_local}):"
 
-  if ($target != :local) then
+  if ($build_config.sync.target != :local) then
     $logger.error "Sorry, syncing to HTTPS is not supported (anymore)."
   end
 
-  require 'HTTPSDownloader.rb' if $source == :https
+  require 'HTTPSDownloader.rb' if $build_config.sync.source == :https
 
   connect
 end
 
 def connect
-  if $source == :https then
+  if $build_config.sync.source == :https then
     if /^(https\:\/\/)?([^\/:]+)(\:(\d+))?(\/.*)?$/i.match($from_https) then
       https_base_url = $from_https
-      $logger.warn 'Username and/or password not specified. If needed, specify $https_data_username and $https_data_password in the project user settings' if $build_config.tools.https_data_username.nil? || $build_config.tools.https_data_password.nil?
+      $logger.warn 'Username and/or password not specified. If needed, specify $build_config.sync.https.username and $build_config.sync.https.password in the project user settings' if $build_config.sync.https.username.nil? || $build_config.sync.https.password.nil?
     else
       $logger.error "Not a valid HTTPS location: #{$from_https}"
     end
     $src_fs = HTTPSDownloader.new($logger)
-    $src_fs.connect https_base_url, $build_config.tools.https_data_username, $build_config.tools.https_data_password
+    $src_fs.connect https_base_url, $build_config.sync.https.username, $build_config.sync.https.password
     $source_path = ''
 
-  elsif $source == :local then
+  elsif $build_config.sync.source == :local then
     $logger.error "Source path empty or not given." if $from_local.to_s.strip.empty?
     $logger.error "Source path '#{$from_local}' not found." unless (File.exist?($from_local) && File.directory?($from_local))
     $src_fs = nil
@@ -301,7 +296,7 @@ def sync
         elsif file_exists(copy_from, $src_fs) then
           sync_normal(datasource, copy_from)
         else
-          if $continue then
+          if $build_config.sync.continue then
             $logger.writeln "File not found: #{copy_from}" unless is_infofile
           else
             $logger.error "File not found: #{copy_from}" unless is_infofile
@@ -322,7 +317,7 @@ end
 
 # ---------
 
-parse_commandline
+parse_commandline(opts)
 
 $datasources = DataSourceCollector.collect($logger, $build_config.layout.product_data_path, $build_config.layout.common_data_paths, nil).keys
 

@@ -6,11 +6,17 @@ module PathConventions
   DATA_REL = 'src/data/sql'
   MODULES_DIR = 'modules'
   DBDATA_DIR = 'dbdata'
+  BUILD_CONFIG_REL = 'src/build'
+  PROFILES_DIR = 'profiles'
   MODULES_REPO = 'database-modules'
   # Sibling modules repo: <workspace>/database-modules/source/modules/src/{main,data}/sql
   MODULES_SQL_REL = 'source/modules/src/main/sql'
   MODULES_DATA_REL = 'source/modules/src/data/sql'
   BUILTIN_COMMON_SQL_REL = 'common/src/main/sql'
+  CONFIG_DIR = 'config'
+  SCRIPTS_DIR = 'scripts'
+  APP_SETTINGS_FILE = 'AppSettings.rb'
+  USER_SETTINGS_FILE = 'UserSettings.rb'
 
   # database-build checkout root (parent of bin/)
   def self.database_build_root
@@ -31,6 +37,41 @@ module PathConventions
     (File.exist?(path) && File.directory?(path)) ? path.fix_pathname : nil
   end
 
+  # <source>/src/build
+  def self.build_config(source_path)
+    join(source_path, BUILD_CONFIG_REL)
+  end
+
+  # <source>/src/build/profiles
+  def self.profiles(source_path)
+    join(source_path, BUILD_CONFIG_REL, PROFILES_DIR)
+  end
+
+  def self.product_sql(source_path, product)
+    join(source_path, SQL_REL, product.to_s)
+  end
+
+  # Data set per profile: <source>/src/data/sql/<profile>
+  def self.product_data(source_path, profile)
+    join(source_path, DATA_REL, profile.to_s)
+  end
+
+  def self.runscripts(build_config_path)
+    join(build_config_path, SCRIPTS_DIR)
+  end
+
+  def self.app_settings(build_config_path)
+    join(build_config_path, CONFIG_DIR, APP_SETTINGS_FILE).fix_filename
+  end
+
+  def self.user_settings(build_config_path)
+    join(build_config_path, CONFIG_DIR, USER_SETTINGS_FILE).fix_filename
+  end
+
+  def self.default_dbdata
+    join(workspace_root, DBDATA_DIR)
+  end
+
   # Internal modules sit beside $source_path: <parent>/modules/src/{main,data}/sql
   def self.internal_modules_sql(source_path)
     dir_if_exists(File.dirname(source_path), MODULES_DIR, SQL_REL)
@@ -38,27 +79,6 @@ module PathConventions
 
   def self.internal_modules_data(source_path)
     dir_if_exists(File.dirname(source_path), MODULES_DIR, DATA_REL)
-  end
-
-  # Expand path to an absolute filename.
-  # Relative paths are resolved against base_dir; absolute paths are left as-is.
-  def self.expand_from(base_dir, path)
-    return nil if path.nil?
-
-    path = path.to_s
-    path = '.' if path.empty?
-
-    expanded = is_absolute?(path) ? File.expand_path(path) : File.expand_path(path, base_dir)
-    expanded.fix_filename
-  end
-
-  #
-  # Private section
-  #
-  private
-
-  def self.is_absolute?(path)
-    path.start_with?('/') || path.match?(%r{^[A-Za-z]:[\\/]})
   end
 
 end
