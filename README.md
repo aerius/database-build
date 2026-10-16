@@ -4,8 +4,9 @@ Build tooling for PostgreSQL database projects.
 
 ## Convention over configuration
 
-`Build.rb` and `SyncDBData.rb` must be run from the product source folder: the folder containing `src/build/`. The layout below is fixed and cannot be configured:
+`Build.rb` and `SyncDBData.rb` must be run from the product source folder: the folder containing `src/build/`.
 
+The layout below is fixed and cannot be configured:
 ```text
 <source folder>/              # current directory
   src/build/                  # build config
@@ -21,9 +22,15 @@ Build tooling for PostgreSQL database projects.
 
 A profile is a Ruby file `src/build/profiles/<profile>.rb`; the profile name is that file name without `.rb` (`latest.rb` -> profile `latest`).
 
-The profile argument is only that name (`latest`); a file name (`latest.rb`) or path is refused. It is optional when `profiles/` holds exactly one profile.
+The profile argument is only that name (`latest`); a file name (`latest.rb`) or path is refused.
 
-The profile name also selects the data set: profile `latest` loads `src/data/sql/latest/load.rb`, profile `integration-test` loads `src/data/sql/integration-test/load.rb`. `Build.rb` (`load_data`) and `SyncDBData.rb` (which dbdata files to fetch) both follow it. Data shared between profiles belongs in the internal modules data folder (`../modules/src/data/sql`), which `run_sql` searches after the profile's data folder.
+It is optional when `profiles/` holds exactly one profile.
+
+The profile name also selects the data set: profile `latest` loads `src/data/sql/latest/load.rb`, profile `integration-test` loads `src/data/sql/integration-test/load.rb`.
+
+`Build.rb` (`load_data`) and `SyncDBData.rb` (which dbdata files to fetch) both follow it.
+
+Data shared between profiles belongs in the internal modules data folder (`../modules/src/data/sql`), which `run_sql` searches after the profile's data folder.
 
 ```text
 src/build/profiles/
@@ -74,7 +81,6 @@ ruby ../../../../database-build/bin/Build.rb default latest --version '#'
 ### Overridable settings
 
 Typical `AppSettings.rb` / `UserSettings.rb` assignments:
-
 - `$build_config.layout.dbdata_path` (default `<workspace>/dbdata/`)
 - `$build_config.postgres.name_prefix` (default `AERIUS`)
 - `$build_config.postgres.username` / `.password` (default `aerius`)
@@ -85,7 +91,11 @@ Typical `AppSettings.rb` / `UserSettings.rb` assignments:
 
 ### Docker
 
-`DBSOURCE_PATH` is the product source folder; `docker/build-database.sh` runs the scripts from there. `DBPROFILE` selects the profile under `src/build/profiles/` (optional when there is only one). The script writes `$build_config.layout.dbdata_path` from `DBDATA_PATH` into `<DBSOURCE_PATH>/src/build/config/UserSettings.rb`, so the image does not depend on the workspace `dbdata/` convention.
+`DBSOURCE_PATH` is the product source folder; `docker/build-database.sh` runs the scripts from there.
+
+`DBPROFILE` selects the profile under `src/build/profiles/` (optional when there is only one).
+
+The script writes `$build_config.layout.dbdata_path` from `DBDATA_PATH` into `<DBSOURCE_PATH>/src/build/config/UserSettings.rb`, so the image does not depend on the workspace `dbdata/` convention.
 
 ## Build script
 
@@ -94,9 +104,7 @@ Typical `AppSettings.rb` / `UserSettings.rb` assignments:
 When using Build.rb directly, a database is not 100% reproducible (uncommitted changes). As a first step, the build can store the git hashes of all common module repositories and whether there were uncommitted changes.
 
 When your runscript calls `add_build_constants`, the build stores:
-
 - **CURRENT_BUILD_COMMON_MODULE_REPO_HASHES** — A JSON string with one entry per common module repository (from the derived common SQL and data paths). Each entry has `repo_url`, `commit_hash`, `sql_paths` (array), `data_paths` (array), and `had_uncommitted_changes`. A repository can have multiple paths, so the path arrays can have more than one element. Paths are relative to the git repository root, not to the project settings file.
-
 - **CURRENT_BUILD_SCRIPT_HAD_UNCOMMITTED_CHANGES** — `'true'` if the product sql path repository, product data path repository, or any common module repository had uncommitted or untracked changes; `'false'` otherwise.
 
 Example JSON stored in CURRENT_BUILD_COMMON_MODULE_REPO_HASHES:
