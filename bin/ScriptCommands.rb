@@ -197,11 +197,52 @@ class ScriptCommands
     }
   end
 
-  def load_data
+  # Adding a foreign key after the load checks all rows in one pass instead of row by row.
+  def load_data(*params)
+    foreign_keys_after_load = false
+    if params == [:foreign_keys_after_load] then
+      foreign_keys_after_load = true
+    elsif !params.empty? then
+      $logger.error "Unknown parameter given to load_data()"
+    end
+
+    foreign_keys = drop_foreign_keys if foreign_keys_after_load
+    run_load_script
+    add_foreign_keys(foreign_keys) if foreign_keys_after_load
+  end
+
+  def run_load_script
     filename = File.expand_path($product_data_path + 'load.rb').fix_filename
     $logger.error "File not found: #{filename}" unless File.exist?(filename)
     stacktrace_filename = Pathname.new(filename).relative_path_from(Pathname.new(File.expand_path(File.dirname(__FILE__))))
     eval(IO.readlines(filename).join, nil, stacktrace_filename.to_s)
+  end
+
+  # Skipped: keys with an ON UPDATE or ON DELETE action (a load could rely on it), NOT VALID keys (adding one back would not check the rows) and partition copies (they follow their parent key).
+  def drop_foreign_keys
+    ensure_database_name
+    sql = <<-SQL
+      SELECT
+        format('ALTER TABLE %s DROP CONSTRAINT %I', conrelid::regclass, conname) AS drop_statement,
+        format('ALTER TABLE %s ADD CONSTRAINT %I %s', conrelid::regclass, conname, pg_get_constraintdef(oid)) AS add_statement
+
+        FROM pg_constraint
+
+        WHERE contype = 'f' AND conparentid = 0 AND convalidated AND confupdtype IN ('a', 'r') AND confdeltype IN ('a', 'r')
+
+        ORDER BY conrelid, conname
+    SQL
+    foreign_keys = PostgresTools.fetch_sql_command(sql)
+    $logger.writeln_with_timing("Dropping #{foreign_keys.size} foreign keys until the data is loaded...") {
+      PostgresTools.execute_sql_command(foreign_keys.map { |foreign_key| foreign_key['drop_statement'] + ";\n" }.join) unless foreign_keys.empty?
+    }
+    return foreign_keys
+  end
+
+  def add_foreign_keys(foreign_keys)
+    $logger.writeln_with_timing("Adding #{foreign_keys.size} foreign keys back, which checks all loaded rows...") {
+      PostgresTools.execute_sql_command(foreign_keys.map { |foreign_key| foreign_key['add_statement'] + ";\n" }.join) unless foreign_keys.empty?
+    }
   end
 
   def execute_sql(statement)
@@ -478,6 +519,7 @@ class ScriptCommands
     $logger.writeln "Stopped SQL recording."
   end
 
-  private :ensure_database_name, :ensure_version, :ensure_comments_collected, :ensure_datasourcesinfo_collected
+  private :ensure_database_name, :ensure_version, :ensure_comments_collected, :ensure_datasourcesinfo_collected,
+    :run_load_script, :drop_foreign_keys, :add_foreign_keys
 
 end
