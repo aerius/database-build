@@ -69,7 +69,8 @@ ruby /aerius-database-build/bin/SyncDBData.rb "${DBSETTINGS_BASE_DIRECTORY}/${DB
 # initialize database
 # (this is a wrapper provided by the postgres image, which will initialize the db if it isn't already and is executed when starting the image for the first time.
 # Run 'postgres' which will trigger the initialization and start the database, so we can start building the database.)
-/usr/local/bin/docker-entrypoint.sh postgres --wal_level=minimal --fsync=off --full_page_writes=off --synchronous_commit=off --work_mem=32MB --max_wal_size=4GB --checkpoint_timeout=60min --maintenance_work_mem=2GB --autovacuum=off --max_wal_senders=0 &
+# Listen on the unix socket only: parallel builds can share a network, so they would all claim port 5432.
+/usr/local/bin/docker-entrypoint.sh postgres --listen_addresses='' --wal_level=minimal --fsync=off --full_page_writes=off --synchronous_commit=off --work_mem=32MB --max_wal_size=4GB --checkpoint_timeout=60min --maintenance_work_mem=2GB --autovacuum=off --max_wal_senders=0 &
 
 # The database starts twice. First to set it up and a second time to simply start cleanly.
 # Wait for it to stop once. (Detect socket file being removed)
@@ -78,7 +79,7 @@ inotifywait -e DELETE --include .s.PGSQL.5432 /var/run/postgresql/
 
 # Wait for the DB to finish starting up (the second time)
 echo 'Waiting for PostgreSQL to start up again..'
-until pg_isready -q -d "${POSTGRES_DB}" -U "${POSTGRES_USER}" -h "$(hostname -i)"; do
+until pg_isready -q -d "${POSTGRES_DB}" -U "${POSTGRES_USER}"; do
   sleep 0.5s
 done
 echo 'PostgreSQL is up again'
