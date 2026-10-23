@@ -197,11 +197,37 @@ class ScriptCommands
     }
   end
 
-  def load_data
+  def load_data(*params)
+    foreign_keys_after_load = false
+    if params == [:foreign_keys_after_load] then
+      foreign_keys_after_load = true
+    elsif !params.empty? then
+      $logger.error "Unknown parameter given to load_data()"
+    end
+
+    drop_foreign_keys if foreign_keys_after_load
+    run_load_script
+    add_foreign_keys if foreign_keys_after_load
+  end
+
+  def run_load_script
     filename = File.expand_path($product_data_path + 'load.rb').fix_filename
     $logger.error "File not found: #{filename}" unless File.exist?(filename)
     stacktrace_filename = Pathname.new(filename).relative_path_from(Pathname.new(File.expand_path(File.dirname(__FILE__))))
     eval(IO.readlines(filename).join, nil, stacktrace_filename.to_s)
+  end
+
+  def drop_foreign_keys
+    ensure_database_name
+    $logger.writeln "Dropping foreign keys..."
+    PostgresTools.execute_sql_command("SELECT #{$db_essentials_function_prefix}drop_foreign_keys_before_load()")
+  end
+
+  def add_foreign_keys
+    ensure_database_name
+    $logger.writeln_with_timing("Adding foreign keys back...") {
+      PostgresTools.execute_sql_command("SELECT #{$db_essentials_function_prefix}add_foreign_keys_after_load()")
+    }
   end
 
   def execute_sql(statement)
@@ -478,6 +504,6 @@ class ScriptCommands
     $logger.writeln "Stopped SQL recording."
   end
 
-  private :ensure_database_name, :ensure_version, :ensure_comments_collected, :ensure_datasourcesinfo_collected
+  private :ensure_database_name, :ensure_version, :ensure_comments_collected, :ensure_datasourcesinfo_collected, :run_load_script, :drop_foreign_keys, :add_foreign_keys
 
 end

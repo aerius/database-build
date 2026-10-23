@@ -67,3 +67,94 @@ BEGIN
 END;
 $BODY$
 LANGUAGE plpgsql VOLATILE;
+
+
+/*
+ * drop_foreign_keys_before_load
+ * -----------------------------
+ * Function to drop the foreign keys before the data is loaded, so system.add_foreign_keys_after_load can add them back after the load.
+ * While a table is loaded, a foreign key is checked row by row. Adding the key back to the filled table checks all rows in one pass.
+ * The dropped keys are stored in system.dropped_foreign_keys. This is a normal table and not a temporary one, because the build script runs each call in a new session.
+ * Some foreign keys are left in place:
+ * - Keys with an ON UPDATE or ON DELETE action, as the load could rely on that action.
+ * - NOT VALID keys, as adding one back would not check the loaded rows.
+ * - The copies of a key on each partition, as they follow the key on the parent table.
+ *
+ * Called during build by ruby build script, when load_data is given :foreign_keys_after_load.
+ */
+CREATE OR REPLACE FUNCTION system.drop_foreign_keys_before_load()
+	RETURNS void AS
+$BODY$
+DECLARE
+	foreign_keys record;
+	sql text;
+BEGIN
+	CREATE TABLE system.dropped_foreign_keys (
+		tablename text NOT NULL,
+		constraintname text NOT NULL,
+		definition text NOT NULL
+	);
+
+	INSERT INTO system.dropped_foreign_keys (tablename, constraintname, definition)
+		SELECT
+			conrelid::regclass::text,
+			conname,
+			pg_get_constraintdef(oid)
+
+			FROM pg_constraint
+
+			WHERE contype = 'f' AND conparentid = 0 AND convalidated AND confupdtype IN ('a', 'r') AND confdeltype IN ('a', 'r')
+	;
+
+	FOR foreign_keys IN
+		SELECT
+			tablename,
+			constraintname
+
+			FROM system.dropped_foreign_keys
+
+			ORDER BY tablename, constraintname
+	LOOP
+		sql := 'ALTER TABLE ' || foreign_keys.tablename || ' DROP CONSTRAINT ' || quote_ident(foreign_keys.constraintname);
+		RAISE NOTICE '%', sql;
+		EXECUTE sql;
+	END LOOP;
+END;
+$BODY$
+LANGUAGE plpgsql VOLATILE;
+
+
+/*
+ * add_foreign_keys_after_load
+ * ---------------------------
+ * Function to add back the foreign keys that system.drop_foreign_keys_before_load dropped, and to drop system.dropped_foreign_keys.
+ * Adding a key checks all rows, so bad data still fails the build, with the usual error that names the table, the key and the value.
+ *
+ * Called during build by ruby build script, when load_data is given :foreign_keys_after_load.
+ */
+CREATE OR REPLACE FUNCTION system.add_foreign_keys_after_load()
+	RETURNS void AS
+$BODY$
+DECLARE
+	foreign_keys record;
+	sql text;
+BEGIN
+	FOR foreign_keys IN
+		SELECT
+			tablename,
+			constraintname,
+			definition
+
+			FROM system.dropped_foreign_keys
+
+			ORDER BY tablename, constraintname
+	LOOP
+		sql := 'ALTER TABLE ' || foreign_keys.tablename || ' ADD CONSTRAINT ' || quote_ident(foreign_keys.constraintname) || ' ' || foreign_keys.definition;
+		RAISE NOTICE '%', sql;
+		EXECUTE sql;
+	END LOOP;
+
+	DROP TABLE system.dropped_foreign_keys;
+END;
+$BODY$
+LANGUAGE plpgsql VOLATILE;
