@@ -67,3 +67,34 @@ BEGIN
 END;
 $BODY$
 LANGUAGE plpgsql VOLATILE;
+
+
+/*
+ * foreign_key_drop_and_add_statements
+ * -----------------------------------
+ * Function that lists the foreign keys to drop before the data is loaded, with the statements to drop them and to add them back after the load.
+ * While a table is loaded, a foreign key is checked row by row. Adding it back to the filled table checks all rows in one pass, so bad data still fails the build, with the usual error that names the table, the key and the value.
+ * Some foreign keys are left in place:
+ * - Keys with CASCADE, SET NULL or SET DEFAULT actions, as the load could rely on those changes to referencing rows.
+ * - NOT VALID keys, as adding one back would not check the loaded rows.
+ *
+ * Called during build by ruby build script, when load_data is given :foreign_keys_after_load.
+ */
+CREATE OR REPLACE FUNCTION system.foreign_key_drop_and_add_statements()
+	RETURNS TABLE(drop_statement text, add_statement text) AS
+$BODY$
+	SELECT
+		format('ALTER TABLE %s DROP CONSTRAINT %I', conrelid::regclass, conname),
+		format('ALTER TABLE %s ADD CONSTRAINT %I %s', conrelid::regclass, conname, pg_get_constraintdef(oid))
+
+		FROM pg_constraint
+
+		WHERE
+			contype = 'f' -- Only foreign keys.
+			AND convalidated -- NOT VALID keys must keep checking new rows during the load.
+			AND confupdtype IN ('a', 'r') -- ON UPDATE: NO ACTION or RESTRICT.
+			AND confdeltype IN ('a', 'r') -- ON DELETE: NO ACTION or RESTRICT.
+
+		ORDER BY conrelid::regclass::text, conname
+$BODY$
+LANGUAGE sql STABLE;
